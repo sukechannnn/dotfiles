@@ -14,7 +14,7 @@ set number
 set incsearch
 syntax enable
 let loaded_matchparen = 1
-colorscheme mine
+"colorscheme mine
 set title
 set list
 set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
