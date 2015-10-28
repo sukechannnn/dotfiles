@@ -16,7 +16,6 @@ syntax enable
 let loaded_matchparen = 1
 colorscheme mine
 set title
-"set smartindent
 set list
 set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 set virtualedit=block
@@ -26,6 +25,8 @@ set hidden
 set tabstop=4
 "set expandtab
 set shiftwidth=4
+set noautoindent
+set nosmartindent
 
 "=====================
 "NeoBundle setting
@@ -46,7 +47,8 @@ if has('vim_starting')
 	  NeoBundle 'Shougo/unite.vim.git'
 	  NeoBundle 'scrooloose/nerdtree'
 	  NeoBundle 'Shougo/neocomplcache'
-"      NeoBundle 'tpope/vim-endwise'
+      NeoBundle 'tomtom/tcomment_vim'
+	  "      NeoBundle 'tpope/vim-endwise'
 
 
 
@@ -82,5 +84,12 @@ let g:neocomplcache_enable_underbar_completion = 1
 
 inoremap <expr><CR>  pumvisible() ? neocomplcache#close_popup() : "<CR>"
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
+
+
+
+
+
+
+
 
 
