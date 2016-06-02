@@ -12,7 +12,8 @@ au BufWrite /private/tmp/crontab.* set nowritebackup nobackup
 au BufWrite /private/etc/pw.* set nowritebackup nobackup
 set number
 set incsearch
-syntax enable
+set term=xterm-256color
+syntax on
 let loaded_matchparen = 1
 "colorscheme mine
 set title
@@ -23,6 +24,12 @@ set whichwrap=b,s,[,],<,>
 set backspace=indent,eol,start
 set hidden
 set tabstop=4
+
+hi Pmenu ctermbg=255 ctermfg=0 guifg=#000000 guibg=#999999
+hi PmenuSel ctermbg=blue ctermfg=black
+hi PmenuSbar ctermbg=0 ctermfg=9
+hi PmenuSbar ctermbg=255 ctermfg=0 guifg=#000000 guibg=#FFFFFF
+
 "set expandtab
 set shiftwidth=4
 set noautoindent
@@ -48,6 +55,7 @@ if has('vim_starting')
 	  NeoBundle 'scrooloose/nerdtree'
 	  NeoBundle 'Shougo/neocomplcache'
       NeoBundle 'tomtom/tcomment_vim'
+	  NeoBundle 'fatih/vim-go'
 	  "      NeoBundle 'tpope/vim-endwise'
 
 
