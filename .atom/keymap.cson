@@ -27,7 +27,12 @@
   'cmd-shift-m': 'minimap:toggle'
 
 '.platform-darwin atom-text-editor':
-  'cmd-d': 'pane:split-right'
+  'cmd-d': 'pane:split-right-and-copy-active-item'
 
 'atom-workspace atom-text-editor:not([mini])':
-  'shift-cmd-D': 'pane:split-down'
+  'shift-cmd-D': 'pane:split-down-and-copy-active-item'
+  'alt-cmd-up': 'editor:move-line-up'
+  'alt-cmd-down': 'editor:move-line-down'
+
+'body':
+  'ctrl-cmd-w': 'window:focus-next-pane'

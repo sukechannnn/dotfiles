@@ -10,11 +10,21 @@
   "autocomplete-ruby": {}
   core:
     audioBeep: false
-    closeEmptyWindows: false
+    destroyEmptyPanes: false
     disabledPackages: [
       "spell-check"
       "vim-mode"
       "sync-settings"
+      "autocomplete-go"
+      "builder-go"
+      "go-config"
+      "go-get"
+      "go-plus"
+      "gofmt"
+      "gometalinter-linter"
+      "gorename"
+      "navigator-godef"
+      "tester-go"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
