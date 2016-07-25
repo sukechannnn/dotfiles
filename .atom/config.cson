@@ -25,6 +25,9 @@
       "gorename"
       "navigator-godef"
       "tester-go"
+      "language-gfm"
+      "vim-mode-plus"
+      "atom-ctags"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -98,6 +101,9 @@
 ".json.source":
   editor:
     preferredLineLength: 130
+".md.text":
+  editor:
+    preferredLineLength: 128
 ".source.sql":
   editor:
     preferredLineLength: 130

@@ -1,7 +1,9 @@
 let g:netrw_dirhistmax  =10
-let g:netrw_dirhist_cnt =5
+let g:netrw_dirhist_cnt =7
 let g:netrw_dirhist_1='/Users/obatayousuke/.zprezto'
 let g:netrw_dirhist_2='/Users/obatayousuke/Develop/Provisioning/Itamae/rails_itamae_linux'
 let g:netrw_dirhist_3='/Users/obatayousuke/Develop/Provisioning/Itamae/itamae-plugin-recipe-yk_mecab'
 let g:netrw_dirhist_4='/Users/obatayousuke/Vagrant/itamae-centos72/rails_itamae_centos72'
 let g:netrw_dirhist_5='/Users/obatayousuke/Playground/prmd-test'
+let g:netrw_dirhist_6='/Users/obatayousuke/.zprezto/runcoms'
+let g:netrw_dirhist_7='/Users/obatayousuke/Develop/Homepage/nunnu-homepage'

@@ -540,65 +540,52 @@ class InnerTag extends Tag
 
 # Paragraph
 # -------------------------
-# In Vim world Paragraph is defined as consecutive (non-)blank-line.
+# Paragraph is defined as consecutive (non-)blank-line.
 class Paragraph extends TextObject
   @extend(false)
 
   getStartRow: (startRow, fn) ->
-    for row in [startRow..0] when fn(row)
+    startRow = Math.max(0, startRow)
+    for row in [startRow..0] when not fn(row)
       return row + 1
     0
 
   getEndRow: (startRow, fn) ->
     lastRow = @editor.getLastBufferRow()
-    for row in [startRow..lastRow] when fn(row)
+    startRow = Math.min(lastRow, startRow)
+    for row in [startRow..lastRow] when not fn(row)
       return row - 1
     lastRow
 
   getRange: (startRow) ->
-    startRowIsBlank = @editor.isBufferRowBlank(startRow)
-    fn = (row) =>
-      @editor.isBufferRowBlank(row) isnt startRowIsBlank
+    isBlank = @editor.isBufferRowBlank.bind(@editor)
+    wasBlank = isBlank(startRow)
+    fn = (row) -> isBlank(row) is wasBlank
     new Range([@getStartRow(startRow, fn), 0], [@getEndRow(startRow, fn) + 1, 0])
 
-  selectParagraph: (selection) ->
+  selectParagraph: (selection, {firstTime}) ->
     [startRow, endRow] = selection.getBufferRowRange()
-    if swrap(selection).isSingleRow()
+
+    if firstTime and not @isMode('visual', 'linewise')
       swrap(selection).setBufferRangeSafely @getRange(startRow)
     else
       point = if selection.isReversed()
-        startRow = Math.max(0, startRow - 1)
-        @getRange(startRow)?.start
+        @getRange(startRow - 1)?.start
       else
         @getRange(endRow + 1)?.end
       selection.selectToBufferPosition point if point?
 
   selectTextObject: (selection) ->
+    firstTime = true
     _.times @getCount(), =>
-      @selectParagraph(selection)
-      @selectParagraph(selection) if @instanceof('AParagraph')
+      @selectParagraph(selection, {firstTime})
+      firstTime = false
+      @selectParagraph(selection, {firstTime}) if @instanceof('AParagraph')
 
 class AParagraph extends Paragraph
   @extend()
 
 class InnerParagraph extends Paragraph
-  @extend()
-
-# -------------------------
-class Comment extends Paragraph
-  @extend(false)
-
-  getRange: (startRow) ->
-    return unless @editor.isBufferRowCommented(startRow)
-    fn = (row) =>
-      return if (not @isInner() and @editor.isBufferRowBlank(row))
-      @editor.isBufferRowCommented(row) in [false, undefined]
-    new Range([@getStartRow(startRow, fn), 0], [@getEndRow(startRow, fn) + 1, 0])
-
-class AComment extends Comment
-  @extend()
-
-class InnerComment extends Comment
   @extend()
 
 # -------------------------
@@ -610,15 +597,37 @@ class Indentation extends Paragraph
     baseIndentLevel = getIndentLevelForBufferRow(@editor, startRow)
     fn = (row) =>
       if @editor.isBufferRowBlank(row)
-        @isInner()
+        @isA()
       else
-        getIndentLevelForBufferRow(@editor, row) < baseIndentLevel
+        getIndentLevelForBufferRow(@editor, row) >= baseIndentLevel
     new Range([@getStartRow(startRow, fn), 0], [@getEndRow(startRow, fn) + 1, 0])
 
 class AIndentation extends Indentation
   @extend()
 
 class InnerIndentation extends Indentation
+  @extend()
+
+# -------------------------
+class Comment extends TextObject
+  @extend(false)
+
+  selectTextObject: (selection) ->
+    row = selection.getBufferRange().start.row
+    if rowRange = @getRowRangeForCommentAtBufferRow(row)
+      swrap(selection).selectRowRange(rowRange)
+
+  getRowRangeForCommentAtBufferRow: (row) ->
+    switch
+      when rowRange = @editor.languageMode.rowRangeForCommentAtBufferRow(row)
+        rowRange
+      when @editor.isBufferRowCommented(row)
+        [row, row]
+
+class AComment extends Comment
+  @extend()
+
+class InnerComment extends Comment
   @extend()
 
 # -------------------------
