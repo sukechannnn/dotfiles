@@ -5,14 +5,17 @@
     defaultInputValue: "Project root"
   "atom-ternjs":
     useSnippets: true
+  "autocomplete-ctags":
+    minimumPrefixLength: 2
   "autocomplete-plus":
     minimumWordLength: 1
   "autocomplete-ruby": {}
+  autosave:
+    enabled: true
   core:
     audioBeep: false
     destroyEmptyPanes: false
     disabledPackages: [
-      "spell-check"
       "vim-mode"
       "sync-settings"
       "autocomplete-go"
@@ -28,9 +31,17 @@
       "language-gfm"
       "vim-mode-plus"
       "atom-ctags"
+      "spell-check"
+      "language-matlab"
+      "linter"
+      "react"
+      "react-snippets"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
+    packagesWithKeymapsDisabled: [
+      "symbols-view"
+    ]
     themes: [
       "atom-dark-ui"
       "atom-dark-syntax"
@@ -51,12 +62,12 @@
   "file-types":
     erb: "text.html.ruby"
     rb: "source.ruby.rails"
+  "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
   "japanese-wrap":
     characterWidth: {}
-  linter:
-    showErrorPanel: false
+  linter: {}
   "markdown-pdf": {}
   "markdown-preview":
     useGitHubStyle: true
@@ -72,6 +83,8 @@
   "open-recent":
     listDirectoriesAddedToProject: true
   react: {}
+  "rubocop-auto-correct":
+    correctFile: true
   "ruby-block":
     highlightLineNumber: true
   "status-bar": {}

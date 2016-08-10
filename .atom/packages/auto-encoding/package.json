@@ -1,0 +1,127 @@
+{
+  "name": "auto-encoding",
+  "main": "./lib/main",
+  "version": "0.6.1",
+  "description": "Auto detect",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/t-ishii/auto-encoding.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "atom": ">=0.174.0 <2.0.0"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.4.13",
+    "jschardet": "^1.4.1"
+  },
+  "readme": "# auto-encoding\n\ndefault \"Auto Detect\".\n\n## Installation\n\n`$ apm install auto-encoding`\n",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/t-ishii/auto-encoding/issues"
+  },
+  "homepage": "https://github.com/t-ishii/auto-encoding#readme",
+  "_id": "auto-encoding@0.6.1",
+  "_shasum": "1d1e2da770185c38dd671113eae3744becd2ced4",
+  "_resolved": "file:../d-116710-22610-i0vwja/package.tgz",
+  "_from": "../d-116710-22610-i0vwja/package.tgz",
+  "_atomModuleCache": {
+    "version": 1,
+    "dependencies": [
+      {
+        "name": "iconv-lite",
+        "version": "0.4.13",
+        "path": "node_modules/iconv-lite/lib/index.js"
+      },
+      {
+        "name": "jschardet",
+        "version": "1.4.1",
+        "path": "node_modules/jschardet/src/init.js"
+      }
+    ],
+    "extensions": {
+      ".coffee": [
+        "lib/auto-encoding.coffee",
+        "lib/main.coffee"
+      ],
+      ".js": [
+        "node_modules/iconv-lite/encodings/dbcs-codec.js",
+        "node_modules/iconv-lite/encodings/dbcs-data.js",
+        "node_modules/iconv-lite/encodings/index.js",
+        "node_modules/iconv-lite/encodings/internal.js",
+        "node_modules/iconv-lite/encodings/sbcs-codec.js",
+        "node_modules/iconv-lite/encodings/sbcs-data-generated.js",
+        "node_modules/iconv-lite/encodings/sbcs-data.js",
+        "node_modules/iconv-lite/encodings/utf16.js",
+        "node_modules/iconv-lite/encodings/utf7.js",
+        "node_modules/iconv-lite/lib/bom-handling.js",
+        "node_modules/iconv-lite/lib/extend-node.js",
+        "node_modules/iconv-lite/lib/index.js",
+        "node_modules/iconv-lite/lib/streams.js",
+        "node_modules/jschardet/index.js",
+        "node_modules/jschardet/src/big5freq.js",
+        "node_modules/jschardet/src/big5prober.js",
+        "node_modules/jschardet/src/chardistribution.js",
+        "node_modules/jschardet/src/charsetgroupprober.js",
+        "node_modules/jschardet/src/charsetprober.js",
+        "node_modules/jschardet/src/codingstatemachine.js",
+        "node_modules/jschardet/src/constants.js",
+        "node_modules/jschardet/src/escprober.js",
+        "node_modules/jschardet/src/escsm.js",
+        "node_modules/jschardet/src/eucjpprober.js",
+        "node_modules/jschardet/src/euckrfreq.js",
+        "node_modules/jschardet/src/euckrprober.js",
+        "node_modules/jschardet/src/euctwfreq.js",
+        "node_modules/jschardet/src/euctwprober.js",
+        "node_modules/jschardet/src/gb2312freq.js",
+        "node_modules/jschardet/src/gb2312prober.js",
+        "node_modules/jschardet/src/hebrewprober.js",
+        "node_modules/jschardet/src/index.js",
+        "node_modules/jschardet/src/init.js",
+        "node_modules/jschardet/src/jisfreq.js",
+        "node_modules/jschardet/src/jpcntx.js",
+        "node_modules/jschardet/src/langbulgarianmodel.js",
+        "node_modules/jschardet/src/langcyrillicmodel.js",
+        "node_modules/jschardet/src/langgreekmodel.js",
+        "node_modules/jschardet/src/langhebrewmodel.js",
+        "node_modules/jschardet/src/langhungarianmodel.js",
+        "node_modules/jschardet/src/langthaimodel.js",
+        "node_modules/jschardet/src/latin1prober.js",
+        "node_modules/jschardet/src/mbcharsetprober.js",
+        "node_modules/jschardet/src/mbcsgroupprober.js",
+        "node_modules/jschardet/src/mbcssm.js",
+        "node_modules/jschardet/src/sbcharsetprober.js",
+        "node_modules/jschardet/src/sbcsgroupprober.js",
+        "node_modules/jschardet/src/sjisprober.js",
+        "node_modules/jschardet/src/universaldetector.js",
+        "node_modules/jschardet/src/utf8prober.js"
+      ],
+      ".json": [
+        "node_modules/iconv-lite/encodings/tables/big5-added.json",
+        "node_modules/iconv-lite/encodings/tables/cp936.json",
+        "node_modules/iconv-lite/encodings/tables/cp949.json",
+        "node_modules/iconv-lite/encodings/tables/cp950.json",
+        "node_modules/iconv-lite/encodings/tables/eucjp.json",
+        "node_modules/iconv-lite/encodings/tables/gb18030-ranges.json",
+        "node_modules/iconv-lite/encodings/tables/gbk-added.json",
+        "node_modules/iconv-lite/encodings/tables/shiftjis.json",
+        "node_modules/iconv-lite/package.json",
+        "node_modules/jschardet/package.json",
+        "package.json"
+      ]
+    },
+    "folders": [
+      {
+        "paths": [
+          "lib",
+          "",
+          "spec"
+        ],
+        "dependencies": {
+          "iconv-lite": "^0.4.13",
+          "jschardet": "^1.4.1"
+        }
+      }
+    ]
+  }
+}

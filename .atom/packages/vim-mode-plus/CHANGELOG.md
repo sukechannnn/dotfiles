@@ -1,3 +1,16 @@
+# 0.50.0:
+- Fix: Deprecation warning introduced by new editor.displayLayer #319.
+- Support: set minimum engines to 1.9.0 above.
+
+# 0.49.1:
+- Fix: Invoking text-object command directly from insert-mode cause uncaught exception #318.
+
+# 0.49.0:
+- Improve, Breaking: #314 Allow `move-up-to-edge` and `move-down-to-edge` stops at first or last row even if it char was blank.
+
+# 0.48.0:
+- Improve: New command `vim-mode-plus:force-operator-characterwise`, `vim-mode-plus:force-operator-linewise` to change original wise(linewise/charactewise) and toggle exclusiveness #313
+
 # 0.47.0:
 - Fix: TextObject a-paragraph did not select trailing blank rows for one-line non-blank paragraph #309
 - Breaking: Simplify TextObject comment. now `a /` and `i /` works identically #311

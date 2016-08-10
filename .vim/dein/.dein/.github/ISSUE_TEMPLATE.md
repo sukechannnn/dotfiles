@@ -1,32 +1,28 @@
-# Problems summary
+### Actual behavior
 
+Write here what's happening ...
 
-## Expected
+### Expected behavior
 
+Write here what you're expecting ...
 
-## Environment Information
- * OS:
- * Vim version:
+### Steps to reproduce:
 
+Please create a reproducible case of your problem. Re produce it 
+with a minimal `vimrc` with all plugins disabled and only `vim-go`
+enabled:
 
-## Provide a minimal .vimrc with less than 50 lines (Required!)
+1.
+2.
+3.
 
-```vim
-" Your minimal .vimrc
-set runtimepath^=~/path/to/dein.nvim/
-call dein#begin(path)
-call dein#end()
-```
+### Configuration
 
+Add here your current configuration and additional information that might be
+useful, such as:
 
-## The reproduce ways from Vim starting (Required!)
+* `vimrc` you used to reproduce
+* vim version:
+* vim-go version
+* go version
 
- 1. foo
- 2. bar
- 3. baz
-
-
-## Screen shot (if possible)
-
-
-## Upload the log messages by `:redir` and `:message`

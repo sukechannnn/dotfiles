@@ -1,1 +1,1 @@
-['context_filetype.vim', 'dein.vim', 'neocomplete.vim', 'nerdtree', 'tcomment_vim', 'vim-airline', 'vim-airline-themes', 'vim-go', 'vim-precious', 'vim-toml', 'vimproc.vim']
+['context_filetype.vim', 'dein.vim', 'neocomplete.vim', 'neomru.vim', 'nerdtree', 'tcomment_vim', 'unite.vim', 'vim-airline', 'vim-airline-themes', 'vim-go', 'vim-precious', 'vim-toml', 'vimproc.vim']
