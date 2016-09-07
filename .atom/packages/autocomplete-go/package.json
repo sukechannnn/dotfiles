@@ -9,7 +9,7 @@
     "autocomplete-plus"
   ],
   "main": "./lib/main",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/joefitzgerald/autocomplete-go.git"
@@ -28,15 +28,11 @@
     "url": "https://github.com/joefitzgerald/autocomplete-go/issues"
   },
   "dependencies": {
-    "atom-package-deps": "^4.0.1",
-    "lodash": "^4.6.1"
+    "atom-package-deps": "4.2.0",
+    "lodash": "^4.15.0"
   },
   "devDependencies": {
-    "eslint": "^2.5.1",
-    "babel-eslint": "^6.0.0",
-    "eslint-config-standard": "^5.1.0",
-    "eslint-plugin-standard": "^1.3.2",
-    "eslint-plugin-promise": "^1.1.0"
+    "standard": "^8.0.0-beta.4"
   },
   "package-deps": [
     "go-config",
@@ -143,16 +139,16 @@
   },
   "readme": "# `autocomplete-go` [![Build Status](https://travis-ci.org/joefitzgerald/autocomplete-go.svg?branch=master)](https://travis-ci.org/joefitzgerald/autocomplete-go) [![Build status](https://ci.appveyor.com/api/projects/status/8oveg440vyy4oofq/branch/master?svg=true)](https://ci.appveyor.com/project/joefitzgerald/autocomplete-go/branch/master)\n\n\nAn [`autocomplete-plus`](https://github.com/atom/autocomplete-plus) provider for\nthe [`go`](https://golang.org) language that uses [`gocode`](https://github.com/nsf/gocode) to provide suggestions.\n\n### Prerequisites\n\nThis package requires the following packages to be installed:\n\n* [`environment`](https://atom.io/packages/environment)\n* [`go-config`](https://atom.io/packages/go-config)\n\nAdditionally, you should have [`gocode`](https://github.com/nsf/gocode) installed and available on your path:\n\n> `go get -u github.com/nsf/gocode`\n\nIf you have the [`go-get`](https://atom.io/packages/go-get) package installed, this package will prompt you to get gocode (if it is missing) or update gocode (if it is out of date).\n\n### FAQ\n\n> I am not getting suggestions I expect!\n\n`gocode` uses the output from `go install` to provide its suggestions. You have a few options to ensure you always get up-to-date suggestions:\n\n* Always run `go install ./...` in your package when you make a change\n* Run `gocode set autobuild true` to have `gocode` attempt to run `go install ./...` for you\n* Configure a package (like [build](https://atom.io/packages/build)) to run your build command on every save\n\n### Configuration\n\n* `scopeBlacklist`: Suggestions will not be shown when the cursor is inside the specified comma-delimited scope(s) (default: `.source.go .comment`)\n* `suppressBuiltinAutocompleteProvider`: Suppress the provider built-in to the autocomplete-plus package when editing .go files (default: `true`)\n* `suppressActivationForCharacters`: Suggestions will not be provided when you type one of the specified characters (default: ``comma, newline, space, tab, /, \\, (, ), \", ', :,\n;, <, >, ~, !, @, #, $, %, ^, &, *, |, +,\n=, [, ], {, }, `, ~, ?, -``)\n* `snippetMode`: Snippets can be generated when inserting the suggestion for a `func`; this option allows you to control what is generated (default: `name`)\n  * `name`: E.g.: `fmt.Println(a)` with `a` selected such that it will be replaced on the first keystroke\n  * `nameAndType`: E.g.: `fmt.Println(a ...interface{})`, with `a ...interface{}` selected such that it will be replaced on the first keystroke\n  * `none`: E.g.: `fmt.Println()`, with the cursor placed between the parenthesis\n",
   "readmeFilename": "README.md",
-  "_id": "autocomplete-go@1.1.0",
-  "_shasum": "4a1d0ad506f287b58b62974bd4d5745ac8719e1e",
-  "_resolved": "file:../d-116424-38655-kzq2pt/package.tgz",
-  "_from": "../d-116424-38655-kzq2pt/package.tgz",
+  "_id": "autocomplete-go@1.1.1",
+  "_shasum": "e65a7dc148cb29c0563bffb66315e334a0c7889d",
+  "_resolved": "file:../d-11681-88156-174jvxk/package.tgz",
+  "_from": "../d-11681-88156-174jvxk/package.tgz",
   "_atomModuleCache": {
     "version": 1,
     "dependencies": [
       {
         "name": "atom-package-deps",
-        "version": "4.0.1",
+        "version": "4.2.0",
         "path": "node_modules/atom-package-deps/lib/index.js"
       },
       {
@@ -166,8 +162,38 @@
         "path": "node_modules/atom-package-deps/node_modules/atom-package-path/node_modules/sb-callsite/lib/main.js"
       },
       {
+        "name": "sb-exec",
+        "version": "2.0.5",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/lib/index.js"
+      },
+      {
+        "name": "consistent-env",
+        "version": "1.3.0",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/lib/index.js"
+      },
+      {
+        "name": "lodash.uniq",
+        "version": "4.5.0",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/node_modules/lodash.uniq/index.js"
+      },
+      {
+        "name": "sb-npm-path",
+        "version": "1.0.1",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/lib/index.js"
+      },
+      {
+        "name": "sb-memoize",
+        "version": "1.0.2",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-memoize/lib/index.js"
+      },
+      {
+        "name": "sb-promisify",
+        "version": "1.3.0",
+        "path": "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-promisify/lib/index.js"
+      },
+      {
         "name": "lodash",
-        "version": "4.13.1",
+        "version": "4.15.0",
         "path": "node_modules/lodash/lodash.js"
       }
     ],
@@ -175,11 +201,26 @@
       ".js": [
         "lib/gocodeprovider.js",
         "lib/main.js",
+        "node_modules/atom-package-deps/decls/atom.js",
+        "node_modules/atom-package-deps/decls/jasmine.js",
+        "node_modules/atom-package-deps/decls/package-deps.js",
         "node_modules/atom-package-deps/lib/helpers.js",
         "node_modules/atom-package-deps/lib/index.js",
+        "node_modules/atom-package-deps/lib/types.js",
         "node_modules/atom-package-deps/lib/view.js",
         "node_modules/atom-package-deps/node_modules/atom-package-path/lib/index.js",
         "node_modules/atom-package-deps/node_modules/atom-package-path/node_modules/sb-callsite/lib/main.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/lib/helpers.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/lib/index.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/lib/types.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/decls/jasmine.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/lib/helpers.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/lib/index.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/node_modules/lodash.uniq/index.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/lib/helpers.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/lib/index.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-memoize/lib/index.js",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-promisify/lib/index.js",
         "node_modules/lodash/_DataView.js",
         "node_modules/lodash/_Hash.js",
         "node_modules/lodash/_LazyWrapper.js",
@@ -188,7 +229,6 @@
         "node_modules/lodash/_Map.js",
         "node_modules/lodash/_MapCache.js",
         "node_modules/lodash/_Promise.js",
-        "node_modules/lodash/_Reflect.js",
         "node_modules/lodash/_Set.js",
         "node_modules/lodash/_SetCache.js",
         "node_modules/lodash/_Stack.js",
@@ -205,11 +245,15 @@
         "node_modules/lodash/_arrayFilter.js",
         "node_modules/lodash/_arrayIncludes.js",
         "node_modules/lodash/_arrayIncludesWith.js",
+        "node_modules/lodash/_arrayLikeKeys.js",
         "node_modules/lodash/_arrayMap.js",
         "node_modules/lodash/_arrayPush.js",
         "node_modules/lodash/_arrayReduce.js",
         "node_modules/lodash/_arrayReduceRight.js",
         "node_modules/lodash/_arraySome.js",
+        "node_modules/lodash/_asciiSize.js",
+        "node_modules/lodash/_asciiToArray.js",
+        "node_modules/lodash/_asciiWords.js",
         "node_modules/lodash/_assignInDefaults.js",
         "node_modules/lodash/_assignMergeValue.js",
         "node_modules/lodash/_assignValue.js",
@@ -220,6 +264,7 @@
         "node_modules/lodash/_baseClamp.js",
         "node_modules/lodash/_baseClone.js",
         "node_modules/lodash/_baseConforms.js",
+        "node_modules/lodash/_baseConformsTo.js",
         "node_modules/lodash/_baseCreate.js",
         "node_modules/lodash/_baseDelay.js",
         "node_modules/lodash/_baseDifference.js",
@@ -239,6 +284,7 @@
         "node_modules/lodash/_baseFunctions.js",
         "node_modules/lodash/_baseGet.js",
         "node_modules/lodash/_baseGetAllKeys.js",
+        "node_modules/lodash/_baseGetTag.js",
         "node_modules/lodash/_baseGt.js",
         "node_modules/lodash/_baseHas.js",
         "node_modules/lodash/_baseHasIn.js",
@@ -248,10 +294,17 @@
         "node_modules/lodash/_baseIntersection.js",
         "node_modules/lodash/_baseInverter.js",
         "node_modules/lodash/_baseInvoke.js",
+        "node_modules/lodash/_baseIsArrayBuffer.js",
+        "node_modules/lodash/_baseIsDate.js",
         "node_modules/lodash/_baseIsEqual.js",
         "node_modules/lodash/_baseIsEqualDeep.js",
+        "node_modules/lodash/_baseIsMap.js",
         "node_modules/lodash/_baseIsMatch.js",
+        "node_modules/lodash/_baseIsNaN.js",
         "node_modules/lodash/_baseIsNative.js",
+        "node_modules/lodash/_baseIsRegExp.js",
+        "node_modules/lodash/_baseIsSet.js",
+        "node_modules/lodash/_baseIsTypedArray.js",
         "node_modules/lodash/_baseIteratee.js",
         "node_modules/lodash/_baseKeys.js",
         "node_modules/lodash/_baseKeysIn.js",
@@ -269,12 +322,14 @@
         "node_modules/lodash/_basePickBy.js",
         "node_modules/lodash/_baseProperty.js",
         "node_modules/lodash/_basePropertyDeep.js",
+        "node_modules/lodash/_basePropertyOf.js",
         "node_modules/lodash/_basePullAll.js",
         "node_modules/lodash/_basePullAt.js",
         "node_modules/lodash/_baseRandom.js",
         "node_modules/lodash/_baseRange.js",
         "node_modules/lodash/_baseReduce.js",
         "node_modules/lodash/_baseRepeat.js",
+        "node_modules/lodash/_baseRest.js",
         "node_modules/lodash/_baseSet.js",
         "node_modules/lodash/_baseSetData.js",
         "node_modules/lodash/_baseSlice.js",
@@ -304,7 +359,6 @@
         "node_modules/lodash/_castSlice.js",
         "node_modules/lodash/_charsEndIndex.js",
         "node_modules/lodash/_charsStartIndex.js",
-        "node_modules/lodash/_checkGlobal.js",
         "node_modules/lodash/_cloneArrayBuffer.js",
         "node_modules/lodash/_cloneBuffer.js",
         "node_modules/lodash/_cloneDataView.js",
@@ -326,38 +380,39 @@
         "node_modules/lodash/_createAssigner.js",
         "node_modules/lodash/_createBaseEach.js",
         "node_modules/lodash/_createBaseFor.js",
-        "node_modules/lodash/_createBaseWrapper.js",
+        "node_modules/lodash/_createBind.js",
         "node_modules/lodash/_createCaseFirst.js",
         "node_modules/lodash/_createCompounder.js",
-        "node_modules/lodash/_createCtorWrapper.js",
-        "node_modules/lodash/_createCurryWrapper.js",
+        "node_modules/lodash/_createCtor.js",
+        "node_modules/lodash/_createCurry.js",
         "node_modules/lodash/_createFind.js",
         "node_modules/lodash/_createFlow.js",
-        "node_modules/lodash/_createHybridWrapper.js",
+        "node_modules/lodash/_createHybrid.js",
         "node_modules/lodash/_createInverter.js",
         "node_modules/lodash/_createMathOperation.js",
         "node_modules/lodash/_createOver.js",
         "node_modules/lodash/_createPadding.js",
-        "node_modules/lodash/_createPartialWrapper.js",
+        "node_modules/lodash/_createPartial.js",
         "node_modules/lodash/_createRange.js",
-        "node_modules/lodash/_createRecurryWrapper.js",
+        "node_modules/lodash/_createRecurry.js",
         "node_modules/lodash/_createRelationalOperation.js",
         "node_modules/lodash/_createRound.js",
         "node_modules/lodash/_createSet.js",
         "node_modules/lodash/_createToPairs.js",
-        "node_modules/lodash/_createWrapper.js",
+        "node_modules/lodash/_createWrap.js",
         "node_modules/lodash/_deburrLetter.js",
+        "node_modules/lodash/_defineProperty.js",
         "node_modules/lodash/_equalArrays.js",
         "node_modules/lodash/_equalByTag.js",
         "node_modules/lodash/_equalObjects.js",
         "node_modules/lodash/_escapeHtmlChar.js",
         "node_modules/lodash/_escapeStringChar.js",
+        "node_modules/lodash/_freeGlobal.js",
         "node_modules/lodash/_getAllKeys.js",
         "node_modules/lodash/_getAllKeysIn.js",
         "node_modules/lodash/_getData.js",
         "node_modules/lodash/_getFuncName.js",
         "node_modules/lodash/_getHolder.js",
-        "node_modules/lodash/_getLength.js",
         "node_modules/lodash/_getMapData.js",
         "node_modules/lodash/_getMatchData.js",
         "node_modules/lodash/_getNative.js",
@@ -367,19 +422,20 @@
         "node_modules/lodash/_getTag.js",
         "node_modules/lodash/_getValue.js",
         "node_modules/lodash/_getView.js",
+        "node_modules/lodash/_getWrapDetails.js",
         "node_modules/lodash/_hasPath.js",
+        "node_modules/lodash/_hasUnicode.js",
+        "node_modules/lodash/_hasUnicodeWord.js",
         "node_modules/lodash/_hashClear.js",
         "node_modules/lodash/_hashDelete.js",
         "node_modules/lodash/_hashGet.js",
         "node_modules/lodash/_hashHas.js",
         "node_modules/lodash/_hashSet.js",
-        "node_modules/lodash/_indexKeys.js",
-        "node_modules/lodash/_indexOfNaN.js",
         "node_modules/lodash/_initCloneArray.js",
         "node_modules/lodash/_initCloneByTag.js",
         "node_modules/lodash/_initCloneObject.js",
+        "node_modules/lodash/_insertWrapDetails.js",
         "node_modules/lodash/_isFlattenable.js",
-        "node_modules/lodash/_isFlattenableIteratee.js",
         "node_modules/lodash/_isHostObject.js",
         "node_modules/lodash/_isIndex.js",
         "node_modules/lodash/_isIterateeCall.js",
@@ -410,10 +466,13 @@
         "node_modules/lodash/_mergeDefaults.js",
         "node_modules/lodash/_metaMap.js",
         "node_modules/lodash/_nativeCreate.js",
+        "node_modules/lodash/_nativeKeys.js",
+        "node_modules/lodash/_nativeKeysIn.js",
+        "node_modules/lodash/_nodeUtil.js",
+        "node_modules/lodash/_overArg.js",
         "node_modules/lodash/_parent.js",
         "node_modules/lodash/_reEscape.js",
         "node_modules/lodash/_reEvaluate.js",
-        "node_modules/lodash/_reHasComplexSymbol.js",
         "node_modules/lodash/_reInterpolate.js",
         "node_modules/lodash/_realNames.js",
         "node_modules/lodash/_reorder.js",
@@ -424,6 +483,7 @@
         "node_modules/lodash/_setData.js",
         "node_modules/lodash/_setToArray.js",
         "node_modules/lodash/_setToPairs.js",
+        "node_modules/lodash/_setWrapToString.js",
         "node_modules/lodash/_stackClear.js",
         "node_modules/lodash/_stackDelete.js",
         "node_modules/lodash/_stackGet.js",
@@ -435,6 +495,10 @@
         "node_modules/lodash/_toKey.js",
         "node_modules/lodash/_toSource.js",
         "node_modules/lodash/_unescapeHtmlChar.js",
+        "node_modules/lodash/_unicodeSize.js",
+        "node_modules/lodash/_unicodeToArray.js",
+        "node_modules/lodash/_unicodeWords.js",
+        "node_modules/lodash/_updateWrapDetails.js",
         "node_modules/lodash/_wrapperClone.js",
         "node_modules/lodash/add.js",
         "node_modules/lodash/after.js",
@@ -467,6 +531,7 @@
         "node_modules/lodash/concat.js",
         "node_modules/lodash/cond.js",
         "node_modules/lodash/conforms.js",
+        "node_modules/lodash/conformsTo.js",
         "node_modules/lodash/constant.js",
         "node_modules/lodash/core.js",
         "node_modules/lodash/core.min.js",
@@ -477,6 +542,7 @@
         "node_modules/lodash/date.js",
         "node_modules/lodash/debounce.js",
         "node_modules/lodash/deburr.js",
+        "node_modules/lodash/defaultTo.js",
         "node_modules/lodash/defaults.js",
         "node_modules/lodash/defaultsDeep.js",
         "node_modules/lodash/defer.js",
@@ -525,6 +591,8 @@
         "node_modules/lodash/forInRight.js",
         "node_modules/lodash/forOwn.js",
         "node_modules/lodash/forOwnRight.js",
+        "node_modules/lodash/fp/F.js",
+        "node_modules/lodash/fp/T.js",
         "node_modules/lodash/fp/__.js",
         "node_modules/lodash/fp/_baseConvert.js",
         "node_modules/lodash/fp/_convertBrowser.js",
@@ -542,7 +610,11 @@
         "node_modules/lodash/fp/array.js",
         "node_modules/lodash/fp/ary.js",
         "node_modules/lodash/fp/assign.js",
+        "node_modules/lodash/fp/assignAll.js",
+        "node_modules/lodash/fp/assignAllWith.js",
         "node_modules/lodash/fp/assignIn.js",
+        "node_modules/lodash/fp/assignInAll.js",
+        "node_modules/lodash/fp/assignInAllWith.js",
         "node_modules/lodash/fp/assignInWith.js",
         "node_modules/lodash/fp/assignWith.js",
         "node_modules/lodash/fp/assoc.js",
@@ -572,6 +644,7 @@
         "node_modules/lodash/fp/concat.js",
         "node_modules/lodash/fp/cond.js",
         "node_modules/lodash/fp/conforms.js",
+        "node_modules/lodash/fp/conformsTo.js",
         "node_modules/lodash/fp/constant.js",
         "node_modules/lodash/fp/contains.js",
         "node_modules/lodash/fp/convert.js",
@@ -584,8 +657,11 @@
         "node_modules/lodash/fp/date.js",
         "node_modules/lodash/fp/debounce.js",
         "node_modules/lodash/fp/deburr.js",
+        "node_modules/lodash/fp/defaultTo.js",
         "node_modules/lodash/fp/defaults.js",
+        "node_modules/lodash/fp/defaultsAll.js",
         "node_modules/lodash/fp/defaultsDeep.js",
+        "node_modules/lodash/fp/defaultsDeepAll.js",
         "node_modules/lodash/fp/defer.js",
         "node_modules/lodash/fp/delay.js",
         "node_modules/lodash/fp/difference.js",
@@ -595,6 +671,8 @@
         "node_modules/lodash/fp/dissocPath.js",
         "node_modules/lodash/fp/divide.js",
         "node_modules/lodash/fp/drop.js",
+        "node_modules/lodash/fp/dropLast.js",
+        "node_modules/lodash/fp/dropLastWhile.js",
         "node_modules/lodash/fp/dropRight.js",
         "node_modules/lodash/fp/dropRightWhile.js",
         "node_modules/lodash/fp/dropWhile.js",
@@ -609,6 +687,8 @@
         "node_modules/lodash/fp/escapeRegExp.js",
         "node_modules/lodash/fp/every.js",
         "node_modules/lodash/fp/extend.js",
+        "node_modules/lodash/fp/extendAll.js",
+        "node_modules/lodash/fp/extendAllWith.js",
         "node_modules/lodash/fp/extendWith.js",
         "node_modules/lodash/fp/fill.js",
         "node_modules/lodash/fp/filter.js",
@@ -656,6 +736,7 @@
         "node_modules/lodash/fp/inRange.js",
         "node_modules/lodash/fp/includes.js",
         "node_modules/lodash/fp/includesFrom.js",
+        "node_modules/lodash/fp/indexBy.js",
         "node_modules/lodash/fp/indexOf.js",
         "node_modules/lodash/fp/indexOfFrom.js",
         "node_modules/lodash/fp/init.js",
@@ -734,6 +815,8 @@
         "node_modules/lodash/fp/meanBy.js",
         "node_modules/lodash/fp/memoize.js",
         "node_modules/lodash/fp/merge.js",
+        "node_modules/lodash/fp/mergeAll.js",
+        "node_modules/lodash/fp/mergeAllWith.js",
         "node_modules/lodash/fp/mergeWith.js",
         "node_modules/lodash/fp/method.js",
         "node_modules/lodash/fp/methodOf.js",
@@ -839,8 +922,13 @@
         "node_modules/lodash/fp/subtract.js",
         "node_modules/lodash/fp/sum.js",
         "node_modules/lodash/fp/sumBy.js",
+        "node_modules/lodash/fp/symmetricDifference.js",
+        "node_modules/lodash/fp/symmetricDifferenceBy.js",
+        "node_modules/lodash/fp/symmetricDifferenceWith.js",
         "node_modules/lodash/fp/tail.js",
         "node_modules/lodash/fp/take.js",
+        "node_modules/lodash/fp/takeLast.js",
+        "node_modules/lodash/fp/takeLastWhile.js",
         "node_modules/lodash/fp/takeRight.js",
         "node_modules/lodash/fp/takeRightWhile.js",
         "node_modules/lodash/fp/takeWhile.js",
@@ -897,6 +985,7 @@
         "node_modules/lodash/fp/valueOf.js",
         "node_modules/lodash/fp/values.js",
         "node_modules/lodash/fp/valuesIn.js",
+        "node_modules/lodash/fp/where.js",
         "node_modules/lodash/fp/whereEq.js",
         "node_modules/lodash/fp/without.js",
         "node_modules/lodash/fp/words.js",
@@ -910,6 +999,7 @@
         "node_modules/lodash/fp/xorBy.js",
         "node_modules/lodash/fp/xorWith.js",
         "node_modules/lodash/fp/zip.js",
+        "node_modules/lodash/fp/zipAll.js",
         "node_modules/lodash/fp/zipObj.js",
         "node_modules/lodash/fp/zipObject.js",
         "node_modules/lodash/fp/zipObjectDeep.js",
@@ -1158,8 +1248,19 @@
         "node_modules/lodash/zipWith.js"
       ],
       ".json": [
+        "node_modules/atom-package-deps/.eslintrc.json",
         "node_modules/atom-package-deps/node_modules/atom-package-path/node_modules/sb-callsite/package.json",
         "node_modules/atom-package-deps/node_modules/atom-package-path/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/.eslintrc.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/.eslintrc.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/node_modules/lodash.uniq/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/.eslintrc.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-memoize/.eslintrc.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-memoize/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/node_modules/sb-promisify/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/package.json",
+        "node_modules/atom-package-deps/node_modules/sb-exec/package.json",
         "node_modules/atom-package-deps/package.json",
         "node_modules/lodash/package.json",
         "package.json"
@@ -1173,17 +1274,19 @@
           "spec"
         ],
         "dependencies": {
-          "atom-package-deps": "^4.0.1",
-          "lodash": "^4.6.1"
+          "atom-package-deps": "4.2.0",
+          "lodash": "^4.15.0"
         }
       },
       {
         "paths": [
-          "node_modules/atom-package-deps/lib",
-          "node_modules/atom-package-deps"
+          "node_modules/atom-package-deps",
+          "node_modules/atom-package-deps/decls",
+          "node_modules/atom-package-deps/lib"
         ],
         "dependencies": {
-          "atom-package-path": "^1.1.0"
+          "atom-package-path": "^1.1.0",
+          "sb-exec": "^2.0.5"
         }
       },
       {
@@ -1194,6 +1297,37 @@
         ],
         "dependencies": {
           "sb-callsite": "^1.1.2"
+        }
+      },
+      {
+        "paths": [
+          "node_modules/atom-package-deps/node_modules/sb-exec",
+          "node_modules/atom-package-deps/node_modules/sb-exec/lib"
+        ],
+        "dependencies": {
+          "consistent-env": "^1.2.0",
+          "sb-npm-path": "^1.0.0"
+        }
+      },
+      {
+        "paths": [
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env",
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/decls",
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/consistent-env/lib"
+        ],
+        "dependencies": {
+          "lodash.uniq": "^4.5.0"
+        }
+      },
+      {
+        "paths": [
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path",
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/lib",
+          "node_modules/atom-package-deps/node_modules/sb-exec/node_modules/sb-npm-path/spec"
+        ],
+        "dependencies": {
+          "sb-memoize": "^1.0.1",
+          "sb-promisify": "^1.2.0"
         }
       }
     ]

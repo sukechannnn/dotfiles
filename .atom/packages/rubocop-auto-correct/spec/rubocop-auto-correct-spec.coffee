@@ -100,7 +100,7 @@ describe "RubocopAutoCorrect", ->
   describe "when command with arguments", ->
     beforeEach ->
       buffer.setText("{ :atom => 'A hackable text editor for the 21st Century' }\n")
-      atom.config.set('rubocop-auto-correct.rubocopCommandPath', 'rubocop --format simple')
+      atom.config.set('rubocop-auto-correct.rubocopCommandPath', 'rubocop --no-color --format simple')
 
     describe "when correct buffer", ->
       it "manually run", ->
@@ -120,7 +120,7 @@ describe "RubocopAutoCorrect", ->
         bufferChangedSpy = jasmine.createSpy()
         buffer.onDidChange(bufferChangedSpy)
         waitsFor ->
-          bufferChangedSpy.callCount > 0
+          bufferChangedSpy.callCount > 1
         runs ->
           expect(buffer.getText()).toBe "{ atom: 'A hackable text editor for the 21st Century' }\n"
 
@@ -141,6 +141,13 @@ describe "RubocopAutoCorrect", ->
       expect(atom.config.get('rubocop-auto-correct').notification).toBe true
       @rubocopAutoCorrect.toggleNotification()
       expect(atom.config.get('rubocop-auto-correct').notification).toBe false
+
+    it "changes notification", ->
+      atom.config.set('rubocop-auto-correct.onlyFixesNotification', false)
+      @rubocopAutoCorrect.toggleOnlyFixesNotification()
+      expect(atom.config.get('rubocop-auto-correct').onlyFixesNotification).toBe true
+      @rubocopAutoCorrect.toggleOnlyFixesNotification()
+      expect(atom.config.get('rubocop-auto-correct').onlyFixesNotification).toBe false
 
     it "changes correct method", ->
       atom.config.set('rubocop-auto-correct.correctFile', false)

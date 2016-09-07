@@ -32,7 +32,6 @@
       "vim-mode-plus"
       "atom-ctags"
       "spell-check"
-      "language-matlab"
       "linter"
       "react"
       "react-snippets"
@@ -108,6 +107,15 @@
 ".css.less.source":
   editor:
     preferredLineLength: 130
+".elixir.html.text":
+  editor:
+    preferredLineLength: 128
+".elixir.source":
+  editor:
+    preferredLineLength: 128
+".elixir.text":
+  editor:
+    preferredLineLength: 128
 ".js.jsx.source":
   editor:
     preferredLineLength: 130

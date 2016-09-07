@@ -24,9 +24,17 @@ module.exports =
     @registerCommands()
     @registerVimStateCommands()
 
+
     if atom.inDevMode()
       developer = (new (require './developer'))
       @subscribe(developer.init(service))
+
+    @subscribe @observeVimMode ->
+      message = """
+      ## Message by vim-mode-plus: vim-mode detected!
+      To use vim-mode-plus, you must **disable vim-mode** manually.
+      """.replace(/_/g, ' ')
+      atom.notifications.addWarning(message, dismissable: true)
 
     @subscribe atom.workspace.observeTextEditors (editor) =>
       return if editor.isMini()
@@ -64,6 +72,11 @@ module.exports =
         @refreshHighlightSearchForVisibleEditors()
       else
         @clearHighlightSearchForEditors()
+
+  observeVimMode: (fn) ->
+    fn() if atom.packages.isPackageActive('vim-mode')
+    atom.packages.onDidActivatePackage (pack) ->
+      fn() if pack.name is 'vim-mode'
 
   onDidSetLastSearchPattern: (fn) -> @emitter.on('did-set-last-search-pattern', fn)
   emitDidSetLastSearchPattern: (fn) -> @emitter.emit('did-set-last-search-pattern')
@@ -157,12 +170,18 @@ module.exports =
       do (char) ->
         commands["set-input-char-#{char}"] = -> @setInputChar(char)
 
-    scope = 'atom-text-editor:not([mini])'
-    for name, fn of commands
-      do (fn) =>
-        @subscribe atom.commands.add scope, "vim-mode-plus:#{name}", (event) =>
-          if editor = atom.workspace.getActiveTextEditor()
-            fn.call(@getEditorState(editor))
+    getEditorState = @getEditorState.bind(this)
+
+    bindToVimState = (oldCommands) ->
+      newCommands = {}
+      for name, fn of oldCommands
+        do (fn) ->
+          newCommands["vim-mode-plus:#{name}"] = (event) ->
+            event.stopPropagation()
+            fn.call(getEditorState(@getModel()), event)
+      newCommands
+
+    @subscribe atom.commands.add('atom-text-editor:not([mini])', bindToVimState(commands))
 
   consumeStatusBar: (statusBar) ->
     @statusBarManager.initialize(statusBar)

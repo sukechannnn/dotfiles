@@ -9,16 +9,12 @@ _ = require 'underscore-plus'
   highlightRanges, getNewTextRangeFromCheckpoint
   isEndsWithNewLineForBufferRow
   isAllWhiteSpace
+  isSingleLine
 } = require './utils'
 swrap = require './selection-wrapper'
 settings = require './settings'
 Base = require './base'
-
-# -------------------------
-class OperatorError extends Base
-  @extend(false)
-  constructor: (@message) ->
-    @name = 'Operator Error'
+{OperatorError} = require './errors'
 
 # -------------------------
 class Operator extends Base
@@ -551,6 +547,7 @@ class Surround extends TransformString
     ['{', '}']
     ['<', '>']
   ]
+  spaceSurroundedRegExp: /^\s([\s|\S]+)\s$/
   input: null
   charsMax: 1
   hover: icon: ':surround:', emoji: ':two_women_holding_hands:'
@@ -571,28 +568,25 @@ class Surround extends TransformString
   onConfirm: (@input) ->
     @processOperation()
 
-  getPair: (input) ->
-    pair = _.detect(@pairs, (pair) -> input in pair)
-    pair ?= [input, input]
+  getPair: (char) ->
+    pair = _.detect(@pairs, (pair) -> char in pair)
+    pair ?= [char, char]
 
-  surround: (text, pair) ->
-    [open, close] = pair
-    if LineEndingRegExp.test(text)
+  surround: (text, char, options={}) ->
+    keepLayout = options.keepLayout ? false
+    [open, close] = @getPair(char)
+    if (not keepLayout) and LineEndingRegExp.test(text)
       @autoIndent = true # [FIXME]
       open += "\n"
       close += "\n"
 
-    SpaceSurroundedRegExp = /^\s([\s|\S]+)\s$/
-    isSurroundedBySpace = (text) ->
-      SpaceSurroundedRegExp.test(text)
-
-    if @input in settings.get('charactersToAddSpaceOnSurround') and not isSurroundedBySpace(text)
+    if char in settings.get('charactersToAddSpaceOnSurround') and isSingleLine(text)
       open + ' ' + text + ' ' + close
     else
       open + text + close
 
   getNewText: (text) ->
-    @surround text, @getPair(@input)
+    @surround(text, @input)
 
 class SurroundWord extends Surround
   @extend()
@@ -630,8 +624,6 @@ class DeleteSurround extends Surround
     @processOperation()
 
   getNewText: (text) ->
-    isSingleLine = (text) ->
-      text.split(/\n|\r\n/).length is 1
     text = text[1...-1]
     if isSingleLine(text)
       text.trim()
@@ -661,8 +653,8 @@ class ChangeSurround extends DeleteSurround
     super(from)
 
   getNewText: (text) ->
-    [open, close] = @getPair(@char)
-    open + text[1...-1] + close
+    innerText = super # Delete surround
+    @surround(innerText, @char, keepLayout: true)
 
 class ChangeSurroundAnyPair extends ChangeSurround
   @extend()
@@ -705,6 +697,12 @@ class Yank extends Operator
 class YankLine extends Yank
   @extend()
   target: 'MoveToRelativeLine'
+
+  mutateSelection: (selection) ->
+    if @isMode('visual')
+      swrap(selection).expandOverLine()
+      swrap(selection).preserveCharacterwise()
+    super
 
 class YankToLastCharacterOfLine extends Yank
   @extend()
@@ -1113,7 +1111,8 @@ class ActivateInsertMode extends Operator
           selection.insertText(text, autoIndent: true)
 
       # grouping changes for undo checkpoint need to come last
-      @editor.groupChangesSinceCheckpoint(@getCheckpoint('undo'))
+      if settings.get('groupChangesWhenLeavingInsertMode')
+        @editor.groupChangesSinceCheckpoint(@getCheckpoint('undo'))
 
   initialize: ->
     @checkpoint = {}

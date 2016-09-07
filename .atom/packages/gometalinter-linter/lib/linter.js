@@ -4,6 +4,13 @@ import {CompositeDisposable} from 'atom'
 import os from 'os'
 import path from 'path'
 
+function capitalizeFirstLetter (str) {
+  if (!str) {
+    return str
+  }
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 class GometalinterLinter {
   constructor (goconfigFunc, gogetFunc) {
     this.goget = gogetFunc
@@ -156,11 +163,11 @@ class GometalinterLinter {
         return false
       }
 
-      let args = ['--install', '--update']
+      let args = ['--install']
       let notification = atom.notifications.addInfo('gometalinter', {
         dismissable: false,
         icon: 'cloud-download',
-        description: 'Running `gometalinter --install --update` to install and update tools.'
+        description: 'Running `gometalinter --install` to install tools.'
       })
       let options = this.getExecutorOptions(editor)
       return config.executor.exec(cmd, args, options).then((r) => {
@@ -182,7 +189,7 @@ class GometalinterLinter {
           dismissable: true,
           icon: 'cloud-download',
           detail: detail.trim(),
-          description: 'The tools were installed and updated.'
+          description: 'The tools were installed.'
         })
         return r
       })
@@ -236,7 +243,7 @@ class GometalinterLinter {
       } else {
         range = [[message.line - 1, 0], [message.line - 1, 1000]]
       }
-      results.push({name: message.linter, type: message.severity, row: message.line, column: message.col, text: message.message + ' (' + message.linter + ')', filePath: path.join(cwd, message.path), range: range})
+      results.push({name: message.linter, type: capitalizeFirstLetter(message.severity), row: message.line, column: message.col, text: message.message + ' (' + message.linter + ')', filePath: path.join(cwd, message.path), range: range})
     }
 
     return results

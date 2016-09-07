@@ -408,17 +408,26 @@ describe "Operator TransformString", ->
 
       describe 'charactersToAddSpaceOnSurround setting', ->
         beforeEach ->
+          settings.set('charactersToAddSpaceOnSurround', ['(', '{', '['])
           set
             text: "apple\norange\nlemmon"
             cursorBuffer: [0, 0]
 
-        it "add additional space inside pair char when surround", ->
-          settings.set('charactersToAddSpaceOnSurround', ['(', '{', '['])
-          ensure ['y s i w', input: '('], text: "( apple )\norange\nlemmon"
-          keystroke 'j'
-          ensure ['y s i w', input: '{'], text: "( apple )\n{ orange }\nlemmon"
-          keystroke 'j'
-          ensure ['y s i w', input: '['], text: "( apple )\n{ orange }\n[ lemmon ]"
+        describe "char is in charactersToAddSpaceOnSurround", ->
+          it "add additional space inside pair char when surround", ->
+            ensure ['y s i w', input: '('], text: "( apple )\norange\nlemmon"
+            keystroke 'j'
+            ensure ['y s i w', input: '{'], text: "( apple )\n{ orange }\nlemmon"
+            keystroke 'j'
+            ensure ['y s i w', input: '['], text: "( apple )\n{ orange }\n[ lemmon ]"
+
+        describe "char is not in charactersToAddSpaceOnSurround", ->
+          it "add additional space inside pair char when surround", ->
+            ensure ['y s i w', input: ')'], text: "(apple)\norange\nlemmon"
+            keystroke 'j'
+            ensure ['y s i w', input: '}'], text: "(apple)\n{orange}\nlemmon"
+            keystroke 'j'
+            ensure ['y s i w', input: ']'], text: "(apple)\n{orange}\n[lemmon]"
 
     describe 'map-surround', ->
       beforeEach ->
@@ -494,7 +503,7 @@ describe "Operator TransformString", ->
               ""
             ].join("\n")
 
-    describe 'change srurround', ->
+    describe 'change surround', ->
       beforeEach ->
         atom.keymaps.add "surround-test",
           'atom-text-editor.vim-mode-plus.normal-mode':
@@ -555,6 +564,33 @@ describe "Operator TransformString", ->
               hello: world
             )
             """
+
+      describe 'charactersToAddSpaceOnSurround setting', ->
+        ensureChangeSurround = (inputKeystrokes, options) ->
+          set(text: options.initialText, cursorBuffer: [0, 0])
+          delete options.initialText
+          keystrokes = ['c s'].concat({input: inputKeystrokes})
+          ensure(keystrokes, options)
+
+        beforeEach ->
+          settings.set('charactersToAddSpaceOnSurround', ['(', '{', '['])
+
+        describe 'when input char is in charactersToAddSpaceOnSurround', ->
+          describe 'single line text', ->
+            it "add single space around pair regardless of exsiting inner text", ->
+              ensureChangeSurround '({', initialText: "(apple)", text: "{ apple }"
+              ensureChangeSurround '({', initialText: "( apple )", text: "{ apple }"
+              ensureChangeSurround '({', initialText: "(  apple  )", text: "{ apple }"
+
+          describe 'multi line text', ->
+            it "don't sadd single space around pair", ->
+              ensureChangeSurround '({', initialText: "(\napple\n)", text: "{\napple\n}"
+
+        describe 'when first input char is not in charactersToAddSpaceOnSurround', ->
+          it "remove surrounding space of inner text", ->
+            ensureChangeSurround '(}', initialText: "(apple)", text: "{apple}"
+            ensureChangeSurround '(}', initialText: "( apple )", text: "{apple}"
+            ensureChangeSurround '(}', initialText: "(  apple  )", text: "{apple}"
 
     describe 'surround-word', ->
       beforeEach ->

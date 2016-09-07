@@ -9,6 +9,11 @@ It depends on the following packages:
 * [`go-config`](https://atom.io/packages/go-config)
 * [`go-get`](https://atom.io/packages/go-get)
 
+## Usage
+
+* Show coverage from the Command Palette with `Golang: gocover` or the shortcut <kbd>ctrl+alt+c</kbd>.
+* Clear coverage with `Golang: Cleargocover` or <kbd>ctrl+alt+shift+c</kbd>.
+
 ## Configuration
 
 * `runCoverageOnSave`: Run `go test -coverprofile` on the current package each

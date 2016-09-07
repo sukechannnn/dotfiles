@@ -18,6 +18,7 @@ class Tester {
     this.observeTextEditors()
     this.handleCommands()
     this.subscribeToSaveEvents()
+    this.markedEditors = new Map()
     this.running = false
     temp.track()
   }
@@ -25,6 +26,11 @@ class Tester {
   dispose () {
     this.running = true
     this.removeTempDir()
+    this.clearMarkersFromEditors()
+    if (this.markedEditors) {
+      this.markedEditors.clear()
+    }
+    this.markedEditors = null
     if (this.subscriptions) {
       this.subscriptions.dispose()
     }
@@ -130,8 +136,11 @@ class Tester {
       return
     }
     let file = editor.getPath()
-    let buffer = editor.getBuffer()
-    if (!file || !buffer) {
+    if (!editor.id) {
+      return
+    }
+
+    if (!file) {
       return
     }
     this.clearMarkers(editor)
@@ -146,32 +155,46 @@ class Tester {
     }
 
     try {
+      let coveredLayer = editor.addMarkerLayer()
+      let uncoveredLayer = editor.addMarkerLayer()
+      this.markedEditors.set(editor.id, coveredLayer.id + ',' + uncoveredLayer.id)
       for (let range of editorRanges) {
-        let marker = buffer.markRange(range.range, {class: 'gocover', gocovercount: range.count, invalidate: 'touch'})
-        let c = 'uncovered'
         if (range.count > 0) {
-          c = 'covered'
+          coveredLayer.markBufferRange(range.range, {invalidate: 'touch'})
+        } else {
+          uncoveredLayer.markBufferRange(range.range, {invalidate: 'touch'})
         }
-        editor.decorateMarker(marker, {type: 'highlight', class: c, onlyNonEmpty: true})
       }
+      editor.decorateMarkerLayer(coveredLayer, {type: 'highlight', class: 'covered', onlyNonEmpty: true})
+      editor.decorateMarkerLayer(uncoveredLayer, {type: 'highlight', class: 'uncovered', onlyNonEmpty: true})
     } catch (e) {
       console.log(e)
     }
   }
 
   clearMarkers (editor) {
-    if (!editor || !editor.getBuffer()) {
+    if (!editor || !editor.id || !editor.getBuffer() || !this.markedEditors) {
+      return
+    }
+
+    if (!this.markedEditors.has(editor.id)) {
       return
     }
 
     try {
-      let markers = editor.getBuffer().findMarkers({class: 'gocover'})
-      if (!markers || markers.length <= 0) {
+      let layersid = this.markedEditors.get(editor.id)
+      if (!layersid) {
         return
       }
-      for (let marker of markers) {
-        marker.destroy()
+
+      for (let layerid of layersid.split(',')) {
+        let layer = editor.getMarkerLayer(layerid)
+        if (layer) {
+          layer.destroy()
+        }
       }
+
+      this.markedEditors.delete(editor.id)
     } catch (e) {
       console.log(e)
     }

@@ -16,10 +16,6 @@ supportedModeClass = [
   'characterwise'
 ]
 
-class SpecError
-  constructor: (@message) ->
-    @name = 'SpecError'
-
 # Utils
 # -------------------------
 getView = (model) ->
@@ -67,8 +63,7 @@ buildTextInputEvent = (key) ->
   event
 
 getHiddenInputElementForEditor = (editor) ->
-  editorElement = atom.views.getView(editor)
-  editorElement.component.hiddenInputComponent.getDomNode()
+  editor.element.component.hiddenInputComponent.getDomNode()
 
 # FIX orignal characterForKeyboardEvent(it can't handle 'space')
 characterForKeyboardEvent = (event) ->
@@ -185,7 +180,7 @@ class VimEditor
   validateOptions: (options, validOptions, message) ->
     invalidOptions = _.without(_.keys(options), validOptions...)
     if invalidOptions.length
-      throw new SpecError("#{message}: #{inspect(invalidOptions)}")
+      throw new Error("#{message}: #{inspect(invalidOptions)}")
 
   setOptionsOrdered = [
     'text',

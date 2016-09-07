@@ -5,7 +5,7 @@ vim-mode improved.
 # Important
 
 - **vim-mode-plus is replacement of vim-mode, you must disable vim-mode first to use vim-mode-plus**.
-- You don't need following packages for vim-mode since it's built-in to vim-mode-plus.
+- You don't need following packages since it's built-in to vim-mode-plus.
   - [vim-surround](https://atom.io/packages/vim-surround)
   - [vim-mode-visual-block](https://atom.io/packages/vim-mode-visual-block)
 - Scope for CSS selector and keymap is different from vim-mode, **not compatible**.
@@ -18,6 +18,10 @@ As you can see in commit history, this project is originally started by forking 
 The great design to achieve Vim operation by composing operator with target(motion, text-object) on top of operationStack is still lives in vim-mode-plus now.  
 I don't think I can find this idea by myself from nothing.  
 Sincerely, I feel I couldn't do anything without original vim-mode.  
+
+# Issue report
+
+- Read [ISSUE_TEMPLATE](https://github.com/t9md/atom-vim-mode-plus/blob/master/ISSUE_TEMPLATE.md)
 
 # Whats this?
 
@@ -32,11 +36,13 @@ Fork of [vim-mode](https://github.com/atom/vim-mode). Started at 2015.8.1.
 - Stay same cursor position after operate(e.g `y`, `gU`) by `stayOnYank`, `stayOnOperate` setting.(disabled by default)
 - Lots of new motion like `move-up-to-edge`, `move-down-to-edge`.(No keymap by default)
 - Surround built-in. Powerful AnyPair family(`change-surround-any-pair` operator, `inner-any-pair` text-object) to detect pair automatically.
-- Set cursor position to start of change on undo or redo by enabling `setCursorToStartOfChangeOnUndoRedo`(disabled by default. Atom's default is end of change).
+- Set cursor position to start of change on undo or redo by enabling `setCursorToStartOfChangeOnUndoRedo`(enabled by default. Atom's default is end of change).
 - Allow super granular keymap only effective when specific operation is pending like `yank-pending`, `delete-pending`. [#215](https://github.com/t9md/atom-vim-mode-plus/issues/215)
 - And more...
 
 # FAQ
+
+Search [Q&A](https://github.com/t9md/atom-vim-mode-plus/issues?utf8=%E2%9C%93&q=label%3AQ%26A) label on issues.
 
 ### Why fork? why not directly contribute to official vim-mode?
 
@@ -75,6 +81,7 @@ If you want to directly edit `config.cson`, here it is.
 
 # Wiki
 
+- [TIPS](https://github.com/t9md/atom-vim-mode-plus/wiki/TIPS)
 - [Commands](https://github.com/t9md/atom-vim-mode-plus/wiki/Commands) summary of vmp's commands with keymap.
 - [Operations](https://github.com/t9md/atom-vim-mode-plus/wiki/Operations) includes most of commands with keymap information.
 - [GIFs](https://github.com/t9md/atom-vim-mode-plus/wiki/GIFs) demonstrates fancy features.
@@ -108,6 +115,8 @@ provides <kbd>gf</kbd> to open file under cursor.
 Not exist in pure Vim, provides clip-board history you can pop yanked text until you get result you want.
 - [choose-pane](https://atom.io/packages/choose-pane)
 Not exist in pure Vim, provide keyboard navigation of between panes/panels by choosing it by label.
+- [paner](https://atom.io/packages/paner)
+provides <kbd>ctrl-w H, J, K, L, x</kbd> to move pane.
 
 # References
 

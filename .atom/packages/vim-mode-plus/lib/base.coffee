@@ -10,6 +10,7 @@ Delegato = require 'delegato'
 settings = require './settings'
 selectList = null
 getEditorState = null # set by Base.init()
+{OperationAbortedError} = require './errors'
 
 vimStateMethods = [
   "onDidChangeInput"
@@ -87,7 +88,7 @@ class Base
     @hasOperator() and not @getOperator().instanceof('Select')
 
   abort: ->
-    throw new OperationAbortedError()
+    throw new OperationAbortedError('aborted')
 
   # Count
   # -------------------------
@@ -256,17 +257,13 @@ class Base
       null
 
   @registerCommand: ->
-    atom.commands.add(@getCommandScope(), @getCommandName(), (event) => @run(event))
-
-  @run: (event) ->
-    if vimState = getEditorState(atom.workspace.getActiveTextEditor())
-      vimState.domEvent = event
-      # Reason: https://github.com/t9md/atom-vim-mode-plus/issues/85
-      vimState.operationStack.run(this)
-
-class OperationAbortedError extends Base
-  @extend(false)
-  constructor: (@message) ->
-    @name = 'OperationAborted Error'
+    klass = this
+    atom.commands.add @getCommandScope(), @getCommandName(), (event) ->
+      vimState = getEditorState(@getModel()) ? getEditorState(atom.workspace.getActiveTextEditor())
+      if vimState?
+        vimState.domEvent = event
+        # Reason: https://github.com/t9md/atom-vim-mode-plus/issues/85
+        vimState.operationStack.run(klass)
+      event.stopPropagation()
 
 module.exports = Base
