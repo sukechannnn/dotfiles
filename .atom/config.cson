@@ -14,7 +14,6 @@
     enabled: true
   core:
     audioBeep: false
-    destroyEmptyPanes: false
     disabledPackages: [
       "vim-mode"
       "sync-settings"

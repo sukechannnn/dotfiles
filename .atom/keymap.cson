@@ -39,3 +39,6 @@
 
 'atom-text-editor[data-grammar~="ruby"]':
   'cmd-r': 'rubocop-auto-correct:current-file'
+
+'.platform-darwin':
+  'cmd-ctrl-o': 'tree-view:toggle-focus'
