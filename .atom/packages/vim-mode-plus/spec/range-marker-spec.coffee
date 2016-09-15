@@ -14,7 +14,7 @@ describe "Range Marker", ->
   afterEach ->
     vimState.resetNormalMode()
 
-  describe "MarkRange operator", ->
+  describe "CreateRangeMarker operator", ->
     textForMarker = (marker) ->
       editor.getTextInBufferRange(marker.getBufferRange())
 
@@ -33,7 +33,7 @@ describe "Range Marker", ->
     beforeEach ->
       atom.keymaps.add "test",
         'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-          'g m': 'vim-mode-plus:mark-range'
+          'g m': 'vim-mode-plus:create-range-marker'
       set
         text: """
         ooo xxx ooo
@@ -49,36 +49,38 @@ describe "Range Marker", ->
       expect(vimState.hasRangeMarkers()).toBe(false)
 
     describe "basic behavior", ->
-      it "MarkRange add range marker", ->
-        keystroke('g m i w')
-        ensureRangeMarker length: 1, text: ['ooo']
-        keystroke('j .')
-        ensureRangeMarker length: 2, text: ['ooo', 'xxx']
-      it "marked range can use as target of operator by `i r`", ->
-        keystroke('g m i w j . 2 j g m i p') # Mark 2 inner-word and 1 inner-paragraph
-        ensureRangeMarker length: 3, text: ['ooo', 'xxx', "ooo xxx ooo\nxxx ooo xxx\n"]
-        ensure 'g U i r',
-          text: """
-          OOO xxx ooo
-          XXX ooo xxx
+      describe "create-range-marker", ->
+        it "create-range-marker create range marker", ->
+          keystroke('g m i w')
+          ensureRangeMarker length: 1, text: ['ooo']
+          keystroke('j .')
+          ensureRangeMarker length: 2, text: ['ooo', 'xxx']
+      describe "[No behavior diff currently] inner-range-marker and a-range-marker", ->
+        it "apply operator to across all range-markers", ->
+          keystroke('g m i w j . 2 j g m i p') # Mark 2 inner-word and 1 inner-paragraph
+          ensureRangeMarker length: 3, text: ['ooo', 'xxx', "ooo xxx ooo\nxxx ooo xxx\n"]
+          ensure 'g U a r',
+            text: """
+            OOO xxx ooo
+            XXX ooo xxx
 
-          OOO XXX OOO
-          XXX OOO XXX
+            OOO XXX OOO
+            XXX OOO XXX
 
-          ooo xxx ooo
-          xxx ooo xxx\n
-          """
+            ooo xxx ooo
+            xxx ooo xxx\n
+            """
 
-    describe "select-all-in-range-marker", ->
+    describe "select-occurrence-in-a-range-marker", ->
       it "select all instance of cursor word only within marked range", ->
         keystroke('g m i p } } j .') # Mark 2 inner-word and 1 inner-paragraph
         paragraphText = "ooo xxx ooo\nxxx ooo xxx\n"
         ensureRangeMarker length: 2, text: [paragraphText, paragraphText]
-        dispatch(editorElement, 'vim-mode-plus:select-all-in-range-marker')
+        dispatch(editorElement, 'vim-mode-plus:select-occurrence-in-a-range-marker')
         expect(editor.getSelections()).toHaveLength(6)
         keystroke 'c'
         editor.insertText '!!!'
-        ensure 'g U i r',
+        ensure
           text: """
           !!! xxx !!!
           xxx !!! xxx

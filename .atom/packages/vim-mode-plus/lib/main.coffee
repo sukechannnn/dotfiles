@@ -146,10 +146,11 @@ module.exports =
       'activate-linewise-visual-mode': -> @activate('visual', 'linewise')
       'activate-characterwise-visual-mode': -> @activate('visual', 'characterwise')
       'activate-blockwise-visual-mode': -> @activate('visual', 'blockwise')
-      'reset-normal-mode': -> @resetNormalMode()
+      'reset-normal-mode': -> @resetNormalMode(userInvocation: true)
       'set-register-name': -> @register.setName() # "
-      'force-operator-characterwise': -> @setForceOperatorWise('characterwise')
-      'force-operator-linewise': -> @setForceOperatorWise('linewise')
+      'operator-modifier-characterwise': -> @setOperatorModifier(wise: 'characterwise')
+      'operator-modifier-linewise': -> @setOperatorModifier(wise: 'linewise')
+      'operator-modifier-occurrence': -> @setOperatorModifier(occurence: true)
       'set-count-0': -> @setCount(0)
       'set-count-1': -> @setCount(1)
       'set-count-2': -> @setCount(2)
@@ -178,7 +179,8 @@ module.exports =
         do (fn) ->
           newCommands["vim-mode-plus:#{name}"] = (event) ->
             event.stopPropagation()
-            fn.call(getEditorState(@getModel()), event)
+            if vimState = getEditorState(@getModel())
+              fn.call(vimState, event)
       newCommands
 
     @subscribe atom.commands.add('atom-text-editor:not([mini])', bindToVimState(commands))

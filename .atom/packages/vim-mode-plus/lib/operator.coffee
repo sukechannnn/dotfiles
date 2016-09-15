@@ -10,6 +10,11 @@ _ = require 'underscore-plus'
   isEndsWithNewLineForBufferRow
   isAllWhiteSpace
   isSingleLine
+  getCurrentWordBufferRange
+  getBufferRangeForPatternFromPoint
+  cursorIsOnWhiteSpace
+  scanInRanges
+  getCharacterAtCursor
 } = require './utils'
 swrap = require './selection-wrapper'
 settings = require './settings'
@@ -25,6 +30,9 @@ class Operator extends Base
   requireTarget: true
   finalMode: "normal"
   finalSubmode: null
+  withOccurrence: false
+  forceWise: null
+  patternForOccurence: null
 
   setMarkForChange: (range) ->
     @vimState.mark.setRange('[', ']', range)
@@ -60,36 +68,77 @@ class Operator extends Base
     return if @instanceof("Repeat")
 
     # [important] intialized is not called when Repeated
-    @initialize?()
+    @initialize()
     @setTarget(@new(@target)) if _.isString(@target)
 
   restorePoint: (selection) ->
-    if @wasNeedStay
-      swrap(selection).setBufferPositionTo('head', fromProperty: true)
+    which = if @wasNeedStay then 'head' else 'start'
+    restore = ->
+      swrap(selection).setBufferPositionTo(which, fromProperty: true)
+
+    if swrap(selection).getProperties().head?
+      if @isWithOccurrence()
+        # Deffer restoring cursor point.
+        # restorePoint is processed one by one, so immediately updating cursorPosition result in intersecting range with other selection
+        # when intersecting selection is destroyed, cursor is moved automatically.
+        @onDidFinishOperation -> restore()
+      else
+        restore()
     else
-      swrap(selection).setBufferPositionTo('start', fromProperty: true)
+      selection.destroy()
 
   observeSelectAction: ->
     # Select operator is used only in visual-mode.
     # visual-mode selection modification should be handled by Motion::select(), TextObject::select()
     unless @instanceof('Select')
       if @wasNeedStay = @needStay() # [FIXME] dirty cache
-        unless @isMode('visual')
-          @onWillSelectTarget => @updateSelectionProperties()
+        @onWillSelectTarget => @updateSelectionProperties() unless @isMode('visual')
       else
         @onDidSelectTarget => @updateSelectionProperties()
 
-    if @needFlash()
-      @onDidSelectTarget =>
-        @flash(@editor.getSelectedBufferRanges())
+    if @isWithOccurrence()
+      scanRanges = null
+      @onWillSelectTarget =>
+        if @isMode('visual')
+          scanRanges = @editor.getSelectedBufferRanges()
+          @vimState.modeManager.deactivate() # clear selection
 
-    if @needTrackChange()
-      marker = null
-      @onDidSelectTarget =>
-        marker = @editor.markBufferRange(@editor.getSelectedBufferRange())
+        unless @patternForOccurence
+          {pattern, bufferRange} = @getPatternAndBufferRangeForOccurrence()
+          @patternForOccurence = pattern
+          if scanRanges?.length and bufferRange? and not @isMode('visual', 'blockwise')
+            lastRangeIndex = scanRanges.length - 1
+            scanRanges[lastRangeIndex] = scanRanges[lastRangeIndex].union(bufferRange)
 
-      @onDidFinishOperation =>
-        @setMarkForChange(range) if (range = marker.getBufferRange())
+      @onDidSelectTarget =>
+        scanRanges ?= @editor.getSelectedBufferRanges()
+        ranges = scanInRanges(@editor, @patternForOccurence, scanRanges)
+        if ranges.length
+          @editor.setSelectedBufferRanges(ranges)
+        else
+          # [FIXME]
+          @restorePoint(selection) for selection in @editor.getSelections()
+          @editor.clearSelections() unless @isMode('visual')
+          @cancelOperation()
+          @abort()
+
+    markerForTrackChange = null
+    @onDidSelectTarget =>
+      @flash(@editor.getSelectedBufferRanges()) if @needFlash()
+      if @needTrackChange()
+        markerForTrackChange = @editor.markBufferRange(@editor.getSelectedBufferRange())
+
+    @onDidFinishOperation =>
+      if markerForTrackChange?
+        @setMarkForChange(range) if (range = markerForTrackChange.getBufferRange())
+
+  # called by operationStack
+  setOperatorModifier: ({occurence, wise}) ->
+    if occurence? and @withOccurrence isnt occurence
+      @withOccurrence = occurence
+
+    if wise? and @forceWise isnt wise
+      @forceWise = wise
 
   # @target - TextObject or Motion to operate on.
   setTarget: (@target) ->
@@ -97,10 +146,11 @@ class Operator extends Base
       @vimState.emitter.emit('did-fail-to-set-target')
       throw new OperatorError("#{@getName()} cannot set #{@target.getName()} as target")
     @target.setOperator(this)
+    @overrideTargetWise(@forceWise) if @forceWise?
     @emitDidSetTarget(this)
     this
 
-  forceWise: (wise) ->
+  overrideTargetWise: (wise) ->
     switch wise
       when 'characterwise'
         if @target.linewise
@@ -111,13 +161,19 @@ class Operator extends Base
       when 'linewise'
         @target.linewise = true
 
+  isWithOccurrence: ->
+    @withOccurrence
+
+  hasForceWise: ->
+    @forceWise?
+
   # Return true unless all selection is empty.
   # -------------------------
   selectTarget: ->
     @observeSelectAction()
+
     @emitWillSelectTarget()
-    if @isMode('operator-pending') and wise = @vimState.getForceOperatorWise()
-      @forceWise(wise)
+
     @target.select()
     @emitDidSelectTarget()
     haveSomeSelection(@editor)
@@ -150,6 +206,37 @@ class Operator extends Base
 
     @mutateSelections (selection) => @mutateSelection(selection)
     @activateMode(@finalMode, @finalSubmode)
+
+  # Return {pattern, bufferRange},
+  #   - Mandatory: pattern
+  #   - Optional: bufferRange
+  getPatternAndBufferRangeForOccurrence: ->
+    if @hasRegisterName()
+      return {pattern: ///#{_.escapeRegExp(@getRegisterValueAsText())}///g }
+
+    cursor = @editor.getLastCursor()
+    char = getCharacterAtCursor(cursor)
+    scope = cursor.getScopeDescriptor().getScopesArray()
+    nonWordCharacters = atom.config.get('editor.nonWordCharacters', {scope})
+
+    if char in nonWordCharacters
+      return {pattern:  ///#{_.escapeRegExp(char)}///g }
+
+    if cursorIsOnWhiteSpace(cursor)
+      # When cursor is at just before whit space(| position in text below)
+      #   aaa| bbb
+      # Atom's native cursor.getCurrentWordBufferRange() return range for aaa text.
+      # This is not very intuitive in Vim's cursor representation.
+      # So here we return range of single or multiple white spaces.
+      point = cursor.getBufferPosition()
+      bufferRange = getBufferRangeForPatternFromPoint(@editor, point, /[ \t]*/)
+      if bufferRange?
+        cursorWord = @editor.getTextInBufferRange(bufferRange)
+        return {pattern: ///#{_.escapeRegExp(cursorWord)}///g, bufferRange}
+
+    bufferRange = getCurrentWordBufferRange(cursor)
+    cursorWord = @editor.getTextInBufferRange(bufferRange)
+    {pattern: ///\b#{_.escapeRegExp(cursorWord)}\b///g, bufferRange}
 
 # -------------------------
 class Select extends Operator
@@ -215,6 +302,7 @@ class DeleteToLastCharacterOfLine extends Delete
   @extend()
   target: 'MoveToLastCharacterOfLine'
   initialize: ->
+    super
     if @isVisualBlockwise = @isMode('visual', 'blockwise')
       @requireTarget = false
 
@@ -240,12 +328,19 @@ class DeleteLine extends Delete
     super
 
 # -------------------------
+transformerRegistry = []
 class TransformString extends Operator
   @extend(false)
   trackChange: true
   stayOnLinewise: true
   setPoint: true
   autoIndent: false
+
+  @registerToSelectList: ->
+    transformerRegistry.push(this)
+
+  getTransformers: ->
+    transformerRegistry
 
   mutateSelection: (selection) ->
     text = @getNewText(selection.getText(), selection)
@@ -256,6 +351,8 @@ class TransformString extends Operator
 # -------------------------
 class ToggleCase extends TransformString
   @extend()
+  @registerToSelectList()
+  @description: "`Hello World` -> `hELLO wORLD`"
   displayName: 'Toggle ~'
   hover: icon: ':toggle-case:', emoji: ':clap:'
   toggleCase: (char) ->
@@ -276,34 +373,42 @@ class ToggleCaseAndMoveRight extends ToggleCase
 
 class UpperCase extends TransformString
   @extend()
-  displayName: 'Upper'
+  @registerToSelectList()
+  @description: "`Hello World` -> `HELLO WORLD`"
   hover: icon: ':upper-case:', emoji: ':point_up:'
+  displayName: 'Upper'
   getNewText: (text) ->
     text.toUpperCase()
 
 class LowerCase extends TransformString
   @extend()
-  displayName: 'Lower'
+  @registerToSelectList()
+  @description: "`Hello World` -> `hello world`"
   hover: icon: ':lower-case:', emoji: ':point_down:'
+  displayName: 'Lower'
   getNewText: (text) ->
     text.toLowerCase()
 
 # DUP meaning with SplitString need consolidate.
 class SplitByCharacter extends TransformString
   @extend()
+  @registerToSelectList()
   getNewText: (text) ->
     text.split('').join(' ')
 
 class CamelCase extends TransformString
   @extend()
+  @registerToSelectList()
   displayName: 'Camelize'
+  @description: "`hello-world` -> `helloWorld`"
   hover: icon: ':camel-case:', emoji: ':camel:'
   getNewText: (text) ->
     _.camelize(text)
 
 class SnakeCase extends TransformString
   @extend()
-  @description: "CamelCase -> camel_case"
+  @registerToSelectList()
+  @description: "`HelloWorld` -> `hello_world`"
   displayName: 'Underscore _'
   hover: icon: ':snake-case:', emoji: ':snake:'
   getNewText: (text) ->
@@ -311,7 +416,8 @@ class SnakeCase extends TransformString
 
 class PascalCase extends TransformString
   @extend()
-  @description: "text_before -> TextAfter"
+  @registerToSelectList()
+  @description: "`hello_world` -> `HelloWorld`"
   displayName: 'Pascalize'
   hover: icon: ':pascal-case:', emoji: ':triangular_ruler:'
   getNewText: (text) ->
@@ -319,21 +425,25 @@ class PascalCase extends TransformString
 
 class DashCase extends TransformString
   @extend()
+  @registerToSelectList()
   displayName: 'Dasherize -'
+  @description: "HelloWorld -> hello-world"
   hover: icon: ':dash-case:', emoji: ':dash:'
   getNewText: (text) ->
     _.dasherize(text)
 
 class TitleCase extends TransformString
   @extend()
-  @description: "CamelCase -> Camel Case"
+  @registerToSelectList()
+  @description: "`HelloWorld` -> `Hello World`"
   displayName: 'Titlize'
   getNewText: (text) ->
     _.humanizeEventName(_.dasherize(text))
 
 class EncodeUriComponent extends TransformString
   @extend()
-  @description: "URI encode string"
+  @registerToSelectList()
+  @description: "`Hello World` -> `Hello%20World`"
   displayName: 'Encode URI Component %'
   hover: icon: 'encodeURI', emoji: 'encodeURI'
   getNewText: (text) ->
@@ -341,15 +451,25 @@ class EncodeUriComponent extends TransformString
 
 class DecodeUriComponent extends TransformString
   @extend()
-  @description: "Decode URL encoded string"
+  @registerToSelectList()
+  @description: "`Hello%20World` -> `Hello World`"
   displayName: 'Decode URI Component %%'
   hover: icon: 'decodeURI', emoji: 'decodeURI'
   getNewText: (text) ->
     decodeURIComponent(text)
 
+class TrimString extends TransformString
+  @extend()
+  @registerToSelectList()
+  @description: "` hello ` -> `hello`"
+  displayName: 'Trim string'
+  getNewText: (text) ->
+    text.trim()
+
 class CompactSpaces extends TransformString
   @extend()
-  @description: "Compact multiple spaces to single space"
+  @registerToSelectList()
+  @description: "`  a    b    c` -> `a b c`"
   displayName: 'Compact space'
   mutateSelection: (selection) ->
     text = @getNewText(selection.getText(), selection)
@@ -433,47 +553,26 @@ class TransformStringByExternalCommand extends TransformString
     @stdoutBySelection.get(selection)
 
 # -------------------------
-class TransformStringBySelectList extends Operator
+class TransformStringBySelectList extends TransformString
   @extend()
-  @description: "Transform string by specified oprator selected from select-list"
+  @description: "Interactively choose string transformation operator from select-list"
   requireInput: true
-  # Member of transformers can be either of
-  # - Operation class name: e.g 'CamelCase'
-  # - Operation class itself: e.g. CamelCase
-  transformers: [
-    'CamelCase'
-    'DashCase'
-    'SnakeCase'
-    'TitleCase'
-    'EncodeUriComponent'
-    'DecodeUriComponent'
-    'Reverse'
-    'Surround'
-    'MapSurround'
-    'IncrementNumber'
-    'DecrementNumber'
-    'JoinByInput'
-    'JoinWithKeepingSpace'
-    'SplitString'
-    'LowerCase'
-    'UpperCase'
-    'ToggleCase'
-  ]
 
   getItems: ->
-    @transformers.map (klass) ->
+    @getTransformers().map (klass) ->
       klass = Base.getClass(klass) if _.isString(klass)
       displayName = klass::displayName if klass::hasOwnProperty('displayName')
       displayName ?= _.humanizeEventName(_.dasherize(klass.name))
       {name: klass, displayName}
 
   initialize: ->
-    @onDidSetTarget =>
-      @focusSelectList({items: @getItems()})
+    super
 
     @vimState.onDidConfirmSelectList (transformer) =>
       @vimState.reset()
-      @vimState.operationStack.run(transformer.name, {target: @target.constructor.name})
+      target = @target?.constructor.name
+      @vimState.operationStack.run(transformer.name, {target})
+    @focusSelectList({items: @getItems()})
 
   execute: ->
     # NEVER be executed since operationStack is replaced with selected transformer
@@ -555,6 +654,8 @@ class Surround extends TransformString
   autoIndent: false
 
   initialize: ->
+    super
+
     return unless @requireInput
     @onDidConfirmInput (input) => @onConfirm(input)
     @onDidChangeInput (input) => @addHover(input)
@@ -729,6 +830,7 @@ class Join extends TransformString
 
 class JoinWithKeepingSpace extends TransformString
   @extend()
+  @registerToSelectList()
   input: ''
   requireTarget: false
   trim: false
@@ -751,6 +853,7 @@ class JoinWithKeepingSpace extends TransformString
 
 class JoinByInput extends JoinWithKeepingSpace
   @extend()
+  @registerToSelectList()
   @description: "Transform multi-line to single-line by with specified separator character"
   hover: icon: ':join:', emoji: ':couple:'
   requireInput: true
@@ -766,6 +869,7 @@ class JoinByInput extends JoinWithKeepingSpace
 class JoinByInputWithKeepingSpace extends JoinByInput
   @description: "Join lines without padding space between each line"
   @extend()
+  @registerToSelectList()
   trim: false
   join: (rows) ->
     rows.join(@input)
@@ -774,12 +878,14 @@ class JoinByInputWithKeepingSpace extends JoinByInput
 # String suffix in name is to avoid confusion with 'split' window.
 class SplitString extends TransformString
   @extend()
+  @registerToSelectList()
   @description: "Split single-line into multi-line by splitting specified separator chars"
   hover: icon: ':split-string:', emoji: ':hocho:'
   requireInput: true
   input: null
 
   initialize: ->
+    super
     unless @isMode('visual')
       @setTarget @new("MoveToRelativeLine", {min: 1})
     @focusInput(charsMax: 10)
@@ -789,15 +895,29 @@ class SplitString extends TransformString
     regex = ///#{_.escapeRegExp(@input)}///g
     text.split(regex).join("\n")
 
-class Reverse extends TransformString
-  @extend()
-  @description: "Reverse lines(e.g reverse selected three line)"
+class ChangeOrder extends TransformString
+  @extend(false)
   mutateSelection: (selection) ->
     swrap(selection).expandOverLine()
     textForRows = swrap(selection).lineTextForBufferRows()
-    newText = textForRows.reverse().join("\n") + "\n"
+    rows = @getNewRows(textForRows)
+    newText = rows.join("\n") + "\n"
     selection.insertText(newText)
     @restorePoint(selection)
+
+class Reverse extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  @description: "Reverse lines(e.g reverse selected three line)"
+  getNewRows: (rows) ->
+    rows.reverse()
+
+class Sort extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  @description: "Sort lines alphabetically"
+  getNewRows: (rows) ->
+    rows.sort()
 
 # -------------------------
 class Repeat extends Operator
@@ -998,6 +1118,7 @@ class Replace extends Operator
   requireInput: true
 
   initialize: ->
+    super
     @setTarget(@new('MoveRight')) if @isMode('normal')
     @focusInput()
 
@@ -1016,7 +1137,6 @@ class Replace extends Operator
         insertText(text) if text.length >= @getCount()
       else
         insertText(text)
-
       @restorePoint(selection) unless (input is "\n")
 
     # FIXME this is very imperative, handling in very lower level.
@@ -1028,36 +1148,25 @@ class Replace extends Operator
 
     @activateMode('normal')
 
-class AddSelection extends Operator
+class SelectOccurrence extends Operator
   @extend()
+  @description: "Add selection onto each matching word within target range"
+  withOccurrence: true
 
   execute: ->
-    lastSelection = @editor.getLastSelection()
-    lastSelection.selectWord() unless @isMode('visual')
-    word = @editor.getSelectedText()
-    return if word is ''
-    return unless @selectTarget()
-
-    ranges = []
-    pattern = if @isMode('visual')
-      ///#{_.escapeRegExp(word)}///g
-    else
-      ///\b#{_.escapeRegExp(word)}\b///g
-
-    for selection in @editor.getSelections()
-      scanRange = selection.getBufferRange()
-      @editor.scanInBufferRange pattern, scanRange, ({range}) ->
-        ranges.push(range)
-
-    if ranges.length
-      @editor.setSelectedBufferRanges(ranges)
+    if @selectTarget()
       unless @isMode('visual', 'characterwise')
+        swrap.resetProperties(@editor)
         @activateMode('visual', 'characterwise')
 
-class SelectAllInRangeMarker extends AddSelection
+class SelectOccurrenceInARangeMarker extends SelectOccurrence
   @extend()
-  requireTarget: false
-  target: "MarkedRange"
+  target: "ARangeMarker"
+  flashTarget: false
+
+class SelectOccurrenceInAll extends SelectOccurrence
+  @extend()
+  target: "All"
   flashTarget: false
 
 class SetCursorsToStartOfTarget extends Operator
@@ -1066,20 +1175,56 @@ class SetCursorsToStartOfTarget extends Operator
   mutateSelection: (selection) ->
     swrap(selection).setBufferPositionTo('start')
 
-class SetCursorsToStartOfMarkedRange extends SetCursorsToStartOfTarget
+class SetCursorsToStartOfRangeMarker extends SetCursorsToStartOfTarget
   @extend()
   flashTarget: false
-  target: "MarkedRange"
+  target: "RangeMarker"
 
-class MarkRange extends Operator
+class CreateRangeMarker extends Operator
   @extend()
   keepCursorPosition: true
+  flashTarget: false
 
   mutateSelection: (selection) ->
     range = selection.getBufferRange()
     marker = highlightRanges(@editor, range, class: 'vim-mode-plus-range-marker')
     @vimState.addRangeMarkers(marker)
-    @restorePoint(selection)
+    if selection.isLastSelection()
+      @restorePoint(selection)
+    else
+      selection.destroy()
+
+class ToggleRangeMarker extends CreateRangeMarker
+  @extend()
+  getRangeMarkerAtCursor: ->
+    point = @editor.getCursorBufferPosition()
+
+    containsPoint = (rangeMarker, point) ->
+      rangeMarker.getBufferRange().containsPoint(point, exclusive)
+
+    exclusive = false
+    for rangeMarker in @vimState.getRangeMarkers() when containsPoint(rangeMarker, point)
+      return rangeMarker
+
+  initialize: ->
+    rangeMarker = @getRangeMarkerAtCursor()
+    if rangeMarker?
+      rangeMarker.destroy()
+      @vimState.removeRangeMarker(rangeMarker)
+      @abort()
+
+class ToggleRangeMarkerOnInnerWord extends ToggleRangeMarker
+  @extend()
+  target: 'InnerWord'
+
+class ConvertRangeMarkerToSelection extends Select
+  @extend()
+  flashTarget: false
+  target: "ARangeMarker"
+  execute: ->
+    super
+    @vimState.clearRangeMarkers()
+
 
 # Insert entering operation
 # -------------------------
@@ -1115,6 +1260,7 @@ class ActivateInsertMode extends Operator
         @editor.groupChangesSinceCheckpoint(@getCheckpoint('undo'))
 
   initialize: ->
+    super
     @checkpoint = {}
     @setCheckpoint('undo') unless @isRepeated()
     @observeWillDeactivateMode()
@@ -1221,13 +1367,8 @@ class InsertByTarget extends ActivateInsertMode
   which: null # one of ['start', 'end', 'head', 'tail']
   execute: ->
     @selectTarget()
-    if @isMode('visual', 'blockwise')
-      @getBlockwiseSelections().forEach (bs) =>
-        bs.removeEmptySelections()
-        bs.setPositionForSelections(@which)
-    else
-      for selection in @editor.getSelections()
-        swrap(selection).setBufferPositionTo(@which)
+    for selection in @editor.getSelections()
+      swrap(selection).setBufferPositionTo(@which)
     super
 
 class InsertAtStartOfTarget extends InsertByTarget
@@ -1241,6 +1382,14 @@ class InsertAtStartOfSelection extends InsertAtStartOfTarget
 class InsertAtEndOfTarget extends InsertByTarget
   @extend()
   which: 'end'
+
+class InsertAtStartOfOccurrence extends InsertAtStartOfTarget
+  @extend()
+  withOccurrence: true
+
+class InsertAtEndOfOccurrence extends InsertAtEndOfTarget
+  @extend()
+  withOccurrence: true
 
 # Alias for backward compatibility
 class InsertAtEndOfSelection extends InsertAtEndOfTarget
@@ -1264,6 +1413,20 @@ class InsertAtNextFoldStart extends InsertAtHeadOfTarget
   @description: "Move to next fold start then enter insert-mode"
   target: 'MoveToNextFoldStart'
 
+class InsertAtStartOfSearchCurrentLine extends InsertAtEndOfTarget
+  @extend()
+  defaultLandingPoint: 'start'
+  initialize: ->
+    super
+    @setTarget @new 'SearchCurrentLine',
+      updateSearchHistory: false
+      defaultLandingPoint: @defaultLandingPoint
+      quiet: true
+
+class InsertAtEndOfSearchCurrentLine extends InsertAtStartOfSearchCurrentLine
+  @extend()
+  defaultLandingPoint: 'end'
+
 # -------------------------
 class Change extends ActivateInsertMode
   @extend()
@@ -1285,6 +1448,19 @@ class Change extends ActivateInsertMode
         range = selection.insertText(text, autoIndent: true)
         selection.cursor.moveLeft() unless range.isEmpty()
     super
+
+class ChangeOccurrence extends Change
+  @extend()
+  @description: "Change all matching word within target range"
+  withOccurrence: true
+
+class ChangeOccurrenceInARangeMarker extends ChangeOccurrence
+  @extend()
+  target: "ARangeMarker"
+
+class ChangeOccurrenceAll extends ChangeOccurrence
+  @extend()
+  target: "All"
 
 class Substitute extends Change
   @extend()

@@ -42,11 +42,11 @@ class SelectionWrapper
         @selection.modifySelection =>
           @selection.cursor.setBufferPosition(head)
 
-  getBufferPositionFor: (which, {fromProperty, allowFallBack}={}) ->
+  getBufferPositionFor: (which, {fromProperty, allowFallback}={}) ->
     fromProperty ?= false
-    allowFallBack ?= false
+    allowFallback ?= false
 
-    if fromProperty and (not @hasProperties()) and allowFallBack
+    if fromProperty and (not @hasProperties()) and allowFallback
       fromProperty = false
 
     if fromProperty

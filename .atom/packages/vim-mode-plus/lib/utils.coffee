@@ -171,9 +171,7 @@ pointIsAtEndOfLine = (editor, point) ->
   getEolForBufferRow(editor, point.row).isEqual(point)
 
 getCharacterAtCursor = (cursor) ->
-  {editor} = cursor
-  bufferRange = editor.bufferRangeForScreenRange(cursor.getScreenRange())
-  editor.getTextInBufferRange(bufferRange)
+  getTextInScreenRange(cursor.editor, cursor.getScreenRange())
 
 getTextInScreenRange = (editor, screenRange) ->
   bufferRange = editor.bufferRangeForScreenRange(screenRange)
@@ -542,6 +540,11 @@ getEndPositionForPattern = (editor, from, pattern, options={}) ->
       stop()
   point
 
+getBufferRangeForPatternFromPoint = (editor, fromPoint, pattern) ->
+  end = getEndPositionForPattern(editor, fromPoint, pattern, containedOnly: true)
+  start = getStartPositionForPattern(editor, end, pattern, containedOnly: true) if end?
+  new Range(start, end) if start?
+
 sortComparable = (collection) ->
   collection.sort (a, b) -> a.compare(b)
 
@@ -573,6 +576,28 @@ isSurroundedBySpace = (text) ->
 
 isSingleLine = (text) ->
   text.split(/\n|\r\n/).length is 1
+
+getCurrentWordBufferRange = (cursor) ->
+  # [FIXME] Copy from selection.selectWord() and modify
+  # Original selectWord() modify existing selection
+  # But I only want to get range without modifying selection.
+  options = {}
+  options.wordRegex = /[\t ]*/ if cursor.isSurroundedByWhitespace()
+  if cursor.isBetweenWordAndNonWord()
+    options.includeNonWordCharacters = false
+  cursor.getCurrentWordBufferRange(options)
+
+scanInRanges = (editor, pattern, scanRanges) ->
+  ranges = []
+  for scanRange in scanRanges
+    editor.scanInBufferRange pattern, scanRange, ({range}) ->
+      ranges.push(range)
+  ranges
+
+isRangeContainsSomePoint = (range, points, {exclusive}={}) ->
+  exclusive ?= false
+  points.some (point) ->
+    range.containsPoint(point, exclusive)
 
 # Debugging purpose
 # -------------------------
@@ -698,6 +723,7 @@ module.exports = {
   getBufferRows
   ElementBuilder
   registerElement
+  getBufferRangeForPatternFromPoint
   sortComparable
   smartScrollToBufferPosition
   matchScopes
@@ -705,6 +731,9 @@ module.exports = {
   moveCursorUpBuffer
   isSurroundedBySpace
   isSingleLine
+  getCurrentWordBufferRange
+  scanInRanges
+  isRangeContainsSomePoint
 
   # Debugging
   reportSelection,

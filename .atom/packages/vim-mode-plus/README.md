@@ -2,6 +2,34 @@
 
 vim-mode improved.
 
+<!-- TOC START min:1 max:3 link:true update:true -->
+- [vim-mode-plus](#vim-mode-plus)
+- [What's new in v0.55.0](#whats-new-in-v0550)
+- [Important](#important)
+- [Thanks](#thanks)
+- [Issue report](#issue-report)
+- [Whats this?](#whats-this)
+- [FAQ](#faq)
+    - [Why fork? why not directly contribute to official vim-mode?](#why-fork-why-not-directly-contribute-to-official-vim-mode)
+    - [In visual-block mode, some motion make editor slow, freeze.](#in-visual-block-mode-some-motion-make-editor-slow-freeze)
+    - [ex-mode?](#ex-mode)
+    - [Want to suppress autocomplete-plus's auto suggestion except insert-mode.](#want-to-suppress-autocomplete-pluss-auto-suggestion-except-insert-mode)
+- [Wiki](#wiki)
+- [Keymap](#keymap)
+- [Helper packages](#helper-packages)
+- [References](#references)
+  - [Vim official](#vim-official)
+  - [Other](#other)
+- [Commit emoji convention](#commit-emoji-convention)
+
+<!-- TOC END -->
+
+# What's new in v0.55.0
+
+v0.55.0 is big release which introduce serveral new features.  
+- [WhatsNew v0.55.0](https://github.com/t9md/atom-vim-mode-plus/wiki/WhatsNew-v0.55.0)
+- [CHANGELOG.md](https://github.com/t9md/atom-vim-mode-plus/blob/master/CHANGELOG.md#0550)
+
 # Important
 
 - **vim-mode-plus is replacement of vim-mode, you must disable vim-mode first to use vim-mode-plus**.
@@ -90,7 +118,7 @@ If you want to directly edit `config.cson`, here it is.
 - [Create vmp plugin](https://github.com/t9md/atom-vim-mode-plus/wiki/Create-vmp-plugin)
 - [List of vmp plugins](https://github.com/t9md/atom-vim-mode-plus/wiki/List-of-vmp-plugins)
 
-## Keymap
+# Keymap
 
 vim-mode-plus have many advanced, experimental feature but most of it have no default keymap.  
 If you want to use full power of vim-mode-plus, see and experiment each keymap, command in following links.  
@@ -120,20 +148,20 @@ provides <kbd>ctrl-w H, J, K, L, x</kbd> to move pane.
 
 # References
 
-- Vim official
-  - [motion](http://vimhelp.appspot.com/motion.txt.html)
-  - [operator](http://vimhelp.appspot.com/motion.txt.html#operator)
-  - [text-object](http://vimhelp.appspot.com/motion.txt.html#object-select)
-  - [change](http://vimhelp.appspot.com/change.txt.html)
-  - [marks](http://vimhelp.appspot.com/motion.txt.html#mark-motions)
-  - [scroll](http://vimhelp.appspot.com/scroll.txt.html)
-  - [search-commands](http://vimhelp.appspot.com/pattern.txt.html#search-commands)
+## Vim official
+- [motion](http://vimhelp.appspot.com/motion.txt.html)
+- [operator](http://vimhelp.appspot.com/motion.txt.html#operator)
+- [text-object](http://vimhelp.appspot.com/motion.txt.html#object-select)
+- [change](http://vimhelp.appspot.com/change.txt.html)
+- [marks](http://vimhelp.appspot.com/motion.txt.html#mark-motions)
+- [scroll](http://vimhelp.appspot.com/scroll.txt.html)
+- [search-commands](http://vimhelp.appspot.com/pattern.txt.html#search-commands)
 
-- Other
-  - [operator, the true power of Vim](http://whileimautomaton.net/2008/11/vimm3/operator) by kana.  
+## Other
+- [operator, the true power of Vim](http://whileimautomaton.net/2008/11/vimm3/operator) by kana.  
   True power of Vim is Operator and TextOjbect.
 
-  - [List of text-object as vim plugin](https://github.com/kana/vim-textobj-user/wiki)  
+- [List of text-object as vim plugin](https://github.com/kana/vim-textobj-user/wiki)  
   vim-mode-plus builtin textobj for function, fold, entire, comment, indent, line, and any-pair(super set of many pair text-obj)
 
 # Commit emoji convention

@@ -1,3 +1,67 @@
+# 0.56.0:
+- New: Operator `insert-at-start-of-occurrence`, `insert-at-end-of-occurrence` to start insert at occurrence.
+- New: Operator `sort` #365
+- New: Motion `search-current-line`, `search-current-line-backwards` #366
+- Fix: `f`, `F`, `t`, `T` was broken, no longer focus input on repeat by `;` or `,` #367
+
+# 0.55.0:
+- Internal: Avoid curcular referencing for string transformers store.
+- Doc: Update docstring of many operator for better command report for vmp wiki.
+- Breaking, Improve: `AddSelection` no longer get word from visual-mode #351
+- New: `All` TextObject as alias of `Entire`. #352
+- Improve?, Breaking?: Change range-marker style as-if selection #357
+- Improve, Rename: Cleanup operator-modifier mechanism. Renamed command #357
+  - `v`: `force-operator-characterwise` to `operator-modifier-characterwise`
+  - `V`: `force-operator-linewise` to `operator-modifier-linewise`
+- New: Occurrence operator-modifier #357
+  - `o` in `operator-pending-mode`
+  - As like `v` or `V` modifier force the wise of operator.
+  - `o` modifier re-select cursor-word from target range.
+    - e.g. `g U o i p` upper case all occurrence of cursor-word in paragraph
+    - e.g. `c i p` change whole paragraph, `c o i p` change occurrence of cursor word in paragraph.
+  - This modifier is available for all operator.
+  - `select-occurrence`, `map-surround` is created based on this `occurrence` modifier.
+- New: Narrowed selection state #357
+  - `is-narrow` state is automatically activated/deactivated when `visual-mode` and last selection is multi-line.
+  - Available shortcut in `visual-mode.is-narrow` scope.
+    - `ctrl-cmd-c`: `change-occurrence` to change occurrence of cursor word in selection.
+    - `cmd-d`: `select-occurrence` to select occurrence of cursor word in selection.
+- New: RangeMarker new command.
+  - `toggle-range-marker`: remove or add range-marker
+  - `toggle-range-marker-on-inner-word`: `inner-word` pre-targeted version
+  - `convert-range-marker-to-selection`: add selection on all range-marker and remove range-marker after select.
+- New: IncrementalSearch specific `/`, `?` special feature #357
+  - Direct command from search-input mini editor.
+    - `ctrl-cmd-c`: `change-occurrence-from-search` to change occurrence of search pattern matched.
+    - `cmd-d`: `select-occurrence-from-search` to select occurrence of search pattern matched.
+    - When above command is applied operator target is autmatically set in following priority.
+      1. In `visual-mode` use current selection as target.
+      2. If there is `range-marker` then use it as target.
+      3. None of above match, then enter operator-pending state to get taret from user.
+- Rename: `add-selection` to `select-occurrence`
+- Improve: `reset-normal-mode` clear hlsearch and range-marker more thoughtfully. No longer clear in following situation.
+  - Internal invocation of `vimState.resetNormalMode()`.
+  - When having multiple cursor.
+- Internal: Define `Base::initialize` to be eliminate uncertainty of super calll in child class. #361
+
+# 0.54.1:
+- Breaking: Revert change introduced in 0.54.0(Was not good). insert-mode escape return to normal-mode regardless os autocomplet popup #339.
+
+# 0.54.0:
+- Improve, Breaking: When autocomplete's popup is active, `escape` in `insert-mode` no longer escape insert-mode. #339
+- New: `TrimString` operator 'g |' for default keymap. #341
+- Improve, Breaking: #342 `TransformStringBySelectList` no longer ask target first. Instead ask target last as in normal operator.
+- Internal: Let each operator register itself to select-list
+- New, Experimental: `incrementalSearchVisitDirection` config option #343
+  - Default `absolute`, if `relative`, `visit-next`(tab) follows to search direction(`/` or `?`).
+- Improve: Now user can invoke `add-selection` from `visual` mode #340.
+- New: Add default keymap `g cmd-d` to `vim-mode-plus:add-selection`.
+- Improve, Breaking: Rename `RangeMarker` family operator, text-object to fix naming inconsistency. #346
+  - Operator: `MarkRange` to `CreateRangeMarker`
+  - TextObject: `MarkedRange` to `RangeMarker`
+- Fix: In case vimState is not available(not sure why), cancel execution of operation. #347
+- New: Add keymap to make `I` and `A` is available in all visual submode(was available in `visual-block` only in previous version) #348
+
 # 0.53.0:
 - Fix: Command is dispatched to different(incorrect) editor instead of editor which fired original event. #338
 

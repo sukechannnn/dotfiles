@@ -13,9 +13,6 @@ class OperationStack
     CurrentSelection ?= Base.getClass('CurrentSelection')
     Select ?= Base.getClass('Select')
     MoveToRelativeLine ?= Base.getClass('MoveToRelativeLine')
-
-    # Cache for performance
-    @select = new Select(@vimState)
     @reset()
 
   subscribe: (args...) ->
@@ -29,13 +26,13 @@ class OperationStack
           operation = operation.setTarget(new CurrentSelection(@vimState))
       when operation.isTextObject()
         unless mode is 'operator-pending'
-          operation = @select.setTarget(operation)
+          operation = new Select(@vimState, target: operation)
       when operation.isMotion()
         if (mode is 'visual')
-          operation = @select.setTarget(operation)
+          operation = new Select(@vimState, target: operation)
     operation
 
-  run: (klass, properties) ->
+  run: (klass, properties={}) ->
     klass = Base.getClass(klass) if _.isString(klass)
     try
       # When identical operator repeated, it set target to MoveToRelativeLine.
@@ -115,10 +112,12 @@ class OperationStack
   finish: (operation=null) ->
     @record(operation) if operation?.isRecordable()
     @vimState.emitter.emit('did-finish-operation')
+    
     if @vimState.isMode('normal')
       @ensureAllSelectionsAreEmpty(operation)
       @ensureAllCursorsAreNotAtEndOfLine()
-
+    if @vimState.isMode('visual')
+      @vimState.modeManager.updateNarrowedState()
     @vimState.updateCursorsVisibility()
     @vimState.reset()
 
@@ -149,5 +148,11 @@ class OperationStack
 
   getRecorded: ->
     @recorded
+
+  setOperatorModifier: (modifier) ->
+    # In operator-pending-mode, stack length is always 1 and its' operator.
+    # So either of @stack[0] or @peekTop() is OK.
+    if @vimState.isMode('operator-pending')
+      @stack[0].setOperatorModifier(modifier)
 
 module.exports = OperationStack

@@ -1,34 +1,42 @@
-_ = require 'underscore-plus'
 {
   getIndex
   highlightRanges
   smartScrollToBufferPosition
   getVisibleBufferRange
+  scanInRanges
 } = require './utils'
 
 class MatchList
   index: null
   entries: null
+  pattern: null
 
-  @fromScan: (editor, {fromPoint, pattern, direction, countOffset}) ->
+  @fromScan: (editor, {fromPoint, pattern, direction, countOffset, scanRanges}) ->
     index = 0
-    ranges = []
-    editor.scan pattern, ({range}) ->
-      ranges.push range
+    if scanRanges.length
+      ranges = scanInRanges(editor, pattern, scanRanges)
+    else
+      ranges = []
+      editor.scan pattern, ({range}) ->
+        ranges.push(range)
 
     if direction is 'backward'
-      reversed = ranges.slice().reverse()
-      current = _.detect(reversed, ({start}) -> start.isLessThan(fromPoint))
-      current ?= _.last(ranges)
+      for range in ranges by -1 when range.start.isLessThan(fromPoint)
+        current = range
+        break
+      current ?= ranges.slice(-1)[0] # last
+
     else if direction is 'forward'
-      current = _.detect(ranges, ({start}) -> start.isGreaterThan(fromPoint))
+      for range in ranges when range.start.isGreaterThan(fromPoint)
+        current = range
+        break
       current ?= ranges[0]
 
     index = ranges.indexOf(current)
     index = getIndex(index + countOffset, ranges)
-    new this(editor, ranges, index)
+    new this(editor, ranges, index, pattern)
 
-  constructor: (@editor, ranges, @index) ->
+  constructor: (@editor, ranges, @index, @pattern) ->
     @entries = []
     return unless ranges.length
     @entries = ranges.map (range) =>
@@ -37,6 +45,9 @@ class MatchList
     [first, others..., last] = @entries
     first.first = true
     last?.last = true
+
+  getPattern: ->
+    @pattern
 
   isEmpty: ->
     @entries.length is 0
@@ -55,6 +66,9 @@ class MatchList
 
   getCurrentStartPosition: ->
     @get().getStartPoint()
+
+  getCurrentEndPosition: ->
+    @get().getEndPoint()
 
   getVisible: ->
     range = getVisibleBufferRange(@editor)
@@ -101,6 +115,9 @@ class Match
 
   getStartPoint: ->
     @range.start
+
+  getEndPoint: ->
+    @range.end
 
   scrollToStartPoint: ->
     point = @getStartPoint()

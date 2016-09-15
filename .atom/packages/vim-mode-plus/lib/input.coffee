@@ -111,26 +111,51 @@ class SearchInput extends Input
         attribute: {mini: ''}
     )
 
+  stopPropagation: (oldCommands) ->
+    newCommands = {}
+    for name, fn of oldCommands
+      do (fn) ->
+        if ':' in name
+          commandName = name
+        else
+          commandName = "vim-mode-plus:#{name}"
+        newCommands[commandName] = (event) ->
+          event.stopImmediatePropagation()
+          fn(event)
+    newCommands
+
   initialize: (@vimState) ->
     super
     @options = {}
     {@searchHistory} = @vimState
 
-    atom.commands.add @editorElement,
-      "vim-mode-plus:search-confirm": => @confirm()
-      "vim-mode-plus:search-cancel": => @cancel()
-      "vim-mode-plus:search-visit-next": => @emitter.emit('did-command', 'visit-next')
-      "vim-mode-plus:search-visit-prev": => @emitter.emit('did-command', 'visit-prev')
-      "vim-mode-plus:search-insert-wild-pattern": => @editor.insertText('.*?')
-      "vim-mode-plus:search-activate-literal-mode": => @activateLiteralMode()
-      "vim-mode-plus:search-set-cursor-word": => @setCursorWord()
+    atom.commands.add @editorElement, @stopPropagation(
+      "search-confirm": => @confirm()
+      "search-land-to-start": => @confirm()
+      "search-land-to-end": => @confirm('end')
+      "search-cancel": => @cancel()
+
+      "search-visit-next": => @emitter.emit('did-command', name: 'visit', direction: 'next')
+      "search-visit-prev": => @emitter.emit('did-command', name: 'visit', direction: 'prev')
+      "select-occurrence-from-search": => @emitter.emit('did-command', name: 'run', operation: 'SelectOccurrence')
+      "change-occurrence-from-search": => @emitter.emit('did-command', name: 'run', operation: 'ChangeOccurrence')
+
+      "search-insert-wild-pattern": => @editor.insertText('.*?')
+      "search-activate-literal-mode": => @activateLiteralMode()
+      "search-set-cursor-word": => @setCursorWord()
       'core:move-up': => @editor.setText @searchHistory.get('prev')
       'core:move-down': => @editor.setText @searchHistory.get('next')
+    )
 
     this
 
+  confirm: (landingPoint=null) ->
+    searchConfirmEvent = {input: @editor.getText(), landingPoint}
+    @emitter.emit 'did-confirm', searchConfirmEvent
+    @unfocus()
+
   setCursorWord: ->
-    @editor.setText @vimState.editor.getWordUnderCursor()
+    @editor.setText(@vimState.editor.getWordUnderCursor())
 
   activateLiteralMode: ->
     if @editorElement.classList.contains('literal-mode')

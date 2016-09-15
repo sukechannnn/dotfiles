@@ -33,7 +33,7 @@ class ModeManager
   onWillActivateMode: (fn) -> @emitter.on('will-activate-mode', fn)
   onDidActivateMode: (fn) -> @emitter.on('did-activate-mode', fn)
   onWillDeactivateMode: (fn) -> @emitter.on('will-deactivate-mode', fn)
-  preemptWillDeactivateMode: (fn) -> @emitter.on('will-deactivate-mode', fn)
+  preemptWillDeactivateMode: (fn) -> @emitter.preempt('will-deactivate-mode', fn)
   onDidDeactivateMode: (fn) -> @emitter.on('did-deactivate-mode', fn)
 
   # activate: Public
@@ -68,9 +68,10 @@ class ModeManager
     @emitter.emit('did-activate-mode', {@mode, @submode})
 
   deactivate: ->
-    @emitter.emit('will-deactivate-mode', {@mode, @submode})
-    @deactivator?.dispose()
-    @emitter.emit('did-deactivate-mode', {@mode, @submode})
+    unless @deactivator?.disposed
+      @emitter.emit('will-deactivate-mode', {@mode, @submode})
+      @deactivator?.dispose()
+      @emitter.emit('did-deactivate-mode', {@mode, @submode})
 
   # Normal
   # -------------------------
@@ -130,9 +131,12 @@ class ModeManager
       when 'blockwise'
         @vimState.selectBlockwise() unless swrap(@editor.getLastSelection()).isLinewise()
 
+    @updateNarrowedState()
+
     new Disposable =>
       @normalizeSelections(preservePreviousSelection: true)
       selection.clear(autoscroll: false) for selection in @editor.getSelections()
+      @updateNarrowedState(false)
 
   preservePreviousSelection: (selection) ->
     properties = if selection.isBlockwise?()
@@ -158,11 +162,15 @@ class ModeManager
         @vimState.clearBlockwiseSelections()
 
   normalizeSelections: ({preservePreviousSelection}={}) ->
+    preservePreviousSelection ?= false
+
     if preservePreviousSelection
       range = @editor.getLastSelection().getBufferRange()
       @vimState.mark.setRange('<', '>', range)
     @selectCharacterwise()
+
     swrap.resetProperties(@editor)
+
     if preservePreviousSelection and not @editor.getLastSelection().isEmpty()
       @preservePreviousSelection(@editor.getLastSelection())
 
@@ -173,5 +181,20 @@ class ModeManager
       selection.modifySelection ->
         # [FIXME] SCATTERED_CURSOR_ADJUSTMENT
         moveCursorLeft(selection.cursor, {allowWrap: true, preserveGoalColumn: true})
+
+  # Narrow to selection
+  # -------------------------
+  hasMultiLineSelection: ->
+    if @isMode('visual', 'blockwise')
+      # [FIXME] why I need null guard here
+      not @vimState.getLastBlockwiseSelection()?.isSingleRow()
+    else
+      not swrap(@editor.getLastSelection()).isSingleRow()
+
+  updateNarrowedState: (value=null) ->
+    @editorElement.classList.toggle('is-narrowed', value ? @hasMultiLineSelection())
+
+  isNarrowed: ->
+    @editorElement.classList.contains('is-narrowed')
 
 module.exports = ModeManager

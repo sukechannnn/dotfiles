@@ -138,10 +138,13 @@
   'g /': 'vim-mode-plus:toggle-line-comments'
   'g -': 'vim-mode-plus:dash-case'
   'g space': 'vim-mode-plus:compact-spaces'
+  'g |': 'vim-mode-plus:trim-string'
+  'g cmd-d': 'vim-mode-plus:select-occurrence'
   # 'g _': 'vim-mode-plus:snake-case'
   # 'g r':   'vim-mode-plus:reverse'
+  # 'g s':   'vim-mode-plus:sort'
   # 'ctrl-s': 'vim-mode-plus:transform-string-by-select-list'
-  # 'g m': 'vim-mode-plus:mark-range'
+  # 'g m': 'vim-mode-plus:toggle-range-marker'
 
   'ctrl-a': 'vim-mode-plus:increase'
   'ctrl-x': 'vim-mode-plus:decrease'
@@ -274,8 +277,16 @@
   '%': 'vim-mode-plus:move-to-line-by-percent'
 
 'atom-text-editor.vim-mode-plus.with-range-marker:not(.insert-mode)':
-  'cmd-d': 'vim-mode-plus:select-all-in-range-marker'
-  'ctrl-cmd-g': 'vim-mode-plus:marked-range'
+  'cmd-d': 'vim-mode-plus:select-occurrence-in-a-range-marker'
+  'ctrl-cmd-g': 'vim-mode-plus:convert-range-marker-to-selection'
+
+'atom-text-editor.vim-mode-plus.visual-mode.is-narrowed':
+  'ctrl-cmd-c': 'vim-mode-plus:change-occurrence'
+  'cmd-d': 'vim-mode-plus:select-occurrence'
+
+'.platform-darwin atom-text-editor.vim-mode-plus-search':
+  'ctrl-cmd-c': 'vim-mode-plus:change-occurrence-from-search'
+  'cmd-d': 'vim-mode-plus:select-occurrence-from-search'
 
 # normal
 # -------------------------
@@ -325,8 +336,9 @@
 # operator-pending
 # -------------------------
 'atom-text-editor.vim-mode-plus.operator-pending-mode':
-  'v': 'vim-mode-plus:force-operator-characterwise'
-  'V': 'vim-mode-plus:force-operator-linewise'
+  'v': 'vim-mode-plus:operator-modifier-characterwise'
+  'V': 'vim-mode-plus:operator-modifier-linewise'
+  'o': 'vim-mode-plus:operator-modifier-occurrence'
 
 # operator-pending, visual
 # -------------------------
@@ -425,7 +437,9 @@
   'i c': 'vim-mode-plus:inner-latest-change'
   'a c': 'vim-mode-plus:a-latest-change'
   'g v': 'vim-mode-plus:previous-selection'
-  'i r': 'vim-mode-plus:marked-range'
+
+  'i r': 'vim-mode-plus:inner-range-marker'
+  'a r': 'vim-mode-plus:a-range-marker'
 
 # visual
 # -------------------------
@@ -440,10 +454,8 @@
   'V': 'vim-mode-plus:activate-linewise-visual-mode'
   'ctrl-v': 'vim-mode-plus:activate-blockwise-visual-mode'
 
-  # 'g I': 'vim-mode-plus:insert-at-start-of-target'
-  # 'I': 'vim-mode-plus:insert-at-start-of-target'
-  # 'g A': 'vim-mode-plus:insert-at-end-of-target'
-  # 'A': 'vim-mode-plus:insert-at-end-of-target'
+  'I': 'vim-mode-plus:insert-at-start-of-selection'
+  'A': 'vim-mode-plus:insert-at-end-of-selection'
 
   # 'p': 'vim-mode-plus:swap-with-register'
   # 'P': 'vim-mode-plus:swap-with-register'
@@ -453,8 +465,6 @@
 'atom-text-editor.vim-mode-plus.visual-mode.blockwise':
   'o': 'vim-mode-plus:blockwise-other-end',
   'O': 'vim-mode-plus:reverse-selections',
-  'I': 'vim-mode-plus:insert-at-start-of-selection'
-  'A': 'vim-mode-plus:insert-at-end-of-selection'
   'D': 'vim-mode-plus:delete-to-last-character-of-line' # To avoid overridden by delete-line in visual-mode
 
 # Input mini editor e.g. mark, surround.

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AboutToPasteTabsWithCancel</key>
+	<true/>
+	<key>AboutToPasteTabsWithCancel_selection</key>
+	<integer>0</integer>
 	<key>AdjustWindowForFontSizeChange</key>
 	<true/>
 	<key>AllowClipboardAccess</key>
@@ -202,7 +206,7 @@
 	<key>NSFontPanelSizeSliderParams</key>
 	<string>2 0 100</string>
 	<key>NSNavLastRootDirectory</key>
-	<string>~/Documents</string>
+	<string>~/dotfiles</string>
 	<key>NSNavPanelExpandedSizeForOpenMode</key>
 	<string>{712, 459}</string>
 	<key>NSNavPanelExpandedSizeForSaveMode</key>
@@ -212,6 +216,8 @@
 	<key>NSRepeatCountBinding</key>
 	<string></string>
 	<key>NSScrollAnimationEnabled</key>
+	<false/>
+	<key>NSScrollViewShouldScrollUnderTitlebar</key>
 	<false/>
 	<key>NSTableView Columns KeyBingingTable</key>
 	<array>
@@ -224,7 +230,7 @@
 		BAtzdHJlYW10eXBlZIHoA4QBQISEhAhOU1N0cmluZwGEhAhOU09iamVjdACF
 		hAErATGG
 		</data>
-		<string>302</string>
+		<string>307</string>
 	</array>
 	<key>NSTableView Hidden Columns KeyBingingTable</key>
 	<array/>
@@ -240,13 +246,17 @@
 	<key>NSWindow Frame NSFontPanel</key>
 	<string>529 273 445 77 0 0 1366 745 </string>
 	<key>NSWindow Frame Preferences</key>
-	<string>438 260 924 485 0 0 1366 745 </string>
+	<string>438 289 606 456 0 0 1366 745 </string>
+	<key>NSWindow Frame SUUpdateAlert</key>
+	<string>375 264 620 392 0 0 1366 745 </string>
+	<key>NSWindow Frame SharedPreferences</key>
+	<string>269 148 1018 447 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>4 15 1361 730 0 0 1366 745 </string>
+	<string>4 9 1361 736 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
 	<string>4 0 1361 745 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 2</key>
-	<string>52 0 1225 745 0 0 1366 745 </string>
+	<string>4 7 1225 731 0 0 1366 745 </string>
 	<key>New Bookmarks</key>
 	<array>
 		<dict>
@@ -1700,12 +1710,24 @@
 			<string>/Users/obatayousuke</string>
 		</dict>
 	</array>
+	<key>NoSyncConfirmBeta</key>
+	<true/>
+	<key>NoSyncDoNotWarnBeforeMultilinePaste</key>
+	<true/>
+	<key>NoSyncDoNotWarnBeforeMultilinePaste_selection</key>
+	<integer>0</integer>
 	<key>NoSyncHaveShownPromoWithId_4</key>
 	<true/>
+	<key>NoSyncInstallationId</key>
+	<string>86B9E352-E315-44AA-9991-9355AFBC6B34</string>
+	<key>NoSyncPermissionToShowTip</key>
+	<false/>
+	<key>NoSyncTimeOfFirstLaunchOfVersionWithTip</key>
+	<real>488251770.21003199</real>
 	<key>NoSyncTimeOfLastPromo</key>
 	<real>478107280.92067498</real>
 	<key>NoSyncTimeOfLastPromoDownload</key>
-	<real>486365307.91902298</real>
+	<real>488199770.73862398</real>
 	<key>OnlyWhenMoreTabs</key>
 	<true/>
 	<key>OpenArrangementAtStartup</key>
@@ -1754,7 +1776,7 @@
 		</dict>
 	</dict>
 	<key>PrefsCustomFolder</key>
-	<string>/Users/obatayousuke/Documents</string>
+	<string>/Users/obatayousuke/dotfiles</string>
 	<key>PromptOnQuit</key>
 	<true/>
 	<key>QuitWhenAllWindowsClosed</key>
@@ -1765,12 +1787,14 @@
 	<integer>3</integer>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>SUFeedAlternateAppNameKey</key>
+	<string>iTerm</string>
 	<key>SUFeedURL</key>
-	<string>https://iterm2.com/appcasts/testing.xml</string>
+	<string>https://iterm2.com/appcasts/testing.xml?shard=4</string>
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2016-05-31T09:24:41Z</date>
+	<date>2016-09-03T09:06:09Z</date>
 	<key>SavePasteHistory</key>
 	<false/>
 	<key>ShowBookmarkName</key>
@@ -1816,6 +1840,6 @@
 	<key>findRegex_iTerm</key>
 	<false/>
 	<key>iTerm Version</key>
-	<string>2.1.4</string>
+	<string>3.0.9</string>
 </dict>
 </plist>

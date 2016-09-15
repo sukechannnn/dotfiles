@@ -24,7 +24,7 @@ class TextObject extends Base
   constructor: ->
     @constructor::inner = @getName().startsWith('Inner')
     super
-    @initialize?()
+    @initialize()
 
   isInner: ->
     @inner
@@ -673,6 +673,7 @@ class Function extends Fold
   omittingClosingCharLanguages: ['go']
 
   initialize: ->
+    super
     @language = @editor.getGrammar().scopeName.replace(/^source\./, '')
 
   getFoldRowRangesContainsForRow: (row) ->
@@ -718,6 +719,10 @@ class AEntire extends Entire
 
 class InnerEntire extends Entire
   @extend()
+
+# Alias as accessible name
+class All extends Entire
+  @extend(false)
 
 # -------------------------
 class LatestChange extends TextObject
@@ -788,11 +793,16 @@ class PreviousSelection extends TextObject
     return unless range = @vimState.mark.getRange('<', '>')
     @editor.getLastSelection().setBufferRange(range)
 
-class MarkedRange extends TextObject
-  @extend()
-  backward: true
+class RangeMarker extends TextObject
+  @extend(false)
 
   select: ->
-    ranges = @vimState.getRangeMarkers().map((m) -> m.getBufferRange())
+    ranges = @vimState.getRangeMarkerBufferRanges()
     if ranges.length
       @editor.setSelectedBufferRanges(ranges)
+
+class ARangeMarker extends RangeMarker
+  @extend()
+
+class InnerRangeMarker extends RangeMarker
+  @extend()

@@ -41,7 +41,7 @@ class Motion extends Base
 
   constructor: ->
     super
-    @initialize?()
+    @initialize()
 
   isLinewise: ->
     if @isMode('visual')
@@ -127,6 +127,7 @@ class CurrentSelection extends Motion
   inclusive: true
 
   initialize: ->
+    super
     @pointInfoByCursor = new Map
 
   execute: ->
@@ -648,6 +649,7 @@ class ScrollFullScreenDown extends Motion
   amountOfPage: +1
 
   initialize: ->
+    super
     amountOfRows = Math.ceil(@amountOfPage * @editor.getRowsPerPage() * @getCount())
     @cursorRow = @editor.getCursorScreenPosition().row + amountOfRows
     @newTopRow = @editor.getFirstVisibleScreenRow() + amountOfRows
@@ -694,6 +696,7 @@ class Find extends Motion
   requireInput: true
 
   initialize: ->
+    super
     @focusInput() unless @isComplete()
 
   isBackwards: ->
@@ -759,6 +762,7 @@ class RepeatFind extends Find
     unless findObj = globalState.currentFind
       @abort()
     {@offset, @backwards, @input} = findObj
+    super
 
 class RepeatFindReverse extends RepeatFind
   @extend()
@@ -774,6 +778,7 @@ class MoveToMark extends Motion
   hover: icon: ":move-to-mark:`", emoji: ":round_pushpin:`"
 
   initialize: ->
+    super
     @focusInput() unless @isComplete()
 
   input: null # set when instatntiated via vimState::moveToMark()
@@ -807,6 +812,15 @@ class SearchBase extends Motion
   backwards: false
   useRegexp: true
   configScope: null
+  updateSearchHistory: true
+  scanRanges: null
+  landingPoint: null # ['start' or 'end']
+  defaultLandingPoint: 'start' # ['start' or 'end']
+  caseSensitivity: null
+  quiet: false
+
+  isQuiet: ->
+    @quiet
 
   getCount: ->
     count = super - 1
@@ -816,6 +830,15 @@ class SearchBase extends Motion
   isBackwards: ->
     @backwards
 
+  getVisualEffectFor: (key) ->
+    if @isQuiet()
+      false
+    else
+      settings.get(key)
+
+  needToUpdateSearchHistory: ->
+    @updateSearchHistory
+
   isCaseSensitive: (term) ->
     switch @getCaseSensitivity()
       when 'smartcase' then term.search('[A-Z]') isnt -1
@@ -823,16 +846,18 @@ class SearchBase extends Motion
       when 'sensitive' then true
 
   getCaseSensitivity: ->
-    if settings.get("useSmartcaseFor#{@configScope}")
-      'smartcase'
-    else if settings.get("ignoreCaseFor#{@configScope}")
-      'insensitive'
-    else
-      'sensitive'
+    @caseSensitivity ?=
+      if settings.get("useSmartcaseFor#{@configScope}")
+        'smartcase'
+      else if settings.get("ignoreCaseFor#{@configScope}")
+        'insensitive'
+      else
+        'sensitive'
 
   finish: ->
-    if @isIncrementalSearch?() and settings.get('showHoverSearchCounter')
+    if @isIncrementalSearch?() and @getVisualEffectFor('showHoverSearchCounter')
       @vimState.hoverSearchCounter.reset()
+    @scanRanges = null
     @matches?.destroy()
     @matches = null
 
@@ -842,13 +867,19 @@ class SearchBase extends Motion
       timeout: 100
     atom.beep()
 
+  getLandingPoint: ->
+    @landingPoint ?= @defaultLandingPoint
+
   getPoint: (cursor) ->
     input = @getInput()
     @matches ?= @getMatchList(cursor, input)
     if @matches.isEmpty()
       null
     else
-      @matches.getCurrentStartPosition()
+      if @getLandingPoint() is 'start'
+        @matches.getCurrentStartPosition()
+      else
+        @matches.getCurrentEndPosition()
 
   moveCursor: (cursor) ->
     input = @getInput()
@@ -860,15 +891,17 @@ class SearchBase extends Motion
       @visitMatch "current",
         timeout: settings.get('showHoverSearchCounterDuration')
         landing: true
-      cursor.setBufferPosition(point, {autoscroll: false})
+      cursor.setBufferPosition(point, autoscroll: false)
     else
-      @flashScreen() if settings.get('flashScreenOnSearchHasNoMatch')
+      @flashScreen() if @getVisualEffectFor('flashScreenOnSearchHasNoMatch')
 
-    globalState.currentSearch = this
-    @vimState.searchHistory.save(input)
-    pattern = @getPattern(input)
-    globalState.lastSearchPattern = pattern
-    @vimState.main.emitDidSetLastSearchPattern()
+    if @needToUpdateSearchHistory()
+      globalState.currentSearch = this
+      @vimState.searchHistory.save(input)
+
+    unless @isQuiet()
+      globalState.lastSearchPattern = @getPattern(input)
+      @vimState.main.emitDidSetLastSearchPattern()
     @finish()
 
   getFromPoint: (cursor) ->
@@ -877,12 +910,16 @@ class SearchBase extends Motion
     else
       cursor.getBufferPosition()
 
+  getScanRanges: ->
+    @scanRanges ? []
+
   getMatchList: (cursor, input) ->
     MatchList.fromScan @editor,
       fromPoint: @getFromPoint(cursor)
       pattern: @getPattern(input)
       direction: (if @isBackwards() then 'backward' else 'forward')
       countOffset: @getCount()
+      scanRanges: @getScanRanges()
 
   visitMatch: (direction=null, options={}) ->
     {timeout, landing} = options
@@ -895,14 +932,14 @@ class SearchBase extends Motion
       timeout: settings.get('flashOnSearchDuration')
 
     if landing
-      if settings.get('flashOnSearch') and not @isIncrementalSearch?()
+      if @getVisualEffectFor('flashOnSearch') and not @isIncrementalSearch?()
         match.flash(flashOptions)
     else
       @matches.refresh()
-      if settings.get('flashOnSearch')
+      if @getVisualEffectFor('flashOnSearch')
         match.flash(flashOptions)
 
-    if settings.get('showHoverSearchCounter')
+    if @getVisualEffectFor('showHoverSearchCounter')
       @vimState.hoverSearchCounter.withTimeout match.getStartPoint(),
         text: @matches.getCounterText()
         classList: match.getClassList()
@@ -919,9 +956,10 @@ class Search extends SearchBase
     settings.get('incrementalSearch')
 
   initialize: ->
-    @setIncrementalSearch() if @isIncrementalSearch()
+    super
+    @activateIncrementalSearch() if @isIncrementalSearch()
 
-    @onDidConfirmSearch (@input) =>
+    @onDidConfirmSearch ({@input, @landingPoint}) =>
       unless @isIncrementalSearch()
         searchChar = if @isBackwards() then '?' else '/'
         if @input in ['', searchChar]
@@ -948,29 +986,41 @@ class Search extends SearchBase
       @visitCursors() if @isIncrementalSearch()
     @vimState.searchInput.focus({@backwards})
 
-  setIncrementalSearch: ->
+  activateIncrementalSearch: ->
     @restoreEditorState = saveEditorState(@editor)
-    @subscribe @editorElement.onDidChangeScrollTop => @matches?.refresh()
-    @subscribe @editorElement.onDidChangeScrollLeft => @matches?.refresh()
+    refresh = => @matches?.refresh()
+    @subscribe @editorElement.onDidChangeScrollTop(refresh)
+    @subscribe @editorElement.onDidChangeScrollLeft(refresh)
 
     @onDidCommandSearch (command) =>
       return unless @input
       return if @matches.isEmpty()
-      switch command
-        when 'visit-next' then @visitMatch('next')
-        when 'visit-prev' then @visitMatch('prev')
+      switch command.name
+        when 'visit'
+          direction = command.direction
+          if @isBackwards() and settings.get('incrementalSearchVisitDirection') is 'relative'
+            direction = switch direction
+              when 'next' then 'prev'
+              when 'prev' then 'next'
+          @visitMatch(direction)
+        when 'run'
+          options = {patternForOccurence: @matches.pattern} # preserve before cancel
+          options.target = 'ARangeMarker' if @vimState.hasRangeMarkers()
+          @vimState.searchHistory.save(@input)
+          @vimState.searchInput.cancel()
+          @vimState.operationStack.run(command.operation, options)
 
   visitCursors: ->
     visitCursor = (cursor) =>
       @matches ?= @getMatchList(cursor, input)
       if @matches.isEmpty()
-        @flashScreen() if settings.get('flashScreenOnSearchHasNoMatch')
+        @flashScreen() if @getVisualEffectFor('flashScreenOnSearchHasNoMatch')
       else
         @visitMatch()
 
     @matches?.destroy()
     @matches = null
-    @vimState.hoverSearchCounter.reset() if settings.get('showHoverSearchCounter')
+    @vimState.hoverSearchCounter.reset() if @getVisualEffectFor('showHoverSearchCounter')
 
     input = @getInput()
     if input isnt ''
@@ -994,6 +1044,16 @@ class Search extends SearchBase
       new RegExp(_.escapeRegExp(term), modifiers)
 
 class SearchBackwards extends Search
+  @extend()
+  backwards: true
+
+class SearchCurrentLine extends Search
+  @extend()
+  quiet: true
+  getScanRanges: ->
+    [@editor.getLastCursor().getCurrentLineBufferRange()]
+
+class SearchCurrentLineBackwards extends SearchCurrentLine
   @extend()
   backwards: true
 
@@ -1049,9 +1109,10 @@ class RepeatSearch extends SearchBase
   @extend()
 
   initialize: ->
+    super
     unless search = globalState.currentSearch
       @abort()
-    {@input, @backwards, @getPattern, @getCaseSensitivity, @configScope} = search
+    {@input, @backwards, @getPattern, @getCaseSensitivity, @configScope, @quiet} = search
 
 class RepeatSearchReverse extends RepeatSearch
   @extend()
@@ -1068,6 +1129,7 @@ class MoveToPreviousFoldStart extends Motion
   direction: 'prev'
 
   initialize: ->
+    super
     @rows = @getFoldRows(@which)
     @rows.reverse() if @direction is 'prev'
 

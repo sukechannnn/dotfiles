@@ -6,7 +6,13 @@ settings = require './settings'
 globalState = require './global-state'
 {HoverElement} = require './hover'
 {InputElement, SearchInputElement} = require './input'
-{haveSomeSelection, highlightRanges, getVisibleBufferRange, matchScopes} = require './utils'
+{
+  haveSomeSelection
+  highlightRanges
+  getVisibleBufferRange
+  matchScopes
+  isRangeContainsSomePoint
+} = require './utils'
 swrap = require './selection-wrapper'
 
 OperationStack = require './operation-stack'
@@ -89,10 +95,8 @@ class VimState
   selectLinewise: ->
     swrap.expandOverLine(@editor, preserveGoalColumn: true)
 
-  forceOperatorWise: null
-  setForceOperatorWise: (@forceOperatorWise) ->
-  getForceOperatorWise: -> @forceOperatorWise
-  resetForceOperatorWise: -> @setForceOperatorWise(null)
+  setOperatorModifier: (modifier) ->
+    @operationStack.setOperatorModifier(modifier)
 
   # Count
   # -------------------------
@@ -147,7 +151,7 @@ class VimState
     @inputCharSubscriptions?.dispose()
 
   # -------------------------
-  toggleClassList: (className, bool) ->
+  toggleClassList: (className, bool=undefined) ->
     @editorElement.classList.toggle(className, bool)
 
   swapClassName: (className) ->
@@ -219,6 +223,7 @@ class VimState
     @operationRecords?.destroy?()
     @register?.destroy?
     @clearHighlightSearch()
+    @clearRangeMarkers()
     @highlightSearchSubscription?.dispose()
     {
       @hover, @hoverSearchCounter, @operationStack,
@@ -268,16 +273,17 @@ class VimState
     @subscriptions.add atom.commands.onWillDispatch(preserveCharacterwise)
     @subscriptions.add atom.commands.onDidDispatch(checkSelection)
 
-  resetNormalMode: ->
+  resetNormalMode: ({userInvocation}={}) ->
+    if userInvocation ? false
+      unless @editor.hasMultipleCursors()
+        @clearRangeMarkers() if settings.get('clearRangeMarkerOnResetNormalMode')
+        @main.clearHighlightSearchForEditors() if settings.get('clearHighlightSearchOnResetNormalMode')
     @editor.clearSelections()
     @activate('normal')
-    @main.clearRangeMarkerForEditors() if settings.get('clearRangeMarkerOnResetNormalMode')
-    @main.clearHighlightSearchForEditors() if settings.get('clearHighlightSearchOnResetNormalMode')
 
   reset: ->
     @resetCount()
     @resetCharInput()
-    @resetForceOperatorWise()
     @register.reset()
     @searchHistory.reset()
     @hover.reset()
@@ -330,6 +336,13 @@ class VimState
   # -------------------------
   addRangeMarkers: (markers) ->
     @rangeMarkers.push(markers...)
+    @updateHasRangeMarkerState()
+
+  removeRangeMarker: (rangeMarker) ->
+    _.remove(@rangeMarkers, rangeMarker)
+    @updateHasRangeMarkerState()
+
+  updateHasRangeMarkerState: ->
     @toggleClassList('with-range-marker', @hasRangeMarkers())
 
   hasRangeMarkers: ->
@@ -338,7 +351,23 @@ class VimState
   getRangeMarkers: (markers) ->
     @rangeMarkers
 
+  getRangeMarkerBufferRanges: ({cursorContainedOnly}={}) ->
+    ranges = @rangeMarkers.map (marker) ->
+      marker.getBufferRange()
+
+    unless (cursorContainedOnly ? false)
+      ranges
+    else
+      points = @editor.getCursorBufferPositions()
+      ranges.filter (range) ->
+        isRangeContainsSomePoint(range, points, exclusive: false)
+
+  eachRangeMarkers: (fn) ->
+    for rangeMarker in @getRangeMarkers()
+      fn(rangeMarker)
+
   clearRangeMarkers: ->
-    marker.destroy() for marker in @rangeMarkers
+    @eachRangeMarkers (rangeMarker) ->
+      rangeMarker.destroy()
     @rangeMarkers = []
     @toggleClassList('with-range-marker', @hasRangeMarkers())
