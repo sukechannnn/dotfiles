@@ -34,6 +34,7 @@
       "linter"
       "react"
       "react-snippets"
+      "auto-encoding"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
