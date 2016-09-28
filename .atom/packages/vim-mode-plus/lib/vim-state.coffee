@@ -21,7 +21,7 @@ ModeManager = require './mode-manager'
 RegisterManager = require './register-manager'
 SearchHistoryManager = require './search-history-manager'
 CursorStyleManager = require './cursor-style-manager'
-BlockwiseSelection = null # delay
+BlockwiseSelection = require './blockwise-selection'
 
 packageScope = 'vim-mode-plus'
 
@@ -32,6 +32,7 @@ class VimState
 
   @delegatesProperty('mode', 'submode', toProperty: 'modeManager')
   @delegatesMethods('isMode', 'activate', toProperty: 'modeManager')
+  @delegatesMethods('getCount', 'setCount', 'hasCount', toProperty: 'operationStack')
 
   constructor: (@main, @editor, @statusBarManager) ->
     @editorElement = @editor.element
@@ -81,13 +82,9 @@ class VimState
   clearBlockwiseSelections: ->
     @blockwiseSelections = []
 
-  addBlockwiseSelectionFromSelection: (selection) ->
-    BlockwiseSelection ?= require './blockwise-selection'
-    @blockwiseSelections.push(new BlockwiseSelection(selection))
-
   selectBlockwise: ->
     for selection in @editor.getSelections()
-      @addBlockwiseSelectionFromSelection(selection)
+      @blockwiseSelections.push(new BlockwiseSelection(selection))
     @updateSelectionProperties()
 
   # Other
@@ -97,37 +94,6 @@ class VimState
 
   setOperatorModifier: (modifier) ->
     @operationStack.setOperatorModifier(modifier)
-
-  # Count
-  # -------------------------
-  # keystroke `3d2w` delete 6(3*2) words
-  #  Each time, operation instantiated(new Operation), count are preserved.
-  #  pushed to @counts, then while operation executed, operation::getCount()
-  #  call vimState::getCount which return multiplied value for each of preserved counts.
-  count: null
-  counts: []
-  hasCount: -> @count?
-  preserveCount: ->
-    if @hasCount()
-      @counts.push(@count)
-      @count = null
-
-  getCount: ->
-    if @counts.length > 0
-      @counts.reduce (a, b) -> a * b
-    else
-      null
-
-  setCount: (number) ->
-    @count ?= 0
-    @count = (@count * 10) + number
-    @hover.add(number)
-    @toggleClassList('with-count', @hasCount())
-
-  resetCount: ->
-    @count = null
-    @counts = []
-    @toggleClassList('with-count', @hasCount())
 
   # Mark
   # -------------------------
@@ -175,11 +141,13 @@ class VimState
   onDidCommandSearch: (fn) -> @subscribe @searchInput.onDidCommand(fn)
 
   # Select and text mutation(Change)
+  onDidSetTarget: (fn) -> @subscribe @emitter.on('did-set-target', fn)
   onWillSelectTarget: (fn) -> @subscribe @emitter.on('will-select-target', fn)
   onDidSelectTarget: (fn) -> @subscribe @emitter.on('did-select-target', fn)
-  onDidSetTarget: (fn) -> @subscribe @emitter.on('did-set-target', fn)
+  preemptWillSelectTarget: (fn) -> @subscribe @emitter.preempt('will-select-target', fn)
+  preemptDidSelectTarget: (fn) -> @subscribe @emitter.preempt('did-select-target', fn)
+  onDidRestoreCursorPositions: (fn) -> @subscribe @emitter.on('did-restore-cursor-positions', fn)
 
-  # Event for operation execution life cycle.
   onDidFinishOperation: (fn) -> @subscribe @emitter.on('did-finish-operation', fn)
 
   # Select list view
@@ -270,7 +238,12 @@ class VimState
     @editorElement.addEventListener('mouseup', checkSelection)
     @subscriptions.add new Disposable =>
       @editorElement.removeEventListener('mouseup', checkSelection)
-    @subscriptions.add atom.commands.onWillDispatch(preserveCharacterwise)
+
+    # [FIXME]
+    # Hover position get wired when focus-change between more than two pane.
+    # commenting out is far better than introducing Buggy behavior.
+    # @subscriptions.add atom.commands.onWillDispatch(preserveCharacterwise)
+
     @subscriptions.add atom.commands.onDidDispatch(checkSelection)
 
   resetNormalMode: ({userInvocation}={}) ->
@@ -282,7 +255,6 @@ class VimState
     @activate('normal')
 
   reset: ->
-    @resetCount()
     @resetCharInput()
     @register.reset()
     @searchHistory.reset()
@@ -332,15 +304,30 @@ class VimState
     if settings.get('highlightSearch') and @main.highlightSearchPattern?
       @highlightSearchMarkers = @highlightSearch(@main.highlightSearchPattern, scanRange)
 
+  # Repeat
+  # -------------------------
+  reapatRecordedOperation: ->
+    @operationStack.runRecorded()
+
   # rangeMarkers for narrowRange
   # -------------------------
   addRangeMarkers: (markers) ->
     @rangeMarkers.push(markers...)
     @updateHasRangeMarkerState()
 
+  addRangeMarkersForRanges: (ranges) ->
+    markers = highlightRanges(@editor, ranges, class: 'vim-mode-plus-range-marker')
+    @addRangeMarkers(markers)
+
   removeRangeMarker: (rangeMarker) ->
     _.remove(@rangeMarkers, rangeMarker)
     @updateHasRangeMarkerState()
+
+  getRangeMarkerAtBufferPosition: (point) ->
+    exclusive = false
+    for rangeMarker in @getRangeMarkers()
+      if rangeMarker.getBufferRange().containsPoint(point, exclusive)
+        return rangeMarker
 
   updateHasRangeMarkerState: ->
     @toggleClassList('with-range-marker', @hasRangeMarkers())

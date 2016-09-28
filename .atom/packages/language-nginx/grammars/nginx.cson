@@ -1,7 +1,6 @@
 'fileTypes': [
   'conf',
-  'nginx',
-  'conf.erb'
+  'nginx'
 ]
 'foldingStartMarker': '\\{\\s*$'
 'foldingStopMarker': '^\\s*\\}'
@@ -209,3 +208,4 @@
     'name': 'support.function.directive.module.http.lua'
   }
 ]
+

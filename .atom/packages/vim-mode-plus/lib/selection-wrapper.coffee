@@ -1,16 +1,19 @@
 _ = require 'underscore-plus'
 {Range, Disposable} = require 'atom'
-{isLinewiseRange} = require './utils'
 
 propertyStore = new Map
 
 class SelectionWrapper
   constructor: (@selection) ->
 
-  hasProperties: -> propertyStore.has(@selection)
+  hasProperties: ->
+    # console.log 'hasProperties', @selection.id
+    propertyStore.has(@selection)
   getProperties: -> propertyStore.get(@selection) ? {}
-  setProperties: (prop) -> propertyStore.set(@selection, prop)
-  resetProperties: -> propertyStore.delete(@selection)
+  setProperties: (prop) ->
+    # console.log 'setProp', @selection.id
+    propertyStore.set(@selection, prop)
+  clearProperties: -> propertyStore.delete(@selection)
 
   setBufferRangeSafely: (range) ->
     if range
@@ -140,6 +143,8 @@ class SelectionWrapper
       editor.bufferRangeForScreenRange([start, end])
 
   preserveCharacterwise: ->
+    basename = require('path').basename
+    # console.log "PRESERVING", basename(@selection.editor.getPath())
     properties = @detectCharacterwiseProperties()
     unless @selection.isEmpty()
       endPoint = if @selection.isReversed() then 'tail' else 'head'
@@ -186,7 +191,7 @@ class SelectionWrapper
     end = editor.bufferPositionForScreenPosition(screenPoint, clipDirection: 'forward')
 
     @setBufferRange([start, end], {preserveFolds: true})
-    @resetProperties()
+    @clearProperties()
     @selection.cursor.goalColumn = goalColumn if goalColumn
 
   # Only for setting autoscroll option to false by default
@@ -214,13 +219,16 @@ class SelectionWrapper
     startRow is endRow
 
   isLinewise: ->
-    isLinewiseRange(@getBufferRange())
+    {start, end} = @getBufferRange()
+    (start.row isnt end.row) and (start.column is end.column is 0)
 
   detectVisualModeSubmode: ->
-    switch
-      when @isLinewise() then 'linewise'
-      when not @selection.isEmpty() then 'characterwise'
-      else null
+    if @selection.isEmpty()
+      null
+    else if @isLinewise()
+      'linewise'
+    else
+      'characterwise'
 
 swrap = (selection) ->
   new SelectionWrapper(selection)
@@ -237,9 +245,9 @@ swrap.reverse = (editor) ->
   editor.getSelections().forEach (selection) ->
     swrap(selection).reverse()
 
-swrap.resetProperties = (editor) ->
+swrap.clearProperties = (editor) ->
   editor.getSelections().forEach (selection) ->
-    swrap(selection).resetProperties()
+    swrap(selection).clearProperties()
 
 swrap.detectVisualModeSubmode = (editor) ->
   selections = editor.getSelections()

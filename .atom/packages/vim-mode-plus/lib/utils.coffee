@@ -34,16 +34,18 @@ include = (klass, module) ->
   for key, value of module
     klass::[key] = value
 
-debug = (message) ->
+debug = (messages...) ->
   return unless settings.get('debug')
-  message += "\n"
+  # messages += "\n"
+  # console.log messages
   switch settings.get('debugOutput')
     when 'console'
-      console.log message
+      # console.log "HEY!"
+      console.log messages...
     when 'file'
       filePath = fs.normalize settings.get('debugOutputFilePath')
       if fs.existsSync(filePath)
-        fs.appendFileSync filePath, message
+        fs.appendFileSync filePath, messages
 
 getView = (model) ->
   atom.views.getView(model)
@@ -58,6 +60,17 @@ saveEditorState = (editor) ->
     for row in foldStartRows.reverse() when not editor.isFoldedAtBufferRow(row)
       editor.foldBufferRow(row)
     editorElement.setScrollTop(scrollTop)
+
+# Return function to restore cursor position
+# When restoring, removed cursors are ignored.
+saveCursorPositions = (editor) ->
+  points = new Map
+  for cursor in editor.getCursors()
+    points.set(cursor, cursor.getBufferPosition())
+  ->
+    for cursor in editor.getCursors() when points.has(cursor)
+      point = points.get(cursor)
+      cursor.setBufferPosition(point)
 
 getKeystrokeForEvent = (event) ->
   keyboardEvent = event.originalEvent.originalEvent ? event.originalEvent
@@ -180,6 +193,17 @@ getTextInScreenRange = (editor, screenRange) ->
 cursorIsOnWhiteSpace = (cursor) ->
   isAllWhiteSpace(getCharacterAtCursor(cursor))
 
+getNonWordCharactersForCursor = (cursor) ->
+  # Atom 1.11.0-beta5 have this experimental method.
+  if cursor.getNonWordCharacters?
+    cursor.getNonWordCharacters()
+  else
+    scope = cursor.getScopeDescriptor().getScopesArray()
+    atom.config.get('editor.nonWordCharacters', {scope})
+
+cursorIsOnNonWordCharacter = (cursor) ->
+  getCharacterAtCursor(cursor) in getNonWordCharactersForCursor(cursor)
+
 getWordRegExpForPointWithCursor = (cursor, point) ->
   options = {}
   if pointIsBetweenWordAndNonWord(cursor.editor, point, cursor.getScopeDescriptor())
@@ -247,10 +271,12 @@ pointIsAtVimEndOfFile = (editor, point) ->
 cursorIsAtVimEndOfFile = (cursor) ->
   pointIsAtVimEndOfFile(cursor.editor, cursor.getBufferPosition())
 
+isEmptyRow = (editor, row) ->
+  {start, end} = editor.bufferRangeForBufferRow(row)
+  start.column is 0 and end.column is 0
+
 cursorIsAtEmptyRow = (cursor) ->
-  row = cursor.getBufferRow()
-  {start, end} = cursor.editor.bufferRangeForBufferRow(row)
-  (start.column is 0) and (end.column is 0)
+  isEmptyRow(cursor.editor, cursor.getBufferRow())
 
 getVimLastBufferRow = (editor) ->
   getVimEofBufferPosition(editor).row
@@ -577,15 +603,29 @@ isSurroundedBySpace = (text) ->
 isSingleLine = (text) ->
   text.split(/\n|\r\n/).length is 1
 
-getCurrentWordBufferRange = (cursor) ->
-  # [FIXME] Copy from selection.selectWord() and modify
-  # Original selectWord() modify existing selection
-  # But I only want to get range without modifying selection.
-  options = {}
-  options.wordRegex = /[\t ]*/ if cursor.isSurroundedByWhitespace()
-  if cursor.isBetweenWordAndNonWord()
-    options.includeNonWordCharacters = false
-  cursor.getCurrentWordBufferRange(options)
+# Return bufferRange and kind ['white-space', 'non-word', 'word']
+#
+# This function modify wordRegex so that it feel NATURAL in Vim's normal mode.
+# In normal-mode, cursor is ractangle(not pipe(|) char).
+# Cursor is like ON word rather than BETWEEN word.
+# The modification is tailord like this
+#   - ON white-space: Includs only white-spaces.
+#   - ON non-word: Includs only non word char(=excludes normal word char).
+getCurrentWordBufferRangeAndKind = (cursor) ->
+  if cursorIsOnWhiteSpace(cursor)
+    kind = 'white-space'
+    source = "[\t ]+"
+  else if cursorIsOnNonWordCharacter(cursor)
+    kind = 'non-word'
+    nonWordCharacters = _.escapeRegExp(getNonWordCharactersForCursor(cursor))
+    source = "[#{nonWordCharacters}]+"
+  else
+    kind = 'word'
+    nonWordCharacters = _.escapeRegExp(getNonWordCharactersForCursor(cursor))
+    source = "^[\t ]*$|[^\\s#{nonWordCharacters}]+"
+  wordRegex = new RegExp(source)
+  range = cursor.getCurrentWordBufferRange({wordRegex})
+  {range, kind}
 
 scanInRanges = (editor, pattern, scanRanges) ->
   ranges = []
@@ -616,6 +656,25 @@ withTrackingCursorPositionChange = (cursor, fn) ->
   cursorAfter = cursor.getBufferPosition()
   unless cursorBefore.isEqual(cursorAfter)
     console.log "Changed: #{cursorBefore.toString()} -> #{cursorAfter.toString()}"
+
+selectedRanges = (editor) ->
+  editor.getSelectedBufferRanges().map(toString).join("\n")
+
+selectedRange = (editor) ->
+  editor.getSelectedBufferRange().toString()
+
+{inspect} = require 'util'
+
+selectedText = (editor) ->
+  editor.getSelectedBufferRanges()
+    .map (range) ->
+      editor.getTextInBufferRange(range)
+      # inspect(editor.getTextInBufferRange(range))
+    .join("\n")
+
+toString = (obj) ->
+  if _.isFunction(obj.toString)
+    obj.toString()
 
 # Reloadable registerElement
 registerElement = (name, options) ->
@@ -660,6 +719,7 @@ module.exports = {
   debug
   getView
   saveEditorState
+  saveCursorPositions
   getKeystrokeForEvent
   getCharacterForEvent
   isLinewiseRange
@@ -704,6 +764,7 @@ module.exports = {
   pointIsBetweenWordAndNonWord
   pointIsSurroundedByWhitespace
   moveCursorToNextNonWhitespace
+  isEmptyRow
   cursorIsAtEmptyRow
   getCodeFoldRowRanges
   getCodeFoldRowRangesContainesForRow
@@ -731,7 +792,7 @@ module.exports = {
   moveCursorUpBuffer
   isSurroundedBySpace
   isSingleLine
-  getCurrentWordBufferRange
+  getCurrentWordBufferRangeAndKind
   scanInRanges
   isRangeContainsSomePoint
 
@@ -740,4 +801,9 @@ module.exports = {
   reportCursor
   withTrackingCursorPositionChange
   logGoalColumnForSelection
+
+  selectedRanges
+  selectedRange
+  selectedText
+  toString
 }

@@ -37,6 +37,9 @@ module.exports = new Settings 'vim-mode-plus',
     items: type: 'string'
     default: []
     description: 'Start in insert-mode whan editorElement matches scope'
+  clearMultipleCursorsOnEscapeInsertMode:
+    type: 'boolean'
+    default: true
   wrapLeftRightMotion:
     type: 'boolean'
     default: false
@@ -100,6 +103,10 @@ module.exports = new Settings 'vim-mode-plus',
     type: 'boolean'
     default: false
     description: "Don't move cursor after Yank"
+  stayOnDelete:
+    type: 'boolean'
+    default: false
+    description: "Don't move cursor after Delete"
   flashOnUndoRedo:
     type: 'boolean'
     default: true

@@ -1,5 +1,6 @@
 _ = require 'underscore-plus'
 {Emitter, Range, CompositeDisposable, Disposable} = require 'atom'
+globalState = require './global-state'
 Base = require './base'
 swrap = require './selection-wrapper'
 {moveCursorLeft} = require './utils'
@@ -17,8 +18,6 @@ class ModeManager
   deactivator: null
 
   replacedCharsBySelection: null
-  previousSelectionProperties: null
-  previousVisualModeSubmode: null
 
   constructor: (@vimState) ->
     {@editor, @editorElement} = @vimState
@@ -30,6 +29,8 @@ class ModeManager
     else
       @mode is mode
 
+  # Event
+  # -------------------------
   onWillActivateMode: (fn) -> @emitter.on('will-activate-mode', fn)
   onDidActivateMode: (fn) -> @emitter.on('did-activate-mode', fn)
   onWillDeactivateMode: (fn) -> @emitter.on('will-deactivate-mode', fn)
@@ -52,6 +53,7 @@ class ModeManager
 
     @deactivator = switch mode
       when 'normal' then @activateNormalMode()
+      when 'operator-pending' then @activateOperatorPendingMode()
       when 'insert' then @activateInsertMode(submode)
       when 'visual' then @activateVisualMode(submode)
 
@@ -81,7 +83,12 @@ class ModeManager
     @editorElement.component?.setInputEnabled(false)
     new Disposable
 
-  # ActivateInsertMode
+  # Operator Pending
+  # -------------------------
+  activateOperatorPendingMode: ->
+    new Disposable
+
+  # Insert
   # -------------------------
   activateInsertMode: (submode=null) ->
     @editorElement.component.setInputEnabled(true)
@@ -90,6 +97,10 @@ class ModeManager
     new Disposable =>
       replaceModeDeactivator?.dispose()
       replaceModeDeactivator = null
+
+      if settings.get('clearMultipleCursorsOnEscapeInsertMode')
+        @editor.clearSelections()
+
       # When escape from insert-mode, cursor move Left.
       needSpecialCareToPreventWrapLine = atom.config.get('editor.atomicSoftTabs') ? true
       for cursor in @editor.getCursors()
@@ -138,19 +149,6 @@ class ModeManager
       selection.clear(autoscroll: false) for selection in @editor.getSelections()
       @updateNarrowedState(false)
 
-  preservePreviousSelection: (selection) ->
-    properties = if selection.isBlockwise?()
-      selection.getCharacterwiseProperties()
-    else
-      swrap(selection).detectCharacterwiseProperties()
-    @previousSelectionProperties = properties
-    @previousVisualModeSubmode = @submode
-
-  getPreviousSelectionInfo: ->
-    properties = @previousSelectionProperties
-    submode = @previousVisualModeSubmode
-    {properties, submode}
-
   selectCharacterwise: ->
     switch @submode
       when 'linewise'
@@ -169,10 +167,15 @@ class ModeManager
       @vimState.mark.setRange('<', '>', range)
     @selectCharacterwise()
 
-    swrap.resetProperties(@editor)
+    swrap.clearProperties(@editor)
 
+    # Here we save previous selection range as characterwise range.
+    # even if original submode was blockwise. since we @selectCharacterwise() to
+    # restore characterwise range. above code.
     if preservePreviousSelection and not @editor.getLastSelection().isEmpty()
-      @preservePreviousSelection(@editor.getLastSelection())
+      lastSelection = @editor.getLastSelection()
+      properties = swrap(lastSelection).detectCharacterwiseProperties()
+      globalState.previousSelection = {properties, @submode}
 
     # We selectRight()ed in visual-mode, so reset this effect here.
     # `vc`, `vs` make selection empty.

@@ -6,6 +6,9 @@ Base = require './base'
 settings = require './settings'
 {CurrentSelection, Select, MoveToRelativeLine} = {}
 {OperationStackError, OperatorError, OperationAbortedError} = require './errors'
+swrap = require './selection-wrapper'
+
+{debug} = require './utils'
 
 class OperationStack
   constructor: (@vimState) ->
@@ -22,28 +25,52 @@ class OperationStack
     {mode} = @vimState
     switch
       when operation.isOperator()
-        if (mode is 'visual') and operation.isRequireTarget()
+        if (mode is 'visual') and not operation.hasTarget() # don't want to override target
           operation = operation.setTarget(new CurrentSelection(@vimState))
       when operation.isTextObject()
         unless mode is 'operator-pending'
-          operation = new Select(@vimState, target: operation)
+          operation = new Select(@vimState).setTarget(operation)
       when operation.isMotion()
         if (mode is 'visual')
-          operation = new Select(@vimState, target: operation)
+          operation = new Select(@vimState).setTarget(operation)
     operation
 
+  hasSelectionProperty: ->
+    swrap(@editor.getLastSelection()).hasProperties()
+
   run: (klass, properties={}) ->
-    klass = Base.getClass(klass) if _.isString(klass)
+    if settings.get('debug')
+      debug 'run-start:', @hasSelectionProperty()
     try
-      # When identical operator repeated, it set target to MoveToRelativeLine.
-      #  e.g. `dd`, `cc`, `gUgU`
-      if (@peekTop()?.constructor is klass)
-        klass = MoveToRelativeLine
-      operation = new klass(@vimState, properties)
-      @stack.push(@composeOperation(operation))
+      switch type = typeof(klass)
+        when 'string', 'function'
+          klass = Base.getClass(klass) if type is 'string'
+          # When identical operator repeated, it set target to MoveToRelativeLine.
+          #  e.g. `dd`, `cc`, `gUgU`
+          klass = MoveToRelativeLine if (@peekTop()?.constructor is klass)
+          operation = @composeOperation(new klass(@vimState, properties))
+        when 'object' # . repeat case
+          operation = klass
+          # console.log operation.getName()
+        else
+          throw new Error('Unsupported type of operation')
+
+      @stack.push(operation)
       @process()
     catch error
       @handleError(error)
+
+  runRecorded: ->
+    if operation = @getRecorded()
+      operation.setRepeated()
+      if @hasCount()
+        count = @getCount()
+        operation.count = count
+        operation.target?.count = count # Some opeartor have no target like ctrl-a(increase).
+
+      # [FIXME] Degradation, this `transact` should not be necessary
+      @editor.transact =>
+        @run(operation)
 
   handleError: (error) ->
     @vimState.reset()
@@ -60,18 +87,19 @@ class OperationStack
 
     try
       @reduce()
-      if @peekTop().isComplete()
+      top = @peekTop()
+
+      if top.isComplete()
+        debug "will-execute:", top.toString()
         @execute(@stack.pop())
       else
-        if @vimState.isMode('normal') and @peekTop().isOperator()
+        if @vimState.isMode('normal') and top.isOperator()
           @vimState.activate('operator-pending')
+          @addToClassList('with-occurrence') if top.isWithOccurrence()
 
         # Temporary set while command is running
-        if scope = @peekTop().constructor.getCommandNameWithoutPrefix?()
-          scope += "-pending"
-          @editorElement.classList.add(scope)
-          @subscribe new Disposable =>
-            @editorElement.classList.remove(scope)
+        if commandName = top.constructor.getCommandNameWithoutPrefix?()
+          @addToClassList(commandName + "-pending")
     catch error
       switch
         when error instanceof OperatorError
@@ -80,6 +108,11 @@ class OperationStack
           @vimState.resetNormalMode()
         else
           throw error
+
+  addToClassList: (className) ->
+    @editorElement.classList.add(className)
+    @subscribe new Disposable =>
+      @editorElement.classList.remove(className)
 
   execute: (operation) ->
     execution = operation.execute()
@@ -110,9 +143,13 @@ class OperationStack
       moveCursorLeft(cursor, {preserveGoalColumn: true})
 
   finish: (operation=null) ->
+    if operation?
+      debug 'finish-operation:', operation.toString(0), @hasSelectionProperty()
+    else
+      debug 'finish-operation: operation=null'
     @record(operation) if operation?.isRecordable()
     @vimState.emitter.emit('did-finish-operation')
-    
+
     if @vimState.isMode('normal')
       @ensureAllSelectionsAreEmpty(operation)
       @ensureAllCursorsAreNotAtEndOfLine()
@@ -120,6 +157,7 @@ class OperationStack
       @vimState.modeManager.updateNarrowedState()
     @vimState.updateCursorsVisibility()
     @vimState.reset()
+    debug '---------------'
 
   peekTop: ->
     _.last(@stack)
@@ -132,6 +170,7 @@ class OperationStack
       @peekTop().setTarget(operation)
 
   reset: ->
+    @resetCount()
     @stack = []
     @processing = false
     @subscriptions?.dispose()
@@ -154,5 +193,33 @@ class OperationStack
     # So either of @stack[0] or @peekTop() is OK.
     if @vimState.isMode('operator-pending')
       @stack[0].setOperatorModifier(modifier)
+
+  # Count
+  # -------------------------
+  # keystroke `3d2w` delete 6(3*2) words.
+  #  2nd number(2 in this case) is always enterd in operator-pending-mode.
+  #  So count have two timing to be entered. that's why here we manage counter by mode.
+  hasCount: ->
+    @count['normal']? or @count['operator-pending']?
+
+  getCount: ->
+    if @hasCount()
+      (@count['normal'] ? 1) * (@count['operator-pending'] ? 1)
+    else
+      null
+
+  setCount: (number) ->
+    if @vimState.mode is 'operator-pending'
+      mode = @vimState.mode
+    else
+      mode = 'normal'
+    @count[mode] ?= 0
+    @count[mode] = (@count[mode] * 10) + number
+    @vimState.hover.add(number)
+    @vimState.toggleClassList('with-count', true)
+
+  resetCount: ->
+    @count = {}
+    @vimState.toggleClassList('with-count', false)
 
 module.exports = OperationStack

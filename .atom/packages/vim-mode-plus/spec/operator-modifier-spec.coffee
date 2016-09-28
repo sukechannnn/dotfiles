@@ -90,7 +90,7 @@ describe "Operator modifier", ->
         editor.insertText('!!!')
         ensure "escape",
           mode: 'normal'
-          numCursors: 8
+          numCursors: 1
           text: """
 
           !!!: xxx: !!!:
@@ -106,7 +106,7 @@ describe "Operator modifier", ->
           """
         ensure "} j .",
           mode: 'normal'
-          numCursors: 8
+          numCursors: 1
           text: """
 
           !!!: xxx: !!!:
@@ -177,26 +177,22 @@ describe "Operator modifier", ->
       beforeEach ->
         set
           text: """
-          ooo: xxx: ooo:
-
-          |||: ooo: xxx: ooo: ooo: oooo:
-
-          xxx: |||: ooo:
-
+          vim-mode-plus vim-mode-plus
           """
       describe "what the cursor-word", ->
-        describe "cursor is at normal word [by select-occurrence]", ->
-          it "pick word but not pick partially matched one and re-use cached cursor-word on repeat", ->
-            set cursor: [0, 0]
-            ensure "g cmd-d o i p", selectedText: ['ooo', 'ooo']
-            ensure "escape escape 2 j .", selectedText: ['ooo', 'ooo', 'ooo']
-            ensure "escape escape 2 j .", selectedText: 'ooo'
-        describe "cursor is at nonWordCharacters [by select-occurrence]", ->
-          it "select that char only", ->
-            set cursor: [0, 3]
-            ensure "g cmd-d o i p", selectedText: [':', ':', ':']
-            ensure "escape escape 2 j .", -> selectedText: [':', ':', ':', ':', ':']
-            ensure "escape escape 2 j .", -> selectedText: [':', ':', ':']
+        ensureCursorWord = (initialPoint, {selectedText}) ->
+          set cursor: initialPoint
+          ensure "g cmd-d i p",
+            selectedText: selectedText
+            mode: ['visual', 'characterwise']
+          ensure "escape", mode: "normal"
+
+        describe "cursor is on normal word", ->
+          it "pick word but not pick partially matched one [by select]", ->
+            ensureCursorWord([0, 0], selectedText: ['vim', 'vim'])
+            ensureCursorWord([0, 3], selectedText: ['-', '-', '-', '-'])
+            ensureCursorWord([0, 4], selectedText: ['mode', 'mode'])
+            ensureCursorWord([0, 9], selectedText: ['plus', 'plus'])
         describe "cursor is at single white space [by delete]", ->
           it "pick single white space only", ->
             set
@@ -453,7 +449,6 @@ describe "Operator modifier", ->
       it 'change all assignment("=") of current-function to "?="', ->
         set cursor: [0, 0]
         ensure ['j f', input: '='], cursor: [1, 17]
-        selectOccurrence =
 
         withMockPlatform searchEditorElement, 'platform-darwin' , ->
           keystroke [
@@ -473,7 +468,7 @@ describe "Operator modifier", ->
           keystroke "m" # clear rangeMarker at cursor which is = sign part of fat arrow.
           expect(vimState.getRangeMarkers()).toHaveLength(10)
           keystroke [
-            'ctrl-cmd-g' # convert-range-marker-to-selection
+            'ctrl-cmd-g' # select-range-marker
             'I'          # Insert at start of selection
           ]
           editor.insertText('?')

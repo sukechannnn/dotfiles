@@ -35,10 +35,10 @@
   'alt-cmd-down': 'editor:move-line-down'
 
 'body':
-  'ctrl-cmd-w': 'window:focus-next-pane'
+  'ctrl-cmd-e': 'window:focus-next-pane'
 
 'atom-text-editor[data-grammar~="ruby"]':
   'cmd-r': 'rubocop-auto-correct:current-file'
 
 '.platform-darwin':
-  'cmd-ctrl-o': 'tree-view:toggle-focus'
+  'ctrl-cmd-w': 'tree-view:toggle-focus'

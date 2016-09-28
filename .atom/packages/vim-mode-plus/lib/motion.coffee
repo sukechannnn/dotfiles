@@ -1,5 +1,6 @@
 _ = require 'underscore-plus'
 {Point, Range} = require 'atom'
+Select = null
 
 globalState = require './global-state'
 {
@@ -27,6 +28,8 @@ globalState = require './global-state'
   getFirstCharacterPositionForBufferRow
   getFirstCharacterBufferPositionForScreenRow
   getTextInScreenRange
+
+  debug
 } = require './utils'
 
 swrap = require './selection-wrapper'
@@ -69,7 +72,8 @@ class Motion extends Base
       @moveCursor(cursor)
 
   select: ->
-    @vimState.modeManager.normalizeSelections() if @isMode('visual')
+    if @isMode('visual')
+      @vimState.modeManager.normalizeSelections()
 
     for selection in @editor.getSelections()
       if @isInclusive() or @isLinewise()
@@ -82,7 +86,12 @@ class Motion extends Base
     @editor.mergeIntersectingSelections()
 
     # Update characterwise properties on each movement.
-    @updateSelectionProperties() if @isMode('visual')
+    if @isMode('visual')
+      Select ?= Base.getClass('Select')
+      unless @getOperator() instanceof Select
+        debug "= updating: #{@getOperator()?.toString()}"
+      # console.log "= updating: #{@toString()}"
+      @updateSelectionProperties()
 
     switch
       when @isLinewise() then @vimState.selectLinewise()
@@ -123,7 +132,6 @@ class Motion extends Base
 class CurrentSelection extends Motion
   @extend(false)
   selectionExtent: null
-  pointBySelection: null
   inclusive: true
 
   initialize: ->
@@ -648,26 +656,25 @@ class ScrollFullScreenDown extends Motion
   @extend()
   amountOfPage: +1
 
-  initialize: ->
-    super
+  calculateScrollRow: ->
     amountOfRows = Math.ceil(@amountOfPage * @editor.getRowsPerPage() * @getCount())
     @cursorRow = @editor.getCursorScreenPosition().row + amountOfRows
     @newTopRow = @editor.getFirstVisibleScreenRow() + amountOfRows
 
-  scroll: ->
-    @editor.setFirstVisibleScreenRow(@newTopRow)
-
   select: ->
+    @calculateScrollRow()
     super
-    @scroll()
 
   execute: ->
+    @calculateScrollRow()
     super
-    @scroll()
+    @editor.setFirstVisibleScreenRow(@newTopRow)
 
   moveCursor: (cursor) ->
     point = [getValidVimScreenRow(@editor, @cursorRow), 0]
     cursor.setScreenPosition(point, autoscroll: false)
+
+    @editor.setFirstVisibleScreenRow(@newTopRow)
 
 # keymap: ctrl-b
 class ScrollFullScreenUp extends ScrollFullScreenDown

@@ -28,13 +28,18 @@
       "navigator-godef"
       "tester-go"
       "language-gfm"
-      "vim-mode-plus"
       "atom-ctags"
       "spell-check"
       "linter"
       "react"
       "react-snippets"
       "auto-encoding"
+      "autocomplete-elixir"
+      "atom-ternjs"
+      "color-picker"
+      "css-snippets"
+      "environment"
+      "language-elixir"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false

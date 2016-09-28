@@ -42,8 +42,9 @@ class TextObject extends Base
       @vimState.submode is 'linewise'
 
   select: ->
-    for selection in @editor.getSelections()
-      @selectTextObject(selection)
+    @countTimes =>
+      for selection in @editor.getSelections()
+        @selectTextObject(selection)
     @updateSelectionProperties() if @isMode('visual')
 
 # -------------------------
@@ -69,8 +70,11 @@ class Word extends TextObject
 
     start ?= from
     end ?= from
-    if @isA() and endOfSpace = getEndPositionForPattern(@editor, end, /\s+/, options)
-      end = endOfSpace
+    if @isA()
+      if endOfSpace = getEndPositionForPattern(@editor, end, /\s+/, options)
+        end = endOfSpace
+      else if startOfSpace = getStartPositionForPattern(@editor, start, /\s+/, options)
+        start = startOfSpace
 
     unless start.isEqual(end)
       new Range(start, end)
@@ -576,6 +580,7 @@ class Paragraph extends TextObject
       selection.selectToBufferPosition point if point?
 
   selectTextObject: (selection) ->
+    # FIXME: don't manage count on each child
     firstTime = true
     _.times @getCount(), =>
       @selectParagraph(selection, {firstTime})
@@ -784,14 +789,16 @@ class SearchMatchBackward extends SearchMatchForward
         stop()
     found
 
-# [FIXME] Currently vB range is treated as vC range, how I should do?
+# [Limitation: won't fix]: Selected range is not submode aware. always characterwise.
+# So even if original selection was vL or vB, selected range by this text-object
+# is always vC range.
 class PreviousSelection extends TextObject
   @extend()
-  backward: true
-
   select: ->
-    return unless range = @vimState.mark.getRange('<', '>')
-    @editor.getLastSelection().setBufferRange(range)
+    {properties, @submode} = globalState.previousSelection
+    if properties? and @submode?
+      selection = @editor.getLastSelection()
+      swrap(selection).selectByProperties(properties)
 
 class RangeMarker extends TextObject
   @extend(false)

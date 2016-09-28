@@ -23,17 +23,21 @@ vimStateMethods = [
   "onDidCancelSearch"
   "onDidUnfocusSearch"
   "onDidCommandSearch"
+
+  "onDidSetTarget"
   "onWillSelectTarget"
   "onDidSelectTarget"
-  "onDidSetTarget"
+  "preemptWillSelectTarget"
+  "preemptDidSelectTarget"
+  "onDidRestoreCursorPositions"
+
   "onDidFinishOperation"
+
   "onDidCancelSelectList"
   "subscribe"
   "isMode"
-  "hasCount"
   "getBlockwiseSelections"
   "updateSelectionProperties"
-  "preserveCount"
 ]
 
 class Base
@@ -42,7 +46,6 @@ class Base
 
   constructor: (@vimState, properties) ->
     {@editor, @editorElement} = @vimState
-    @preserveCount()
     _.extend(this, properties)
     if settings.get('showHoverOnOperate')
       hover = @hover?[settings.get('showHoverOnOperateIcon')]
@@ -138,11 +141,15 @@ class Base
     @onDidFinishOperation =>
       @vimState.activate(mode, submode)
 
-  addHover: (text, {replace}={}) ->
+  activateModeIfNecessary: (mode, submode) ->
+    unless @vimState.isMode(mode, submode)
+      @activateMode(mode, submode)
+
+  addHover: (text, {replace}={}, point=null) ->
     if replace ? false
-      @vimState.hover.replaceLastSection(text)
+      @vimState.hover.replaceLastSection(text, point)
     else
-      @vimState.hover.add(text)
+      @vimState.hover.add(text, point)
 
   new: (name, properties={}) ->
     klass = Base.getClass(name)
@@ -219,6 +226,12 @@ class Base
   emitDidSetTarget: (operator) ->
     @vimState.emitter.emit('did-set-target', operator)
 
+  emitDidRestoreCursorPositions: ->
+    @vimState.emitter.emit('did-restore-cursor-positions')
+
+  emitDidFailToSetTarget: ->
+    @vimState.emitter.emit('did-fail-to-set-target')
+
   # Class methods
   # -------------------------
   @init: (service) ->
@@ -226,7 +239,8 @@ class Base
     @subscriptions = new CompositeDisposable()
 
     [
-      './operator', './motion', './text-object',
+      './operator', './operator-insert', './operator-transform-string',
+      './motion', './text-object',
       './insert-mode', './misc-command'
     ].forEach(require)
 
