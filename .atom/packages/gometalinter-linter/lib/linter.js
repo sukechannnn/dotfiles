@@ -25,6 +25,7 @@ class GometalinterLinter {
     this.subscriptions.add(atom.commands.add('atom-workspace', 'golang:updatelinters', () => {
       this.updateTools()
     }))
+    this.registered = false
   }
 
   dispose () {
@@ -38,6 +39,25 @@ class GometalinterLinter {
     this.grammarScopes = null
     this.lintOnFly = null
     this.toolCheckComplete = null
+  }
+
+  registerTool () {
+    if (this.registered) {
+      return
+    }
+
+    let g = this.goget()
+    if (!g) {
+      return
+    }
+
+    this.subscriptions.add(g.register('github.com/alecthomas/gometalinter', (outcome) => {
+      if (!outcome.success) {
+        return
+      }
+      this.updateTools()
+    }))
+    this.registered = true
   }
 
   ready () {
@@ -56,6 +76,7 @@ class GometalinterLinter {
     if (!this.ready() || !editor) {
       return []
     }
+
     let buffer = editor.getBuffer()
     if (!buffer) {
       return []
@@ -127,10 +148,15 @@ class GometalinterLinter {
     let options = {}
     if (editor) {
       options.file = editor.getPath()
-      options.directory = path.dirname(editor.getPath())
+      if (options.file) {
+        options.directory = path.dirname(options.file)
+      }
     }
-    if (!options.directory && atom.project.paths.length) {
-      options.directory = atom.project.paths[0]
+    if (!options.directory) {
+      let paths = atom.project.getPaths()
+      if (paths.length) {
+        options.directory = paths[0]
+      }
     }
 
     return options
@@ -165,7 +191,7 @@ class GometalinterLinter {
 
       let args = ['--install']
       let notification = atom.notifications.addInfo('gometalinter', {
-        dismissable: false,
+        dismissable: true,
         icon: 'cloud-download',
         description: 'Running `gometalinter --install` to install tools.'
       })

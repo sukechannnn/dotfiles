@@ -10,6 +10,7 @@ export default {
   tester: null,
   subscriptions: null,
   toolCheckComplete: null,
+  toolRegistered: null,
 
   activate () {
     this.subscriptions = new CompositeDisposable()
@@ -32,6 +33,7 @@ export default {
     this.tester = null
     this.dependenciesInstalled = null
     this.toolCheckComplete = null
+    this.toolRegistered = null
   },
 
   provide () {
@@ -73,6 +75,7 @@ export default {
   consumeGoget (service) {
     this.goget = service
     this.checkForTools()
+    this.registerTool()
   },
 
   checkForTools () {
@@ -96,5 +99,13 @@ export default {
         }
       })
     }
+  },
+
+  registerTool () {
+    if (this.toolRegistered || !this.goget) {
+      return
+    }
+    this.subscriptions.add(this.goget.register('golang.org/x/tools/cmd/cover'))
+    this.toolRegistered = true
   }
 }
