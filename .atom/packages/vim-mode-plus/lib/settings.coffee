@@ -39,6 +39,9 @@ module.exports = new Settings 'vim-mode-plus',
     description: 'Start in insert-mode whan editorElement matches scope'
   clearMultipleCursorsOnEscapeInsertMode:
     type: 'boolean'
+    default: false
+  autoSelectPersistentSelectionOnOperate:
+    type: 'boolean'
     default: true
   wrapLeftRightMotion:
     type: 'boolean'
@@ -51,10 +54,10 @@ module.exports = new Settings 'vim-mode-plus',
     type: 'boolean'
     default: false
     description: 'Clear highlightSearch on `escape` in normal-mode'
-  clearRangeMarkerOnResetNormalMode:
+  clearPersistentSelectionOnResetNormalMode:
     type: 'boolean'
     default: false
-    description: 'Clear rangeMarker on `escape` in normal-mode'
+    description: 'Clear persistentSelection on `escape` in normal-mode'
   charactersToAddSpaceOnSurround:
     type: 'array'
     items: type: 'string'
@@ -99,6 +102,10 @@ module.exports = new Settings 'vim-mode-plus',
     type: 'boolean'
     default: false
     description: "Don't move cursor after TransformString e.g Toggle, Surround"
+  # stayOnIncrease:
+  #   type: 'boolean'
+  #   default: false
+  #   description: "Don't move cursor after Increase/Decrease `ctrl-a` or `ctrl-x`"
   stayOnYank:
     type: 'boolean'
     default: false

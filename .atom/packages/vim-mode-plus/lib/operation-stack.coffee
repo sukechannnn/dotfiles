@@ -1,67 +1,111 @@
+Delegato = require 'delegato'
 _ = require 'underscore-plus'
 
 {Disposable, CompositeDisposable} = require 'atom'
 Base = require './base'
 {moveCursorLeft} = require './utils'
 settings = require './settings'
-{CurrentSelection, Select, MoveToRelativeLine} = {}
-{OperationStackError, OperatorError, OperationAbortedError} = require './errors'
+{Select, MoveToRelativeLine} = {}
+{OperationAbortedError} = require './errors'
 swrap = require './selection-wrapper'
 
-{debug} = require './utils'
-
+# opration life in operationStack
+# 1. run
+#    instantiated by new.
+#    compliment implicit Operator.Select operator if necessary.
+#    push operation to stack.
+# 2. process
+#    reduce stack by, popping top of stack then set it as target of new top.
+#    check if remaining top of stack is executable by calling isComplete()
+#    if executable, then pop stack then execute(poppedOperation)
+#    if not executable, enter "operator-pending-mode"
 class OperationStack
+  Delegato.includeInto(this)
+  @delegatesProperty('mode', 'submode', toProperty: 'modeManager')
+
   constructor: (@vimState) ->
-    {@editor, @editorElement} = @vimState
-    CurrentSelection ?= Base.getClass('CurrentSelection')
+    {@editor, @editorElement, @modeManager} = @vimState
+
+    @subscriptions = new CompositeDisposable
+    @subscriptions.add @vimState.onDidDestroy(@destroy.bind(this))
+
     Select ?= Base.getClass('Select')
     MoveToRelativeLine ?= Base.getClass('MoveToRelativeLine')
+
     @reset()
 
-  subscribe: (args...) ->
-    @subscriptions.add args...
+  # Return handler
+  subscribe: (handler) ->
+    @operationSubscriptions.add(handler)
+    handler # DONT REMOVE
 
-  composeOperation: (operation) ->
-    {mode} = @vimState
-    switch
-      when operation.isOperator()
-        if (mode is 'visual') and not operation.hasTarget() # don't want to override target
-          operation = operation.setTarget(new CurrentSelection(@vimState))
-      when operation.isTextObject()
-        unless mode is 'operator-pending'
-          operation = new Select(@vimState).setTarget(operation)
-      when operation.isMotion()
-        if (mode is 'visual')
-          operation = new Select(@vimState).setTarget(operation)
-    operation
+  reset: ->
+    @resetCount()
+    @stack = []
+    @processing = false
+    @operationSubscriptions?.dispose()
+    @operationSubscriptions = new CompositeDisposable
 
-  hasSelectionProperty: ->
-    swrap(@editor.getLastSelection()).hasProperties()
+  destroy: ->
+    @subscriptions.dispose()
+    @operationSubscriptions?.dispose()
+    {@stack, @operationSubscriptions} = {}
 
+  # Stack manipulation
+  # -------------------------
+  push: (operation) ->
+    @stack.push(operation)
+
+  pop: ->
+    @stack.pop()
+
+  peekTop: ->
+    _.last(@stack)
+
+  peekBottom: ->
+    @stack[0]
+
+  isEmpty: ->
+    @stack.length is 0
+
+  isFull: ->
+    @stack.length is 2
+
+  hasPending: ->
+    @stack.length is 1
+
+  # Main
+  # -------------------------
   run: (klass, properties={}) ->
-    if settings.get('debug')
-      debug 'run-start:', @hasSelectionProperty()
     try
-      switch type = typeof(klass)
-        when 'string', 'function'
-          klass = Base.getClass(klass) if type is 'string'
-          # When identical operator repeated, it set target to MoveToRelativeLine.
-          #  e.g. `dd`, `cc`, `gUgU`
-          klass = MoveToRelativeLine if (@peekTop()?.constructor is klass)
-          operation = @composeOperation(new klass(@vimState, properties))
-        when 'object' # . repeat case
-          operation = klass
-          # console.log operation.getName()
-        else
-          throw new Error('Unsupported type of operation')
+      type = typeof(klass)
+      unless type in ['string', 'function', 'object']
+        throw new Error('Unsupported type of operation')
 
-      @stack.push(operation)
-      @process()
+      if type is 'object' # . repeat case we can execute as-it-is.
+        operation = klass
+      else
+        klass = Base.getClass(klass) if type is 'string'
+        # Replace operator when identical one repeated, e.g. `dd`, `cc`, `gUgU`
+        klass = MoveToRelativeLine if (@peekTop()?.constructor is klass)
+
+        operation = new klass(@vimState, properties)
+
+        # Compliment implicit Select operator
+        if operation.isTextObject() and @mode isnt 'operator-pending' or operation.isMotion() and @mode is 'visual'
+          operation = new Select(@vimState).setTarget(operation)
+
+      if @isEmpty() or (@peekTop().isOperator() and operation.isTarget())
+        @push(operation)
+        @process()
+      else
+        @vimState.emitDidFailToSetTarget() if @peekTop().isOperator()
+        @vimState.resetNormalMode()
     catch error
       @handleError(error)
 
   runRecorded: ->
-    if operation = @getRecorded()
+    if operation = @recordedOperation
       operation.setRepeated()
       if @hasCount()
         count = @getCount()
@@ -71,6 +115,16 @@ class OperationStack
       # [FIXME] Degradation, this `transact` should not be necessary
       @editor.transact =>
         @run(operation)
+
+  runCurrentFind: ({reverse}={}) ->
+    if operation = @vimState.globalState.get('currentFind')
+      operation = operation.clone(@vimState)
+      operation.setRepeated()
+      operation.resetCount()
+      if reverse
+        operation.isBackwards = ->
+          not operation.backwards
+      @run(operation)
 
   handleError: (error) ->
     @vimState.reset()
@@ -82,53 +136,48 @@ class OperationStack
 
   process: ->
     @processing = true
-    if @stack.length > 2
-      throw new Error('Operation stack must not exceeds 2 length')
+    if @isFull()
+      operation = @pop()
+      @peekTop().setTarget(operation)
 
-    try
-      @reduce()
-      top = @peekTop()
+    top = @peekTop()
+    if top.isComplete()
+      @execute(@pop())
+    else
+      if @mode is 'normal' and top.isOperator()
+        @vimState.activate('operator-pending')
 
-      if top.isComplete()
-        debug "will-execute:", top.toString()
-        @execute(@stack.pop())
-      else
-        if @vimState.isMode('normal') and top.isOperator()
-          @vimState.activate('operator-pending')
-          @addToClassList('with-occurrence') if top.isWithOccurrence()
-
-        # Temporary set while command is running
-        if commandName = top.constructor.getCommandNameWithoutPrefix?()
-          @addToClassList(commandName + "-pending")
-    catch error
-      switch
-        when error instanceof OperatorError
-          @vimState.resetNormalMode()
-        when error instanceof OperationStackError
-          @vimState.resetNormalMode()
-        else
-          throw error
-
-  addToClassList: (className) ->
-    @editorElement.classList.add(className)
-    @subscribe new Disposable =>
-      @editorElement.classList.remove(className)
+      # Temporary set while command is running
+      if commandName = top.constructor.getCommandNameWithoutPrefix?()
+        @addToClassList(commandName + "-pending")
 
   execute: (operation) ->
+    @vimState.updatePreviousSelection() if @mode is 'visual'
     execution = operation.execute()
     if execution instanceof Promise
-      finish = => @finish(operation)
-      handleError = => @handleError()
       execution
-        .then(finish)
-        .catch(handleError)
+        .then => @finish(operation)
+        .catch => @handleError()
     else
       @finish(operation)
 
   cancel: ->
-    if @vimState.mode not in ['visual', 'insert']
+    if @mode not in ['visual', 'insert']
       @vimState.resetNormalMode()
     @finish()
+
+  finish: (operation=null) ->
+    @recordedOperation = operation if operation?.isRecordable()
+    @vimState.emitter.emit('did-finish-operation')
+
+    if @mode is 'normal'
+      @ensureAllSelectionsAreEmpty(operation)
+      @ensureAllCursorsAreNotAtEndOfLine()
+    if @mode is 'visual'
+      @vimState.modeManager.updateNarrowedState()
+      @vimState.updatePreviousSelection()
+    @vimState.updateCursorsVisibility()
+    @vimState.reset()
 
   ensureAllSelectionsAreEmpty: (operation) ->
     unless @editor.getLastSelection().isEmpty()
@@ -142,57 +191,10 @@ class OperationStack
       # [FIXME] SCATTERED_CURSOR_ADJUSTMENT
       moveCursorLeft(cursor, {preserveGoalColumn: true})
 
-  finish: (operation=null) ->
-    if operation?
-      debug 'finish-operation:', operation.toString(0), @hasSelectionProperty()
-    else
-      debug 'finish-operation: operation=null'
-    @record(operation) if operation?.isRecordable()
-    @vimState.emitter.emit('did-finish-operation')
-
-    if @vimState.isMode('normal')
-      @ensureAllSelectionsAreEmpty(operation)
-      @ensureAllCursorsAreNotAtEndOfLine()
-    if @vimState.isMode('visual')
-      @vimState.modeManager.updateNarrowedState()
-    @vimState.updateCursorsVisibility()
-    @vimState.reset()
-    debug '---------------'
-
-  peekTop: ->
-    _.last(@stack)
-
-  reduce: ->
-    until @stack.length < 2
-      operation = @stack.pop()
-      unless @peekTop().setTarget?
-        throw new OperationStackError("The top operation in operation stack is not operator!")
-      @peekTop().setTarget(operation)
-
-  reset: ->
-    @resetCount()
-    @stack = []
-    @processing = false
-    @subscriptions?.dispose()
-    @subscriptions = new CompositeDisposable
-
-  destroy: ->
-    @subscriptions?.dispose()
-    {@stack, @subscriptions} = {}
-
-  isEmpty: ->
-    @stack.length is 0
-
-  record: (@recorded) ->
-
-  getRecorded: ->
-    @recorded
-
-  setOperatorModifier: (modifier) ->
-    # In operator-pending-mode, stack length is always 1 and its' operator.
-    # So either of @stack[0] or @peekTop() is OK.
-    if @vimState.isMode('operator-pending')
-      @stack[0].setOperatorModifier(modifier)
+  addToClassList: (className) ->
+    @editorElement.classList.add(className)
+    @subscribe new Disposable =>
+      @editorElement.classList.remove(className)
 
   # Count
   # -------------------------
@@ -209,8 +211,8 @@ class OperationStack
       null
 
   setCount: (number) ->
-    if @vimState.mode is 'operator-pending'
-      mode = @vimState.mode
+    if @mode is 'operator-pending'
+      mode = @mode
     else
       mode = 'normal'
     @count[mode] ?= 0

@@ -5,7 +5,9 @@ Delegato = require 'delegato'
   getVimEofBufferPosition
   getVimLastBufferRow
   getVimLastScreenRow
+  getWordBufferRangeAndKindAtBufferPosition
 } = require './utils'
+swrap = require './selection-wrapper'
 
 settings = require './settings'
 selectList = null
@@ -30,6 +32,13 @@ vimStateMethods = [
   "preemptWillSelectTarget"
   "preemptDidSelectTarget"
   "onDidRestoreCursorPositions"
+  "onDidSetOperatorModifier"
+
+  "onWillActivateMode"
+  "onDidActivateMode"
+  "onWillDeactivateMode"
+  "preemptWillDeactivateMode"
+  "onDidDeactivateMode"
 
   "onDidFinishOperation"
 
@@ -38,6 +47,7 @@ vimStateMethods = [
   "isMode"
   "getBlockwiseSelections"
   "updateSelectionProperties"
+  "addToClassList"
 ]
 
 class Base
@@ -45,7 +55,7 @@ class Base
   @delegatesMethods(vimStateMethods..., toProperty: 'vimState')
 
   constructor: (@vimState, properties) ->
-    {@editor, @editorElement} = @vimState
+    {@editor, @editorElement, @globalState} = @vimState
     _.extend(this, properties)
     if settings.get('showHoverOnOperate')
       hover = @hover?[settings.get('showHoverOnOperateIcon')]
@@ -106,6 +116,9 @@ class Base
   getCount: ->
     @count ?= @vimState.getCount() ? @getDefaultCount()
 
+  resetCount: ->
+    @count = null
+
   isDefaultCount: ->
     @count is @getDefaultCount()
 
@@ -121,9 +134,6 @@ class Base
 
   isDefaultRegisterName: ->
     @vimState.register.isDefaultName()
-
-  hasRegisterName: ->
-    @vimState.register.hasName()
 
   # Misc
   # -------------------------
@@ -154,6 +164,13 @@ class Base
   new: (name, properties={}) ->
     klass = Base.getClass(name)
     new klass(@vimState, properties)
+
+  clone: (vimState) ->
+    object = _.clone(this)
+    object.vimState = vimState
+    object.editor = vimState.editor
+    object.editorElement = vimState.editorElement
+    object
 
   cancelOperation: ->
     @vimState.operationStack.cancel()
@@ -197,6 +214,9 @@ class Base
   getVimLastScreenRow: ->
     getVimLastScreenRow(@editor)
 
+  getWordBufferRangeAndKindAtBufferPosition: (point, options) ->
+    getWordBufferRangeAndKindAtBufferPosition(@editor, point, options)
+
   instanceof: (klassName) ->
     this instanceof Base.getClass(klassName)
 
@@ -209,8 +229,27 @@ class Base
   isTextObject: ->
     @instanceof('TextObject')
 
+  isTarget: ->
+    @isMotion() or @isTextObject()
+
   getName: ->
     @constructor.name
+
+  getCursorBufferPosition: ->
+    if @isMode('visual')
+      [@editor.getLastSelection()].map(@getCursorPositionForSelection.bind(this))[0]
+    else
+      @editor.getCursorBufferPosition()
+
+  getCursorBufferPositions: ->
+    if @isMode('visual')
+      @editor.getSelections().map(@getCursorPositionForSelection.bind(this))
+    else
+      @editor.getCursorBufferPositions()
+
+  getCursorPositionForSelection: (selection) ->
+    options = {fromProperty: true, allowFallback: true}
+    swrap(selection).getBufferPositionFor('head', options)
 
   toString: ->
     str = @getName()
@@ -228,9 +267,6 @@ class Base
 
   emitDidRestoreCursorPositions: ->
     @vimState.emitter.emit('did-restore-cursor-positions')
-
-  emitDidFailToSetTarget: ->
-    @vimState.emitter.emit('did-fail-to-set-target')
 
   # Class methods
   # -------------------------

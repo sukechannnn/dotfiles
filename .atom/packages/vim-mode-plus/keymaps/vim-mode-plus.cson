@@ -98,6 +98,8 @@
   'C': 'vim-mode-plus:change-to-last-character-of-line'
   'S': 'vim-mode-plus:substitute-line'
   'r': 'vim-mode-plus:replace'
+  'g o': 'vim-mode-plus:toggle-preset-occurrence'
+
   # '_': 'vim-mode-plus:replace-with-register'
   'I': 'vim-mode-plus:insert-at-beginning-of-line'
   '>': 'vim-mode-plus:indent'
@@ -129,7 +131,8 @@
   # 'g r':   'vim-mode-plus:reverse'
   # 'g s':   'vim-mode-plus:sort'
   # 'ctrl-s': 'vim-mode-plus:transform-string-by-select-list'
-  # 'g m': 'vim-mode-plus:toggle-range-marker'
+
+  # 'enter': 'vim-mode-plus:toggle-persistent-selection'
 
   'ctrl-a': 'vim-mode-plus:increase'
   'ctrl-x': 'vim-mode-plus:decrease'
@@ -201,8 +204,8 @@
   '`': 'vim-mode-plus:start-move-to-mark'
   "'": 'vim-mode-plus:start-move-to-mark-line'
 
-  # 'ctrl-cmd-k': 'vim-mode-plus:move-up-to-edge'
-  # 'ctrl-cmd-j': 'vim-mode-plus:move-down-to-edge'
+  '[': 'vim-mode-plus:move-up-to-edge'
+  ']': 'vim-mode-plus:move-down-to-edge'
 
   # '[ [': 'vim-mode-plus:move-to-previous-fold-start'
   # '] [': 'vim-mode-plus:move-to-next-fold-start'
@@ -277,23 +280,24 @@
   '0': 'vim-mode-plus:set-count-0'
   '%': 'vim-mode-plus:move-to-line-by-percent'
 
-'atom-text-editor.vim-mode-plus.with-range-marker:not(.insert-mode)':
-  'cmd-d': 'vim-mode-plus:select-occurrence-in-a-range-marker'
-  'ctrl-cmd-g': 'vim-mode-plus:select-range-marker'
+'atom-text-editor.vim-mode-plus.has-persistent-selection:not(.insert-mode)':
+  'ctrl-cmd-g': 'vim-mode-plus:select-persistent-selection'
 
 'atom-text-editor.vim-mode-plus.visual-mode.is-narrowed':
-  'ctrl-cmd-c': 'vim-mode-plus:change-occurrence'
   'cmd-d': 'vim-mode-plus:select-occurrence'
+  'ctrl-cmd-c': 'vim-mode-plus:change-occurrence'
 
 '.platform-darwin atom-text-editor.vim-mode-plus-search':
   'ctrl-cmd-c': 'vim-mode-plus:change-occurrence-from-search'
   'cmd-d': 'vim-mode-plus:select-occurrence-from-search'
+  'cmd-o': 'vim-mode-plus:add-occurrence-pattern-from-search'
 
 # normal
 # -------------------------
 'atom-text-editor.vim-mode-plus.normal-mode':
   'i': 'vim-mode-plus:activate-insert-mode'
   'g i': 'vim-mode-plus:insert-at-last-insert'
+  'r': 'vim-mode-plus:replace-and-move-right'
 
   # 'g I': 'vim-mode-plus:insert-at-start-of-target'
   # 'g A': 'vim-mode-plus:insert-at-end-of-target'
@@ -328,9 +332,9 @@
   # 'd s': 'vim-mode-plus:delete-surround-any-pair'
   # 'd s': 'vim-mode-plus:delete-surround-any-pair-allow-forwarding'
 
-  # 'c s': 'vim-mode-plus:change-surround'
-  # 'c s': 'vim-mode-plus:change-surround-any-pair'
-  # 'c s': 'vim-mode-plus:change-surround-any-pair-allow-forwarding'
+  # 'y s c': 'vim-mode-plus:change-surround'
+  # 'y s c': 'vim-mode-plus:change-surround-any-pair'
+  # 'y s c': 'vim-mode-plus:change-surround-any-pair-allow-forwarding'
 
   # 'y m s':  'vim-mode-plus:map-surround'
 
@@ -341,15 +345,21 @@
   'V': 'vim-mode-plus:operator-modifier-linewise'
   'o': 'vim-mode-plus:operator-modifier-occurrence'
 
-# operator-pending.with-occurrence
-# [Experimental]
+# operator-pending.has-occurrence [Experimental]
 # -------------------------
-'atom-text-editor.vim-mode-plus.operator-pending-mode.with-occurrence':
+'atom-text-editor.vim-mode-plus.operator-pending-mode.has-occurrence':
   'p': 'vim-mode-plus:inner-paragraph'
-  'r': 'vim-mode-plus:a-range-marker'
+  'r': 'vim-mode-plus:a-persistent-selection'
+  'v': 'vim-mode-plus:inner-visible-area'
   'f': 'vim-mode-plus:a-function'
   'l': 'vim-mode-plus:inner-current-line'
   'z': 'vim-mode-plus:a-fold'
+
+# normal.occurrence-pending [Experimental] bulk-edit mode-like
+# -------------------------
+'atom-text-editor.vim-mode-plus.normal-mode.has-occurrence':
+  'I': 'vim-mode-plus:insert-at-start-of-target'
+  'A': 'vim-mode-plus:insert-at-end-of-target'
 
 # operator-pending, visual
 # -------------------------
@@ -449,8 +459,11 @@
   'a c': 'vim-mode-plus:a-latest-change'
   'g v': 'vim-mode-plus:previous-selection'
 
-  'i r': 'vim-mode-plus:inner-range-marker'
-  'a r': 'vim-mode-plus:a-range-marker'
+  'i r': 'vim-mode-plus:inner-persistent-selection'
+  'a r': 'vim-mode-plus:a-persistent-selection'
+
+  'i v': 'vim-mode-plus:inner-visible-area'
+  'a v': 'vim-mode-plus:a-visible-area'
 
 # visual
 # -------------------------
@@ -465,8 +478,10 @@
   'V': 'vim-mode-plus:activate-linewise-visual-mode'
   'ctrl-v': 'vim-mode-plus:activate-blockwise-visual-mode'
 
-  'I': 'vim-mode-plus:insert-at-start-of-selection'
-  'A': 'vim-mode-plus:insert-at-end-of-selection'
+  'I': 'vim-mode-plus:insert-at-start-of-target'
+  'A': 'vim-mode-plus:insert-at-end-of-target'
+
+  'enter': 'vim-mode-plus:create-persistent-selection'
 
   # 'p': 'vim-mode-plus:swap-with-register'
   # 'P': 'vim-mode-plus:swap-with-register'

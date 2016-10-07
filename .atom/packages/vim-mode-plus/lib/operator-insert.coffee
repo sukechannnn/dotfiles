@@ -160,25 +160,9 @@ class InsertAtStartOfTarget extends InsertByTarget
   @extend()
   which: 'start'
 
-# Alias for backward compatibility
-class InsertAtStartOfSelection extends InsertAtStartOfTarget
-  @extend()
-
 class InsertAtEndOfTarget extends InsertByTarget
   @extend()
   which: 'end'
-
-class InsertAtStartOfOccurrence extends InsertAtStartOfTarget
-  @extend()
-  withOccurrence: true
-
-class InsertAtEndOfOccurrence extends InsertAtEndOfTarget
-  @extend()
-  withOccurrence: true
-
-# Alias for backward compatibility
-class InsertAtEndOfSelection extends InsertAtEndOfTarget
-  @extend()
 
 class InsertAtHeadOfTarget extends InsertByTarget
   @extend()
@@ -224,7 +208,7 @@ class Change extends ActivateInsertMode
       @flashTarget = true
 
     selected = @selectTarget()
-    if @isWithOccurrence() and not selected
+    if @isOccurrence() and not selected
       @vimState.activate('normal')
       return
 
@@ -246,11 +230,15 @@ class Change extends ActivateInsertMode
 class ChangeOccurrence extends Change
   @extend()
   @description: "Change all matching word within target range"
-  withOccurrence: true
+  occurrence: true
 
-class ChangeOccurrenceInARangeMarker extends ChangeOccurrence
+class ChangeOccurrenceInAFunctionOrInnerParagraph extends ChangeOccurrence
   @extend()
-  target: "ARangeMarker"
+  target: 'AFunctionOrInnerParagraph'
+
+class ChangeOccurrenceInAPersistentSelection extends ChangeOccurrence
+  @extend()
+  target: "APersistentSelection"
 
 class Substitute extends Change
   @extend()

@@ -1,6 +1,5 @@
 {getVimState, dispatch, TextData, getView} = require './spec-helper'
 settings = require '../lib/settings'
-globalState = require '../lib/global-state'
 
 describe "Motion Search", ->
   [set, ensure, keystroke, editor, editorElement, vimState] = []
@@ -31,7 +30,7 @@ describe "Motion Search", ->
 
       # clear search history
       vimState.searchHistory.clear()
-      globalState.currentSearch = null
+      vimState.globalState.set('currentSearch', null)
 
     describe "as a motion", ->
       it "moves the cursor to the specified search pattern", ->
@@ -234,7 +233,7 @@ describe "Motion Search", ->
         editor.getTextInBufferRange(marker.getBufferRange())
 
       ensureHightlightSearch = (options) ->
-        markers = vimState.getHighlightSearch()
+        markers = vimState.highlightSearch.getMarkers()
         if options.length?
           expect(markers).toHaveLength(options.length)
 
@@ -248,14 +247,14 @@ describe "Motion Search", ->
       beforeEach ->
         jasmine.attachToDOM(getView(atom.workspace))
         settings.set('highlightSearch', true)
-        expect(vimState.hasHighlightSearch()).toBe(false)
+        expect(vimState.highlightSearch.hasMarkers()).toBe(false)
         ensure ['/', search: 'def'], cursor: [1, 0]
 
       describe "clearHighlightSearch command", ->
         it "clear highlightSearch marker", ->
           ensureHightlightSearch length: 2, text: ["def", "def"], mode: 'normal'
           dispatch(editorElement, 'vim-mode-plus:clear-highlight-search')
-          expect(vimState.hasHighlightSearch()).toBe(false)
+          expect(vimState.highlightSearch.hasMarkers()).toBe(false)
 
       describe "clearHighlightSearchOnResetNormalMode", ->
         describe "default setting", ->
@@ -269,7 +268,7 @@ describe "Motion Search", ->
             settings.set('clearHighlightSearchOnResetNormalMode', true)
             ensureHightlightSearch length: 2, text: ["def", "def"], mode: 'normal'
             dispatch(editorElement, 'vim-mode-plus:reset-normal-mode')
-            expect(vimState.hasHighlightSearch()).toBe(false)
+            expect(vimState.highlightSearch.hasMarkers()).toBe(false)
             ensure mode: 'normal'
 
   describe "the * keybinding", ->
@@ -279,21 +278,21 @@ describe "Motion Search", ->
         cursorBuffer: [0, 0]
 
     describe "as a motion", ->
-      it "moves cursor to next occurence of word under cursor", ->
+      it "moves cursor to next occurrence of word under cursor", ->
         ensure '*', cursorBuffer: [2, 0]
 
       it "repeats with the n key", ->
         ensure '*', cursorBuffer: [2, 0]
         ensure 'n', cursorBuffer: [0, 0]
 
-      it "doesn't move cursor unless next occurence is the exact word (no partial matches)", ->
+      it "doesn't move cursor unless next occurrence is the exact word (no partial matches)", ->
         set
           text: "abc\ndef\nghiabc\njkl\nabcdef"
           cursorBuffer: [0, 0]
         ensure '*', cursorBuffer: [0, 0]
 
       describe "with words that contain 'non-word' characters", ->
-        it "moves cursor to next occurence of word under cursor", ->
+        it "moves cursor to next occurrence of word under cursor", ->
           set
             text: """
             abc
@@ -390,7 +389,7 @@ describe "Motion Search", ->
 
   describe "the hash keybinding", ->
     describe "as a motion", ->
-      it "moves cursor to previous occurence of word under cursor", ->
+      it "moves cursor to previous occurrence of word under cursor", ->
         set
           text: "abc\n@def\nabc\ndef\n"
           cursorBuffer: [2, 1]
@@ -404,14 +403,14 @@ describe "Motion Search", ->
         ensure 'n', cursorBuffer: [4, 0]
         ensure 'n', cursorBuffer: [2, 0]
 
-      it "doesn't move cursor unless next occurence is the exact word (no partial matches)", ->
+      it "doesn't move cursor unless next occurrence is the exact word (no partial matches)", ->
         set
           text: "abc\ndef\nghiabc\njkl\nabcdef"
           cursorBuffer: [0, 0]
         ensure '#', cursorBuffer: [0, 0]
 
       describe "with words that containt 'non-word' characters", ->
-        it "moves cursor to next occurence of word under cursor", ->
+        it "moves cursor to next occurrence of word under cursor", ->
           set
             text: "abc\n@def\nabc\n@def\n"
             cursorBuffer: [3, 0]

@@ -21,9 +21,9 @@ class TransformString extends Operator
   @registerToSelectList: ->
     transformerRegistry.push(this)
 
-  mutateSelection: (selection) ->
-    text = @getNewText(selection.getText(), selection)
-    selection.insertText(text, {@autoIndent})
+  mutateSelection: (selection, stopMutation) ->
+    if text = @getNewText(selection.getText(), selection, stopMutation)
+      selection.insertText(text, {@autoIndent})
 
 class ToggleCase extends TransformString
   @extend()
@@ -40,7 +40,7 @@ class ToggleCase extends TransformString
       charLower
 
   getNewText: (text) ->
-    text.split('').map(@toggleCase.bind(this)).join('')
+    text.replace(/./g, @toggleCase.bind(this))
 
 class ToggleCaseAndMoveRight extends ToggleCase
   @extend()
@@ -67,6 +67,36 @@ class LowerCase extends TransformString
   getNewText: (text) ->
     text.toLowerCase()
 
+# Replace
+# -------------------------
+class Replace extends TransformString
+  @extend()
+  input: null
+  hover: icon: ':replace:', emoji: ':tractor:'
+  requireInput: true
+
+  initialize: ->
+    super
+    @focusInput()
+
+  getInput: ->
+    super or "\n"
+
+  mutateSelection: (selection) ->
+    input = @getInput()
+    @restorePositions = false if input is "\n"
+    text = selection.getText().replace(/./g, input)
+    selection.insertText(text, autoIndentNewline: true)
+
+class ReplaceAndMoveRight extends Replace
+  @extend()
+  target: "MoveRight"
+
+  mutateSelection: (selection) ->
+    if selection.getText().length is @getCount()
+      super
+
+# -------------------------
 # DUP meaning with SplitString need consolidate.
 class SplitByCharacter extends TransformString
   @extend()
@@ -166,9 +196,6 @@ class TransformStringByExternalCommand extends TransformString
   stdoutBySelection: null
 
   execute: ->
-    # We need to preserve selection before selection is cleared as a result of mutation.
-    @updatePreviousSelectionIfVisualMode()
-    # Mutation phase
     if @selectTarget()
       new Promise (resolve) =>
         @collect(resolve)
@@ -176,7 +203,7 @@ class TransformStringByExternalCommand extends TransformString
         for selection in @editor.getSelections()
           text = @getNewText(selection.getText(), selection)
           selection.insertText(text, {@autoIndent})
-        @restoreCursorPositions() if @restorePositions
+        @restoreCursorPositionsIfNecessary()
         @activateMode(@finalMode, @finalSubmode)
 
   collect: (resolve) ->
@@ -215,16 +242,9 @@ class TransformStringByExternalCommand extends TransformString
     @getStdout(selection) ? text
 
   # For easily extend by vmp plugin.
-  getCommand: (selection) ->
-    {@command, @args}
-
-  # For easily extend by vmp plugin.
-  getStdin: (selection) ->
-    selection.getText()
-
-  # For easily extend by vmp plugin.
-  getStdout: (selection) ->
-    @stdoutBySelection.get(selection)
+  getCommand: (selection) -> {@command, @args}
+  getStdin: (selection) -> selection.getText()
+  getStdout: (selection) -> @stdoutBySelection.get(selection)
 
 # -------------------------
 selectListItems = null
@@ -286,31 +306,34 @@ class Indent extends TransformString
   @extend()
   hover: icon: ':indent:', emoji: ':point_right:'
   stayOnLinewise: false
-  indentFunction: "indentSelectedRows"
+  useMarkerForStay: true
+  clipToMutationEndOnStay: false
 
   execute: ->
-    @onDidRestoreCursorPositions =>
-      unless @needStay()
-        for cursor in @editor.getCursors()
-          cursor.moveToFirstCharacterOfLine()
+    unless @needStay()
+      @onDidRestoreCursorPositions =>
+        @editor.moveToFirstCharacterOfLine()
     super
 
   mutateSelection: (selection) ->
-    selection[@indentFunction]()
+    selection.indentSelectedRows()
 
 class Outdent extends Indent
   @extend()
   hover: icon: ':outdent:', emoji: ':point_left:'
-  indentFunction: "outdentSelectedRows"
+  mutateSelection: (selection) ->
+    selection.outdentSelectedRows()
 
 class AutoIndent extends Indent
   @extend()
   hover: icon: ':auto-indent:', emoji: ':open_hands:'
-  indentFunction: "autoIndentSelectedRows"
+  mutateSelection: (selection) ->
+    selection.autoIndentSelectedRows()
 
 class ToggleLineComments extends TransformString
   @extend()
   hover: icon: ':toggle-line-comments:', emoji: ':mute:'
+  useMarkerForStay: true
   mutateSelection: (selection) ->
     selection.toggleLineComments()
 
@@ -320,16 +343,15 @@ class Surround extends TransformString
   @extend()
   @description: "Surround target by specified character like `(`, `[`, `\"`"
   displayName: "Surround ()"
+  hover: icon: ':surround:', emoji: ':two_women_holding_hands:'
   pairs: [
     ['[', ']']
     ['(', ')']
     ['{', '}']
     ['<', '>']
   ]
-  spaceSurroundedRegExp: /^\s([\s|\S]+)\s$/
   input: null
   charsMax: 1
-  hover: icon: ':surround:', emoji: ':two_women_holding_hands:'
   requireInput: true
   autoIndent: false
 
@@ -382,8 +404,8 @@ class SurroundSmartWord extends Surround
 class MapSurround extends Surround
   @extend()
   @description: "Surround each word(`/\w+/`) within target"
-  withOccurrence: true
-  patternForOccurence: /\w+/g
+  occurrence: true
+  patternForOccurrence: /\w+/g
 
 class DeleteSurround extends Surround
   @extend()
@@ -400,11 +422,11 @@ class DeleteSurround extends Surround
     @processOperation()
 
   getNewText: (text) ->
+    [openChar, closeChar] = [text[0], _.last(text)]
     text = text[1...-1]
     if isSingleLine(text)
-      text.trim()
-    else
-      text
+      text = text.trim() if openChar isnt closeChar
+    text
 
 class DeleteSurroundAnyPair extends DeleteSurround
   @extend()
@@ -551,8 +573,9 @@ class SplitString extends TransformString
 
 class ChangeOrder extends TransformString
   @extend(false)
+  wise: 'linewise'
+
   mutateSelection: (selection) ->
-    swrap(selection).expandOverLine()
     textForRows = swrap(selection).lineTextForBufferRows()
     rows = @getNewRows(textForRows)
     newText = rows.join("\n") + "\n"

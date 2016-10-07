@@ -221,7 +221,8 @@ class VimEditor
     'selectedScreenRange', 'selectedScreenRangeOrdered'
     'selectedBufferRange', 'selectedBufferRangeOrdered'
     'selectionIsReversed',
-    'rangeMarkerBufferRange'
+    'persistentSelectionBufferRange', 'persistentSelectionCount'
+    'occurrenceCount', 'occurrenceText'
     'characterwiseHead'
     'scrollTop',
     'mode',
@@ -300,12 +301,27 @@ class VimEditor
     @ensureSelectedBufferRange(range, true)
 
   ensureSelectionIsReversed: (reversed) ->
-    actual = @editor.getLastSelection().isReversed()
-    expect(actual).toBe(reversed)
+    for selection in @editor.getSelections()
+      actual = selection.isReversed()
+      expect(actual).toBe(reversed)
 
-  ensureRangeMarkerBufferRange: (range) ->
-    actual = @vimState.getRangeMarkerBufferRanges()
+  ensurePersistentSelectionBufferRange: (range) ->
+    actual = @vimState.persistentSelection.getMarkerBufferRanges()
     expect(actual).toEqual(toArrayOfRange(range))
+
+  ensurePersistentSelectionCount: (number) ->
+    actual = @vimState.persistentSelection.getMarkerCount()
+    expect(actual).toBe number
+
+  ensureOccurrenceCount: (number) ->
+    actual = @vimState.occurrenceManager.getMarkerCount()
+    expect(actual).toBe number
+
+  ensureOccurrenceText: (text) ->
+    markers = @vimState.occurrenceManager.getMarkers()
+    ranges = (r.getBufferRange() for r in markers)
+    actual = (@editor.getTextInBufferRange(r) for r in ranges)
+    expect(actual).toEqual(toArray(text))
 
   ensureCharacterwiseHead: (points) ->
     actual = (swrap(s).getCharacterwiseHeadPosition() for s in @editor.getSelections())

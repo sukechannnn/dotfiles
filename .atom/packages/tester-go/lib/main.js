@@ -2,13 +2,15 @@
 
 import {CompositeDisposable} from 'atom'
 import {Tester} from './tester'
+import TestPanel from './components/test-panel'
+import {TestPanelManager} from './test-panel-manager'
 
 export default {
   dependenciesInstalled: null,
   goget: null,
   goconfig: null,
-  tester: null,
   subscriptions: null,
+  tester: null,
   toolCheckComplete: null,
   toolRegistered: null,
 
@@ -20,6 +22,8 @@ export default {
     }).catch((e) => {
       console.log(e)
     })
+
+    this.getTestPanelManager()
     this.getTester()
   },
 
@@ -31,6 +35,7 @@ export default {
     this.goget = null
     this.goconfig = null
     this.tester = null
+    this.testPanelManager = null
     this.dependenciesInstalled = null
     this.toolCheckComplete = null
     this.toolRegistered = null
@@ -48,9 +53,20 @@ export default {
       return this.getGoconfig()
     }, () => {
       return this.getGoget()
+    }, () => {
+      return this.getTestPanelManager()
     })
     this.subscriptions.add(this.tester)
     return this.tester
+  },
+
+  getTestPanelManager () {
+    if (this.testPanelManager) {
+      return this.testPanelManager
+    }
+    this.testPanelManager = new TestPanelManager()
+    this.subscriptions.add(this.testPanelManager)
+    return this.testPanelManager
   },
 
   getGoconfig () {
@@ -107,5 +123,12 @@ export default {
     }
     this.subscriptions.add(this.goget.register('golang.org/x/tools/cmd/cover'))
     this.toolRegistered = true
+  },
+
+  provideGoPlusView () {
+    return {
+      view: TestPanel,
+      model: this.getTestPanelManager()
+    }
   }
 }

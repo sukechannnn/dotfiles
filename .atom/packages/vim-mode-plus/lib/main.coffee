@@ -7,7 +7,6 @@ StatusBarManager = require './status-bar-manager'
 globalState = require './global-state'
 settings = require './settings'
 VimState = require './vim-state'
-{getVisibleEditors} = require './utils'
 
 module.exports =
   config: settings.config
@@ -17,13 +16,11 @@ module.exports =
     @statusBarManager = new StatusBarManager
     @vimStatesByEditor = new Map
     @emitter = new Emitter
-    @highlightSearchPattern = null
 
     service = @provideVimModePlus()
     @subscribe(Base.init(service))
     @registerCommands()
     @registerVimStateCommands()
-
 
     if atom.inDevMode()
       developer = (new (require './developer'))
@@ -38,48 +35,36 @@ module.exports =
 
     @subscribe atom.workspace.observeTextEditors (editor) =>
       return if editor.isMini()
-      vimState = new VimState(this, editor, @statusBarManager)
+      vimState = new VimState(editor, @statusBarManager, globalState)
       @vimStatesByEditor.set(editor, vimState)
-
-      editorSubscriptions = new CompositeDisposable
-      editorSubscriptions.add editor.onDidDestroy =>
-        editorSubscriptions.dispose()
-        @unsubscribe(editorSubscriptions)
+      @subscribe editor.onDidDestroy =>
         vimState.destroy()
         @vimStatesByEditor.delete(editor)
 
-      editorSubscriptions.add editor.onDidStopChanging ->
-        vimState.refreshHighlightSearch()
-      @subscribe(editorSubscriptions)
       @emitter.emit('did-add-vim-state', vimState)
-
-    @subscribe atom.workspace.onDidStopChangingActivePaneItem (item) =>
-      if atom.workspace.isTextEditor(item)
-        # Still there is possibility editor is destroyed and don't have corresponding
-        # vimState #196.
-        @getEditorState(item)?.refreshHighlightSearch()
 
     workspaceClassList = atom.views.getView(atom.workspace).classList
     @subscribe atom.workspace.onDidChangeActivePane ->
       workspaceClassList.remove('vim-mode-plus-pane-maximized', 'hide-tab-bar')
 
-    @onDidSetLastSearchPattern =>
-      @highlightSearchPattern = globalState.lastSearchPattern
-      @refreshHighlightSearchForVisibleEditors()
+    @subscribe atom.workspace.onDidStopChangingActivePaneItem (item) =>
+      if atom.workspace.isTextEditor(item)
+        # Still there is possibility editor is destroyed and don't have corresponding
+        # vimState #196.
+        @getEditorState(item)?.highlightSearch.refresh()
 
-    @subscribe settings.observe 'highlightSearch', (newValue) =>
+    @subscribe settings.observe 'highlightSearch', (newValue) ->
       if newValue
-        @refreshHighlightSearchForVisibleEditors()
+        # Re-setting value trigger highlightSearch refresh
+        value = globalState.get('highlightSearchPattern')
+        globalState.set('highlightSearchPattern', value)
       else
-        @clearHighlightSearchForEditors()
+        globalState.set('highlightSearchPattern', null)
 
   observeVimMode: (fn) ->
     fn() if atom.packages.isPackageActive('vim-mode')
     atom.packages.onDidActivatePackage (pack) ->
       fn() if pack.name is 'vim-mode'
-
-  onDidSetLastSearchPattern: (fn) -> @emitter.on('did-set-last-search-pattern', fn)
-  emitDidSetLastSearchPattern: (fn) -> @emitter.emit('did-set-last-search-pattern')
 
   # * `fn` {Function} to be called when vimState instance was created.
   #  Usage:
@@ -95,18 +80,9 @@ module.exports =
     @vimStatesByEditor.forEach(fn)
     @onDidAddVimState(fn)
 
-  refreshHighlightSearchForVisibleEditors: ->
-    for editor in getVisibleEditors()
-      @getEditorState(editor).refreshHighlightSearch()
-
-  clearHighlightSearchForEditors: ->
+  clearPersistentSelectionForEditors: ->
     for editor in atom.workspace.getTextEditors()
-      @getEditorState(editor).clearHighlightSearch()
-    @highlightSearchPattern = null
-
-  clearRangeMarkerForEditors: ->
-    for editor in atom.workspace.getTextEditors()
-      @getEditorState(editor).clearRangeMarkers()
+      @getEditorState(editor).clearPersistentSelections()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -123,9 +99,9 @@ module.exports =
     @subscribe atom.commands.add 'atom-text-editor:not([mini])',
       # One time clearing highlightSearch. equivalent to `nohlsearch` in pure Vim.
       # Clear all editor's highlight so that we won't see remaining highlight on tab changed.
-      'vim-mode-plus:clear-highlight-search': => @clearHighlightSearchForEditors()
+      'vim-mode-plus:clear-highlight-search': -> globalState.set('highlightSearchPattern', null)
       'vim-mode-plus:toggle-highlight-search': -> settings.toggle('highlightSearch')
-      'vim-mode-plus:clear-range-marker': => @clearRangeMarkerForEditors()
+      'vim-mode-plus:clear-persistent-selection': => @clearPersistentSelectionForEditors()
 
     @subscribe atom.commands.add 'atom-workspace',
       'vim-mode-plus:maximize-pane': => @maximizePane()
@@ -148,10 +124,12 @@ module.exports =
       'activate-blockwise-visual-mode': -> @activate('visual', 'blockwise')
       'reset-normal-mode': -> @resetNormalMode(userInvocation: true)
       'set-register-name': -> @register.setName() # "
-      'operator-modifier-characterwise': -> @setOperatorModifier(wise: 'characterwise')
-      'operator-modifier-linewise': -> @setOperatorModifier(wise: 'linewise')
-      'operator-modifier-occurrence': -> @setOperatorModifier(occurence: true)
-      'repeat': -> @reapatRecordedOperation()
+      'operator-modifier-characterwise': -> @emitDidSetOperatorModifier(wise: 'characterwise')
+      'operator-modifier-linewise': -> @emitDidSetOperatorModifier(wise: 'linewise')
+      'operator-modifier-occurrence': -> @emitDidSetOperatorModifier(occurrence: true)
+      'repeat': -> @operationStack.runRecorded()
+      'repeat-find': -> @operationStack.runCurrentFind()
+      'repeat-find-reverse': -> @operationStack.runCurrentFind(reverse: true)
       'set-count-0': -> @setCount(0)
       'set-count-1': -> @setCount(1)
       'set-count-2': -> @setCount(2)

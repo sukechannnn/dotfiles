@@ -2,7 +2,6 @@ _ = require 'underscore-plus'
 {Point, Range} = require 'atom'
 Select = null
 
-globalState = require './global-state'
 {
   saveEditorState, getVisibleBufferRange
   moveCursorLeft, moveCursorRight
@@ -47,19 +46,19 @@ class Motion extends Base
     @initialize()
 
   isLinewise: ->
-    if @isMode('visual')
-      @isMode('visual', 'linewise')
+    if @isAsOperatorTarget()
+      @linewise or @isMode('visual', 'linewise')
     else
-      @linewise
+      @isMode('visual', 'linewise')
 
   isBlockwise: ->
     @isMode('visual', 'blockwise')
 
   isInclusive: ->
-    if @isMode('visual')
-      @isMode('visual', ['characterwise', 'blockwise'])
+    if @isAsOperatorTarget()
+      @inclusive or @isMode('visual', ['characterwise', 'blockwise'])
     else
-      @inclusive
+      @isMode('visual', ['characterwise', 'blockwise'])
 
   setBufferPositionSafely: (cursor, point) ->
     cursor.setBufferPosition(point) if point?
@@ -90,7 +89,6 @@ class Motion extends Base
       Select ?= Base.getClass('Select')
       unless @getOperator() instanceof Select
         debug "= updating: #{@getOperator()?.toString()}"
-      # console.log "= updating: #{@toString()}"
       @updateSelectionProperties()
 
     switch
@@ -152,18 +150,6 @@ class CurrentSelection extends Motion
         @selectionExtent = @editor.getSelectedBufferRange().getExtent()
 
       @linewise = @isLinewise() # Cache it in case repeated.
-
-      # * Purpose of pointInfoByCursor? see #235 for detail.
-      # When stayOnTransformString is enabled, cursor pos is not set on start of
-      # of selected range.
-      # But I want following behavior, so need to preserve position info.
-      #  1. `vj>.` -> indent same two rows regardless of current cursor's row.
-      #  2. `vj>j.` -> indent two rows from cursor's row.
-      startOfSelection = cursor.selection.getBufferRange().start
-      @onDidFinishOperation =>
-        cursorPosition = cursor.getBufferPosition()
-        atEOL = cursor.isAtEndOfLine()
-        @pointInfoByCursor.set(cursor, {startOfSelection, cursorPosition, atEOL})
     else
       point = cursor.getBufferPosition()
       if @isBlockwise()
@@ -180,6 +166,19 @@ class CurrentSelection extends Motion
         if atEOL or cursorPosition.isEqual(cursor.getBufferPosition())
           cursor.setBufferPosition(startOfSelection)
       super
+
+    # * Purpose of pointInfoByCursor? see #235 for detail.
+    # When stayOnTransformString is enabled, cursor pos is not set on start of
+    # of selected range.
+    # But I want following behavior, so need to preserve position info.
+    #  1. `vj>.` -> indent same two rows regardless of current cursor's row.
+    #  2. `vj>j.` -> indent two rows from cursor's row.
+    for cursor in @editor.getCursors()
+      startOfSelection = cursor.selection.getBufferRange().start
+      @onDidFinishOperation =>
+        cursorPosition = cursor.getBufferPosition()
+        atEOL = cursor.isAtEndOfLine()
+        @pointInfoByCursor.set(cursor, {startOfSelection, cursorPosition, atEOL})
 
 class MoveLeft extends Motion
   @extend()
@@ -617,11 +616,18 @@ class MoveToTopOfScreen extends Motion
   getPoint: ->
     getFirstCharacterBufferPositionForScreenRow(@editor, @getRow())
 
+  getScrolloff: ->
+    if @isAsOperatorTarget()
+      0
+    else
+      @scrolloff
+
   getRow: ->
     row = getFirstVisibleScreenRow(@editor)
-    offset = @scrolloff
+    offset = @getScrolloff()
     offset = 0 if (row is 0)
-    row + Math.max(@getCount(), offset)
+    offset = Math.max(@getCount(), offset)
+    row + offset
 
 # keymap: M
 class MoveToMiddleOfScreen extends MoveToTopOfScreen
@@ -643,9 +649,10 @@ class MoveToBottomOfScreen extends MoveToTopOfScreen
     # So I intentionally use editor.getLastScreenRow here.
     vimLastScreenRow = @getVimLastScreenRow()
     row = Math.min(@editor.getLastVisibleScreenRow(), vimLastScreenRow)
-    offset = @scrolloff + 1
-    offset = 0 if (row is vimLastScreenRow)
-    row - Math.max(@getCount(), offset)
+    offset = @getScrolloff() + 1
+    offset = 0 if row is vimLastScreenRow
+    offset = Math.max(@getCount(), offset)
+    row - offset
 
 # Scrolling
 # Half: ctrl-d, ctrl-u
@@ -732,8 +739,7 @@ class Find extends Motion
   moveCursor: (cursor) ->
     point = @getPoint(cursor.getBufferPosition())
     @setBufferPositionSafely(cursor, point)
-    unless @isRepeated()
-      globalState.currentFind = this
+    @globalState.set('currentFind', this) unless @isRepeated()
 
 # keymap: F
 class FindBackwards extends Find
@@ -761,21 +767,6 @@ class TillBackwards extends Till
   inclusive: false
   backwards: true
 
-class RepeatFind extends Find
-  @extend()
-  repeated: true
-
-  initialize: ->
-    unless findObj = globalState.currentFind
-      @abort()
-    {@offset, @backwards, @input} = findObj
-    super
-
-class RepeatFindReverse extends RepeatFind
-  @extend()
-  isBackwards: ->
-    not @backwards
-
 # Mark
 # -------------------------
 # keymap: `
@@ -783,12 +774,12 @@ class MoveToMark extends Motion
   @extend()
   requireInput: true
   hover: icon: ":move-to-mark:`", emoji: ":round_pushpin:`"
+  input: null # set when instatntiated via vimState::moveToMark()
 
   initialize: ->
     super
     @focusInput() unless @isComplete()
 
-  input: null # set when instatntiated via vimState::moveToMark()
   getPoint: (fromPoint) ->
     input = @getInput()
     point = null
@@ -903,12 +894,11 @@ class SearchBase extends Motion
       @flashScreen() if @getVisualEffectFor('flashScreenOnSearchHasNoMatch')
 
     if @needToUpdateSearchHistory()
-      globalState.currentSearch = this
+      @globalState.set('currentSearch', this)
       @vimState.searchHistory.save(input)
 
     unless @isQuiet()
-      globalState.lastSearchPattern = @getPattern(input)
-      @vimState.main.emitDidSetLastSearchPattern()
+      @globalState.set('lastSearchPattern', @getPattern(input))
     @finish()
 
   getFromPoint: (cursor) ->
@@ -1010,12 +1000,16 @@ class Search extends SearchBase
               when 'next' then 'prev'
               when 'prev' then 'next'
           @visitMatch(direction)
-        when 'run'
-          options = {patternForOccurence: @matches.pattern} # preserve before cancel
-          options.target = 'ARangeMarker' if @vimState.hasRangeMarkers()
+        when 'occurrence'
+          if command.operation?
+            @vimState.occurrenceManager.resetPatterns()
+
+          @vimState.occurrenceManager.addPattern(@matches.pattern)
           @vimState.searchHistory.save(@input)
           @vimState.searchInput.cancel()
-          @vimState.operationStack.run(command.operation, options)
+
+          if command.operation?
+            @vimState.operationStack.run(command.operation)
 
   visitCursors: ->
     visitCursor = (cursor) =>
@@ -1117,7 +1111,7 @@ class RepeatSearch extends SearchBase
 
   initialize: ->
     super
-    unless search = globalState.currentSearch
+    unless search = @globalState.get('currentSearch')
       @abort()
     {@input, @backwards, @getPattern, @getCaseSensitivity, @configScope, @quiet} = search
 

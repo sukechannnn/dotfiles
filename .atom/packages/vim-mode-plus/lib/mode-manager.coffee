@@ -1,6 +1,5 @@
 _ = require 'underscore-plus'
 {Emitter, Range, CompositeDisposable, Disposable} = require 'atom'
-globalState = require './global-state'
 Base = require './base'
 swrap = require './selection-wrapper'
 {moveCursorLeft} = require './utils'
@@ -9,19 +8,17 @@ settings = require './settings'
 class ModeManager
   mode: 'insert' # Native atom is not modal editor and its default is 'insert'
   submode: null
-
-  vimState: null
-  editor: null
-  editorElement: null
-
-  emitter: null
-  deactivator: null
-
   replacedCharsBySelection: null
 
   constructor: (@vimState) ->
     {@editor, @editorElement} = @vimState
+    @mode = 'insert'
     @emitter = new Emitter
+    @subscriptions = new CompositeDisposable
+    @subscriptions.add @vimState.onDidDestroy(@destroy.bind(this))
+
+  destroy: ->
+    @subscriptions.dispose()
 
   isMode: (mode, submodes) ->
     if submodes?
@@ -65,8 +62,13 @@ class ModeManager
     @editorElement.classList.add("#{@mode}-mode")
     @editorElement.classList.add(@submode) if @submode?
 
+    if @mode is 'visual'
+      @updateNarrowedState()
+      @vimState.updatePreviousSelection()
+
     @vimState.statusBarManager.update(@mode, @submode)
     @vimState.updateCursorsVisibility()
+
     @emitter.emit('did-activate-mode', {@mode, @submode})
 
   deactivate: ->
@@ -142,10 +144,8 @@ class ModeManager
       when 'blockwise'
         @vimState.selectBlockwise() unless swrap(@editor.getLastSelection()).isLinewise()
 
-    @updateNarrowedState()
-
     new Disposable =>
-      @normalizeSelections(preservePreviousSelection: true)
+      @normalizeSelections()
       selection.clear(autoscroll: false) for selection in @editor.getSelections()
       @updateNarrowedState(false)
 
@@ -159,23 +159,9 @@ class ModeManager
           bs.restoreCharacterwise()
         @vimState.clearBlockwiseSelections()
 
-  normalizeSelections: ({preservePreviousSelection}={}) ->
-    preservePreviousSelection ?= false
-
-    if preservePreviousSelection
-      range = @editor.getLastSelection().getBufferRange()
-      @vimState.mark.setRange('<', '>', range)
+  normalizeSelections: ->
     @selectCharacterwise()
-
     swrap.clearProperties(@editor)
-
-    # Here we save previous selection range as characterwise range.
-    # even if original submode was blockwise. since we @selectCharacterwise() to
-    # restore characterwise range. above code.
-    if preservePreviousSelection and not @editor.getLastSelection().isEmpty()
-      lastSelection = @editor.getLastSelection()
-      properties = swrap(lastSelection).detectCharacterwiseProperties()
-      globalState.previousSelection = {properties, @submode}
 
     # We selectRight()ed in visual-mode, so reset this effect here.
     # `vc`, `vs` make selection empty.

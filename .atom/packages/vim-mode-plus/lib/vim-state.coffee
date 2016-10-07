@@ -3,15 +3,15 @@ _ = require 'underscore-plus'
 {Emitter, Disposable, CompositeDisposable, Range} = require 'atom'
 
 settings = require './settings'
-globalState = require './global-state'
 {HoverElement} = require './hover'
 {InputElement, SearchInputElement} = require './input'
 {
   haveSomeSelection
   highlightRanges
-  getVisibleBufferRange
+  getVisibleEditors
   matchScopes
-  isRangeContainsSomePoint
+
+  debug
 } = require './utils'
 swrap = require './selection-wrapper'
 
@@ -22,6 +22,10 @@ RegisterManager = require './register-manager'
 SearchHistoryManager = require './search-history-manager'
 CursorStyleManager = require './cursor-style-manager'
 BlockwiseSelection = require './blockwise-selection'
+OccurrenceManager = require './occurrence-manager'
+HighlightSearchManager = require './highlight-search-manager'
+MutationTracker = require './mutation-tracker'
+PersistentSelectionManager = require './persistent-selection-manager'
 
 packageScope = 'vim-mode-plus'
 
@@ -32,20 +36,22 @@ class VimState
 
   @delegatesProperty('mode', 'submode', toProperty: 'modeManager')
   @delegatesMethods('isMode', 'activate', toProperty: 'modeManager')
-  @delegatesMethods('getCount', 'setCount', 'hasCount', toProperty: 'operationStack')
+  @delegatesMethods('subscribe', 'getCount', 'setCount', 'hasCount', 'addToClassList', toProperty: 'operationStack')
 
-  constructor: (@main, @editor, @statusBarManager) ->
+  constructor: (@editor, @statusBarManager, @globalState) ->
     @editorElement = @editor.element
     @emitter = new Emitter
     @subscriptions = new CompositeDisposable
     @modeManager = new ModeManager(this)
     @mark = new MarkManager(this)
     @register = new RegisterManager(this)
-    @rangeMarkers = []
-
     @hover = new HoverElement().initialize(this)
     @hoverSearchCounter = new HoverElement().initialize(this)
     @searchHistory = new SearchHistoryManager(this)
+    @highlightSearch = new HighlightSearchManager(this)
+    @persistentSelection = new PersistentSelectionManager(this)
+    @occurrenceManager = new OccurrenceManager(this)
+    @mutationTracker = new MutationTracker(this)
 
     @input = new InputElement().initialize(this)
     @searchInput = new SearchInputElement().initialize(this)
@@ -53,19 +59,18 @@ class VimState
     @operationStack = new OperationStack(this)
     @cursorStyleManager = new CursorStyleManager(this)
     @blockwiseSelections = []
+    @previousSelection = {}
     @observeSelection()
 
-    @highlightSearchSubscription = @editorElement.onDidChangeScrollTop =>
-      @refreshHighlightSearch()
+    refreshHighlightSearch = =>
+      @highlightSearch.refresh()
+    @subscriptions.add @editor.onDidStopChanging(refreshHighlightSearch)
 
     @editorElement.classList.add(packageScope)
     if settings.get('startInInsertMode') or matchScopes(@editorElement, settings.get('startInInsertModeScopes'))
       @activate('insert')
     else
       @activate('normal')
-
-  subscribe: (args...) ->
-    @operationStack.subscribe args...
 
   # BlockwiseSelections
   # -------------------------
@@ -91,9 +96,6 @@ class VimState
   # -------------------------
   selectLinewise: ->
     swrap.expandOverLine(@editor, preserveGoalColumn: true)
-
-  setOperatorModifier: (modifier) ->
-    @operationStack.setOperatorModifier(modifier)
 
   # Mark
   # -------------------------
@@ -148,15 +150,27 @@ class VimState
   preemptDidSelectTarget: (fn) -> @subscribe @emitter.preempt('did-select-target', fn)
   onDidRestoreCursorPositions: (fn) -> @subscribe @emitter.on('did-restore-cursor-positions', fn)
 
+  onDidSetOperatorModifier: (fn) -> @subscribe @emitter.on('did-set-operator-modifier', fn)
+  emitDidSetOperatorModifier: (options) -> @emitter.emit('did-set-operator-modifier', options)
+
   onDidFinishOperation: (fn) -> @subscribe @emitter.on('did-finish-operation', fn)
 
   # Select list view
   onDidConfirmSelectList: (fn) -> @subscribe @emitter.on('did-confirm-select-list', fn)
   onDidCancelSelectList: (fn) -> @subscribe @emitter.on('did-cancel-select-list', fn)
 
+  # Proxying modeManger's event hook with short-life subscription.
+  onWillActivateMode: (fn) -> @subscribe @modeManager.onWillActivateMode(fn)
+  onDidActivateMode: (fn) -> @subscribe @modeManager.onDidActivateMode(fn)
+  onWillDeactivateMode: (fn) -> @subscribe @modeManager.onWillDeactivateMode(fn)
+  preemptWillDeactivateMode: (fn) -> @subscribe @modeManager.preemptWillDeactivateMode(fn)
+  onDidDeactivateMode: (fn) -> @subscribe @modeManager.onDidDeactivateMode(fn)
+
   # Events
   # -------------------------
   onDidFailToSetTarget: (fn) -> @emitter.on('did-fail-to-set-target', fn)
+  emitDidFailToSetTarget: -> @emitter.emit('did-fail-to-set-target')
+
   onDidDestroy: (fn) -> @emitter.on('did-destroy', fn)
 
   # * `fn` {Function} to be called when mark was set.
@@ -182,25 +196,20 @@ class VimState
 
     @hover?.destroy?()
     @hoverSearchCounter?.destroy?()
-    @operationStack?.destroy?()
     @searchHistory?.destroy?()
     @cursorStyleManager?.destroy?()
     @input?.destroy?()
     @search?.destroy?()
-    @modeManager?.destroy?()
-    @operationRecords?.destroy?()
     @register?.destroy?
-    @clearHighlightSearch()
-    @clearRangeMarkers()
-    @highlightSearchSubscription?.dispose()
     {
       @hover, @hoverSearchCounter, @operationStack,
       @searchHistory, @cursorStyleManager
-      @input, @search, @modeManager, @operationRecords, @register
-      @count, @rangeMarkers
+      @input, @search, @modeManager, @register
       @editor, @editorElement, @subscriptions,
       @inputCharSubscriptions
-      @highlightSearchSubscription
+      @occurrenceManager
+      @previousSelection
+      @persistentSelection
     } = {}
     @emitter.emit 'did-destroy'
 
@@ -248,10 +257,17 @@ class VimState
 
   resetNormalMode: ({userInvocation}={}) ->
     if userInvocation ? false
-      unless @editor.hasMultipleCursors()
-        @clearRangeMarkers() if settings.get('clearRangeMarkerOnResetNormalMode')
-        @main.clearHighlightSearchForEditors() if settings.get('clearHighlightSearchOnResetNormalMode')
-    @editor.clearSelections()
+      if @editor.hasMultipleCursors()
+        @editor.clearSelections()
+      else if @hasPersistentSelections() and settings.get('clearPersistentSelectionOnResetNormalMode')
+        @clearPersistentSelections()
+      else if @occurrenceManager.hasPatterns()
+        @occurrenceManager.resetPatterns()
+
+      if settings.get('clearHighlightSearchOnResetNormalMode')
+        @globalState.set('highlightSearchPattern', null)
+    else
+      @editor.clearSelections()
     @activate('normal')
 
   reset: ->
@@ -260,6 +276,10 @@ class VimState
     @searchHistory.reset()
     @hover.reset()
     @operationStack.reset()
+    @mutationTracker.reset()
+
+  isVisible: ->
+    @editor in getVisibleEditors()
 
   updateCursorsVisibility: ->
     @cursorStyleManager.refresh()
@@ -273,88 +293,28 @@ class VimState
     for selection in selections
       swrap(selection).preserveCharacterwise()
 
-  # highlightSearch
-  # -------------------------
-  clearHighlightSearch: ->
-    for marker in @highlightSearchMarkers ? []
-      marker.destroy()
-    @highlightSearchMarkers = null
-
-  hasHighlightSearch: ->
-    @highlightSearchMarkers?
-
-  getHighlightSearch: ->
-    @highlightSearchMarkers
-
-  highlightSearch: (pattern, scanRange) ->
-    ranges = []
-    @editor.scanInBufferRange pattern, scanRange, ({range}) ->
-      ranges.push(range)
-    markers = highlightRanges @editor, ranges,
-      invalidate: 'inside'
-      class: 'vim-mode-plus-highlight-search'
-    markers
-
-  refreshHighlightSearch: ->
-    [startRow, endRow] = @editorElement.getVisibleRowRange()
-    return unless scanRange = getVisibleBufferRange(@editor)
-    @clearHighlightSearch()
-    return if matchScopes(@editorElement, settings.get('highlightSearchExcludeScopes'))
-
-    if settings.get('highlightSearch') and @main.highlightSearchPattern?
-      @highlightSearchMarkers = @highlightSearch(@main.highlightSearchPattern, scanRange)
-
-  # Repeat
-  # -------------------------
-  reapatRecordedOperation: ->
-    @operationStack.runRecorded()
-
-  # rangeMarkers for narrowRange
-  # -------------------------
-  addRangeMarkers: (markers) ->
-    @rangeMarkers.push(markers...)
-    @updateHasRangeMarkerState()
-
-  addRangeMarkersForRanges: (ranges) ->
-    markers = highlightRanges(@editor, ranges, class: 'vim-mode-plus-range-marker')
-    @addRangeMarkers(markers)
-
-  removeRangeMarker: (rangeMarker) ->
-    _.remove(@rangeMarkers, rangeMarker)
-    @updateHasRangeMarkerState()
-
-  getRangeMarkerAtBufferPosition: (point) ->
-    exclusive = false
-    for rangeMarker in @getRangeMarkers()
-      if rangeMarker.getBufferRange().containsPoint(point, exclusive)
-        return rangeMarker
-
-  updateHasRangeMarkerState: ->
-    @toggleClassList('with-range-marker', @hasRangeMarkers())
-
-  hasRangeMarkers: ->
-    @rangeMarkers.length > 0
-
-  getRangeMarkers: (markers) ->
-    @rangeMarkers
-
-  getRangeMarkerBufferRanges: ({cursorContainedOnly}={}) ->
-    ranges = @rangeMarkers.map (marker) ->
-      marker.getBufferRange()
-
-    unless (cursorContainedOnly ? false)
-      ranges
+  updatePreviousSelection: ->
+    if @isMode('visual', 'blockwise')
+      properties = @getLastBlockwiseSelection()?.getCharacterwiseProperties()
     else
-      points = @editor.getCursorBufferPositions()
-      ranges.filter (range) ->
-        isRangeContainsSomePoint(range, points, exclusive: false)
+      properties = swrap(@editor.getLastSelection()).detectCharacterwiseProperties()
 
-  eachRangeMarkers: (fn) ->
-    for rangeMarker in @getRangeMarkers()
-      fn(rangeMarker)
+    return unless properties?
 
-  clearRangeMarkers: ->
-    @eachRangeMarkers (rangeMarker) ->
-      rangeMarker.destroy()
-    @rangeMarkers = []
-    @toggleClassList('with-range-marker', @hasRangeMarkers())
+    {head, tail} = properties
+    if head.isGreaterThan(tail)
+      @mark.setRange('<', '>', [tail, head])
+    else
+      @mark.setRange('<', '>', [head, tail])
+    @previousSelection = {properties, @submode}
+
+  # Persistent selection
+  # -------------------------
+  hasPersistentSelections: ->
+    @persistentSelection.hasMarkers()
+
+  getPersistentSelectionBuffferRanges: ->
+    @persistentSelection.getMarkerBufferRanges()
+
+  clearPersistentSelections: ->
+    @persistentSelection.clearMarkers()
