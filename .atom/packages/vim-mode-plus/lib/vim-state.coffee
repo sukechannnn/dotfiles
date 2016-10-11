@@ -1,4 +1,6 @@
 Delegato = require 'delegato'
+{jQuery} = require 'atom-space-pen-views'
+
 _ = require 'underscore-plus'
 {Emitter, Disposable, CompositeDisposable, Range} = require 'atom'
 
@@ -96,6 +98,9 @@ class VimState
   # -------------------------
   selectLinewise: ->
     swrap.expandOverLine(@editor, preserveGoalColumn: true)
+
+  updateSelectionProperties: (options) ->
+    swrap.updateSelectionProperties(@editor, options)
 
   # Mark
   # -------------------------
@@ -237,12 +242,12 @@ class VimState
       else
         @activate('normal') if @isMode('visual')
 
-    _preserveCharacterwise = =>
+    _saveProperties = =>
       for selection in @editor.getSelections()
-        swrap(selection).preserveCharacterwise()
+        swrap(selection).saveProperties()
 
     checkSelection = onInterestingEvent(_checkSelection)
-    preserveCharacterwise = onInterestingEvent(_preserveCharacterwise)
+    saveProperties = onInterestingEvent(_saveProperties)
 
     @editorElement.addEventListener('mouseup', checkSelection)
     @subscriptions.add new Disposable =>
@@ -251,7 +256,7 @@ class VimState
     # [FIXME]
     # Hover position get wired when focus-change between more than two pane.
     # commenting out is far better than introducing Buggy behavior.
-    # @subscriptions.add atom.commands.onWillDispatch(preserveCharacterwise)
+    # @subscriptions.add atom.commands.onWillDispatch(saveProperties)
 
     @subscriptions.add atom.commands.onDidDispatch(checkSelection)
 
@@ -284,20 +289,12 @@ class VimState
   updateCursorsVisibility: ->
     @cursorStyleManager.refresh()
 
-  updateSelectionProperties: ({force}={}) ->
-    selections = @editor.getSelections()
-    unless (force ? true)
-      selections = selections.filter (selection) ->
-        not swrap(selection).getCharacterwiseHeadPosition()?
-
-    for selection in selections
-      swrap(selection).preserveCharacterwise()
 
   updatePreviousSelection: ->
     if @isMode('visual', 'blockwise')
       properties = @getLastBlockwiseSelection()?.getCharacterwiseProperties()
     else
-      properties = swrap(@editor.getLastSelection()).detectCharacterwiseProperties()
+      properties = swrap(@editor.getLastSelection()).captureProperties()
 
     return unless properties?
 
@@ -318,3 +315,13 @@ class VimState
 
   clearPersistentSelections: ->
     @persistentSelection.clearMarkers()
+
+  # Animation management
+  # -------------------------
+  scrollAnimationEffect: null
+  requestScrollAnimation: (from, to, options) ->
+    @scrollAnimationEffect = jQuery(from).animate(to, options)
+
+  finishScrollAnimation: ->
+    @scrollAnimationEffect?.finish()
+    @scrollAnimationEffect = null

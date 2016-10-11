@@ -5,7 +5,7 @@ Select = null
 {
   saveEditorState, getVisibleBufferRange
   moveCursorLeft, moveCursorRight
-  moveCursorUp, moveCursorDown
+  moveCursorUpScreen, moveCursorDownScreen
   moveCursorDownBuffer
   moveCursorUpBuffer
   cursorIsAtVimEndOfFile
@@ -19,6 +19,7 @@ Select = null
   moveCursorToNextNonWhitespace
   cursorIsAtEmptyRow
   getCodeFoldRowRanges
+  getLargestFoldRangeContainsBufferRow
   isIncludeFunctionScopeForRow
   detectScopeStartPositionForScope
   getBufferRows
@@ -27,6 +28,7 @@ Select = null
   getFirstCharacterPositionForBufferRow
   getFirstCharacterBufferPositionForScreenRow
   getTextInScreenRange
+  cursorIsAtEndOfLineAtNonEmptyRow
 
   debug
 } = require './utils'
@@ -45,20 +47,14 @@ class Motion extends Base
     super
     @initialize()
 
-  isLinewise: ->
-    if @isAsOperatorTarget()
-      @linewise or @isMode('visual', 'linewise')
-    else
-      @isMode('visual', 'linewise')
-
   isBlockwise: ->
     @isMode('visual', 'blockwise')
 
   isInclusive: ->
-    if @isAsOperatorTarget()
-      @inclusive or @isMode('visual', ['characterwise', 'blockwise'])
-    else
-      @isMode('visual', ['characterwise', 'blockwise'])
+    @isMode('visual') or @isAsOperatorTarget() and @inclusive
+
+  isLinewise: ->
+    @isMode('visual', 'linewise') or @isAsOperatorTarget() and @linewise
 
   setBufferPositionSafely: (cursor, point) ->
     cursor.setBufferPosition(point) if point?
@@ -71,60 +67,35 @@ class Motion extends Base
       @moveCursor(cursor)
 
   select: ->
-    if @isMode('visual')
-      @vimState.modeManager.normalizeSelections()
+    @vimState.modeManager.normalizeSelections() if @isMode('visual')
 
     for selection in @editor.getSelections()
-      if @isInclusive() or @isLinewise()
-        @selectInclusively(selection)
-      else
-        selection.modifySelection =>
-          @moveCursor(selection.cursor)
+      @selectByMotion(selection)
 
     @editor.mergeCursors()
     @editor.mergeIntersectingSelections()
 
-    # Update characterwise properties on each movement.
-    if @isMode('visual')
-      Select ?= Base.getClass('Select')
-      unless @getOperator() instanceof Select
-        debug "= updating: #{@getOperator()?.toString()}"
-      @updateSelectionProperties()
+    @updateSelectionProperties() if @isMode('visual')
 
+    # Modify selection to submode-wisely
     switch
       when @isLinewise() then @vimState.selectLinewise()
       when @isBlockwise() then @vimState.selectBlockwise()
 
-  # Modify selection inclusively
-  # -------------------------
-  # * Why we need to allowWrap when moveCursorLeft/Right?
-  #  When 'linewise' selection, cursor is at column '0' of NEXT line, so we need to moveLeft
-  #  by wrapping, to put cursor on row which actually be selected(from UX point of view).
-  #  This adjustment is important so that j, k works without special care in moveCursor.
-  selectInclusively: (selection) ->
+  selectByMotion: (selection) ->
     {cursor} = selection
-    originalPoint = cursor.getBufferPosition()
-    # save tailRange(range under cursor) before we start to modify selection
-    tailRange = swrap(selection).getTailBufferRange()
+
     selection.modifySelection =>
       @moveCursor(cursor)
 
-      if @isMode('visual')
-        if cursor.isAtEndOfLine()
-          # [FIXME] SCATTERED_CURSOR_ADJUSTMENT
-          moveCursorLeft(cursor, {preserveGoalColumn: true})
-      else
-        # Return here because no movement was happend, nothing to do.
-        return if cursor.getBufferPosition().isEqual(originalPoint)
+    return if not @isMode('visual') and selection.isEmpty() # Failed to move.
+    return unless @isInclusive() or @isLinewise()
 
-      unless selection.isReversed()
-        # When cursor is at empty row, we allow to wrap to next line
-        # since when we `v`, w have to select line.
-        allowWrap = cursorIsAtEmptyRow(cursor)
-        # [FIXME] SCATTERED_CURSOR_ADJUSTMENT: -> NECESSARY
-        moveCursorRight(cursor, {allowWrap, preserveGoalColumn: true})
-
-      swrap(selection).mergeBufferRange(tailRange, {preserveFolds: true})
+    if @isMode('visual') and cursorIsAtEndOfLineAtNonEmptyRow(cursor)
+      # Avoid puting cursor on EOL in visual-mode as long as cursor's row was non-empty.
+      swrap(selection).translateSelectionHeadAndClip('backward')
+    # to select @inclusive-ly
+    swrap(selection).translateSelectionEndAndClip('forward')
 
 # Used as operator's target in visual-mode.
 class CurrentSelection extends Motion
@@ -206,33 +177,50 @@ class MoveRight extends Motion
 class MoveUp extends Motion
   @extend()
   linewise: true
-  direction: 'up'
 
-  move: (cursor) ->
-    moveCursorUp(cursor)
+  getPoint: (cursor) ->
+    row = @getRow(cursor.getBufferRow())
+    new Point(row, cursor.goalColumn)
+
+  getRow: (row) ->
+    row = Math.max(row - 1, 0)
+    if @editor.isFoldedAtBufferRow(row)
+      row = getLargestFoldRangeContainsBufferRow(@editor, row).start.row
+    row
 
   moveCursor: (cursor) ->
-    isBufferRowWise = @editor.isSoftWrapped() and @isMode('visual', 'linewise')
-    vimLastBufferRow = null
     @countTimes =>
-      if isBufferRowWise
-        vimLastBufferRow ?= @getVimLastBufferRow()
-        amount = if @direction is 'up' then -1 else + 1
-        row = cursor.getBufferRow() + amount
-        if row <= vimLastBufferRow
-          column = cursor.goalColumn or cursor.getBufferColumn()
-          cursor.setBufferPosition([row, column])
-          cursor.goalColumn = column
-      else
-        @move(cursor)
+      cursor.goalColumn ?= cursor.getBufferColumn()
+      {goalColumn} = cursor
+      cursor.setBufferPosition(@getPoint(cursor))
+      cursor.goalColumn = goalColumn
 
 class MoveDown extends MoveUp
   @extend()
   linewise: true
+
+  getRow: (row) ->
+    if @editor.isFoldedAtBufferRow(row)
+      row = getLargestFoldRangeContainsBufferRow(@editor, row).end.row
+    Math.min(row + 1, @getVimLastBufferRow())
+
+class MoveUpScreen extends Motion
+  @extend()
+  linewise: true
+  direction: 'up'
+
+  moveCursor: (cursor) ->
+    @countTimes ->
+      moveCursorUpScreen(cursor)
+
+class MoveDownScreen extends MoveUpScreen
+  @extend()
+  linewise: true
   direction: 'down'
 
-  move: (cursor) ->
-    moveCursorDown(cursor)
+  moveCursor: (cursor) ->
+    @countTimes ->
+      moveCursorDownScreen(cursor)
 
 # Move down/up to Edge
 # -------------------------
@@ -271,12 +259,15 @@ class MoveUpToEdge extends Motion
       if point.row in [0, @getVimLastScreenRow()]
         true
       else
-        # If one of above/below row is not stoppable, it's Edge!
-        above = point.translate([-1, 0])
-        below = point.translate([+1, 0])
-        (not @isStoppablePoint(above)) or (not @isStoppablePoint(below))
+        @isEdge(point)
     else
       false
+
+  isEdge: (point) ->
+    # If one of above/below row is not stoppable, it's Edge!
+    above = point.translate([-1, 0])
+    below = point.translate([+1, 0])
+    (not @isStoppablePoint(above)) or (not @isStoppablePoint(below))
 
   # Avoid stopping on leading and trailing whitespace,
   isValidStoppablePoint: ({row, column}) ->
@@ -445,8 +436,7 @@ class MoveToNextParagraph extends Motion
 
   getPoint: (fromPoint) ->
     wasAtNonBlankRow = not @editor.isBufferRowBlank(fromPoint.row)
-    options = {startRow: fromPoint.row, @direction, includeStartRow: false}
-    for row in getBufferRows(@editor, options)
+    for row in getBufferRows(@editor, {startRow: fromPoint.row, @direction})
       if @editor.isBufferRowBlank(row)
         return new Point(row, 0) if wasAtNonBlankRow
       else
@@ -663,25 +653,59 @@ class ScrollFullScreenDown extends Motion
   @extend()
   amountOfPage: +1
 
-  calculateScrollRow: ->
-    amountOfRows = Math.ceil(@amountOfPage * @editor.getRowsPerPage() * @getCount())
-    @cursorRow = @editor.getCursorScreenPosition().row + amountOfRows
-    @newTopRow = @editor.getFirstVisibleScreenRow() + amountOfRows
+  isSmoothScrollEnabled: ->
+    if Math.abs(@amountOfPage) is 1
+      settings.get('smoothScrollOnFullScrollMotion')
+    else
+      settings.get('smoothScrollOnHalfScrollMotion')
 
-  select: ->
-    @calculateScrollRow()
-    super
+  getSmoothScrollDuation: ->
+    if Math.abs(@amountOfPage) is 1
+      settings.get('smoothScrollOnFullScrollMotionDuration')
+    else
+      settings.get('smoothScrollOnHalfScrollMotionDuration')
 
-  execute: ->
-    @calculateScrollRow()
-    super
-    @editor.setFirstVisibleScreenRow(@newTopRow)
+  getPixelRectTopForSceenRow: (row) ->
+    point = new Point(row, 0)
+    @editor.element.pixelRectForScreenRange(new Range(point, point)).top
+
+  smoothScroll: (fromRow, toRow, options) ->
+    topPixelFrom = {top: @getPixelRectTopForSceenRow(fromRow)}
+    topPixelTo = {top: @getPixelRectTopForSceenRow(toRow)}
+    options.step = (newTop) => @editor.element.setScrollTop(newTop)
+    options.duration = @getSmoothScrollDuation()
+    @vimState.requestScrollAnimation(topPixelFrom, topPixelTo, options)
+
+  highlightScreenRow: (screenRow) ->
+    screenRange = new Range([screenRow, 0], [screenRow, Infinity])
+    marker = @editor.markScreenRange(screenRange)
+    @editor.decorateMarker(marker, type: 'highlight', class: 'vim-mode-plus-flash')
+    marker
+
+  getAmountOfRows: ->
+    Math.ceil(@amountOfPage * @editor.getRowsPerPage() * @getCount())
+
+  getPoint: (cursor) ->
+    row = getValidVimScreenRow(@editor, cursor.getScreenRow() + @getAmountOfRows())
+    new Point(row, 0)
 
   moveCursor: (cursor) ->
-    point = [getValidVimScreenRow(@editor, @cursorRow), 0]
-    cursor.setScreenPosition(point, autoscroll: false)
+    cursor.setScreenPosition(@getPoint(cursor), autoscroll: false)
 
-    @editor.setFirstVisibleScreenRow(@newTopRow)
+    if cursor.isLastCursor()
+      if @isSmoothScrollEnabled()
+        @vimState.finishScrollAnimation()
+
+      currentTopRow = @editor.getFirstVisibleScreenRow()
+      finalTopRow = currentTopRow + @getAmountOfRows()
+      done = => @editor.setFirstVisibleScreenRow(finalTopRow)
+
+      if @isSmoothScrollEnabled()
+        marker = @highlightScreenRow(cursor.getScreenRow())
+        complete = -> marker.destroy()
+        @smoothScroll(currentTopRow, finalTopRow, {done, complete})
+      else
+        done()
 
 # keymap: ctrl-b
 class ScrollFullScreenUp extends ScrollFullScreenDown
@@ -756,10 +780,10 @@ class Till extends Find
   getPoint: ->
     @point = super
 
-  selectInclusively: (selection) ->
+  selectByMotion: (selection) ->
     super
     if selection.isEmpty() and (@point? and not @backwards)
-      selection.selectRight()
+      swrap(selection).translateSelectionEndAndClip('forward')
 
 # keymap: T
 class TillBackwards extends Till
@@ -903,7 +927,7 @@ class SearchBase extends Motion
 
   getFromPoint: (cursor) ->
     if @isMode('visual', 'linewise') and @isIncrementalSearch?()
-      swrap(cursor.selection).getCharacterwiseHeadPosition()
+      swrap(cursor.selection).getBufferPositionFor('head', fromProperty: true)
     else
       cursor.getBufferPosition()
 

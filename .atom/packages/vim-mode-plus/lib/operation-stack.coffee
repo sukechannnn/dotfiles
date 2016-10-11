@@ -87,13 +87,14 @@ class OperationStack
       else
         klass = Base.getClass(klass) if type is 'string'
         # Replace operator when identical one repeated, e.g. `dd`, `cc`, `gUgU`
-        klass = MoveToRelativeLine if (@peekTop()?.constructor is klass)
+        if @peekTop()?.constructor is klass
+          operation = new MoveToRelativeLine(@vimState)
+        else
+          operation = new klass(@vimState, properties)
 
-        operation = new klass(@vimState, properties)
-
-        # Compliment implicit Select operator
-        if operation.isTextObject() and @mode isnt 'operator-pending' or operation.isMotion() and @mode is 'visual'
-          operation = new Select(@vimState).setTarget(operation)
+      # Compliment implicit Select operator
+      if operation.isTextObject() and @mode isnt 'operator-pending' or operation.isMotion() and @mode is 'visual'
+        operation = new Select(@vimState).setTarget(operation)
 
       if @isEmpty() or (@peekTop().isOperator() and operation.isTarget())
         @push(operation)
@@ -122,8 +123,7 @@ class OperationStack
       operation.setRepeated()
       operation.resetCount()
       if reverse
-        operation.isBackwards = ->
-          not operation.backwards
+        operation.backwards = not operation.backwards
       @run(operation)
 
   handleError: (error) ->

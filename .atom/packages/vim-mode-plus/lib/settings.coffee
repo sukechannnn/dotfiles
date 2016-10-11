@@ -161,6 +161,22 @@ module.exports = new Settings 'vim-mode-plus',
   hideTabBarOnMaximizePane:
     type: 'boolean'
     default: true
+  smoothScrollOnFullScrollMotion:
+    type: 'boolean'
+    default: false
+    description: "For `ctrl-f` and `ctrl-b`"
+  smoothScrollOnFullScrollMotionDuration:
+    type: 'integer'
+    default: 500
+    description: "For `ctrl-f` and `ctrl-b`"
+  smoothScrollOnHalfScrollMotion:
+    type: 'boolean'
+    default: false
+    description: "For `ctrl-d` and `ctrl-u`"
+  smoothScrollOnHalfScrollMotionDuration:
+    type: 'integer'
+    default: 500
+    description: "For `ctrl-d` and `ctrl-u`"
   throwErrorOnNonEmptySelectionInNormalMode:
     type: 'boolean'
     default: false
