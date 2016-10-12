@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116829-35133-6w2ib7"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116912-88332-1ghzzyp"
     ]
   ],
-  "_from": "../d-116829-35133-1vt41ak/package.tgz",
-  "_id": "autocomplete-go@1.2.0",
+  "_from": "../d-116912-88332-fqjsop/package.tgz",
+  "_id": "autocomplete-go@1.3.0",
   "_inCache": true,
   "_installable": true,
   "_location": "/autocomplete-go",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-116829-35133-1vt41ak/package.tgz",
-  "_shasum": "f8d65a7c1ee0a84a9b88c7c973a7d57a91c9d422",
+  "_resolved": "file:../d-116912-88332-fqjsop/package.tgz",
+  "_shasum": "b6ad81e1b1148a7e2bddf8b2a4dd95e654ef1e4a",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116829-35133-1vt41ak/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116829-35133-6w2ib7",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88332-fqjsop/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116912-88332-1ghzzyp",
   "author": {
     "name": "Joe Fitzgerald",
     "email": "jfitzgerald@pivotal.io",
@@ -149,7 +149,7 @@
   },
   "description": "An autocomplete-plus provider for the Go language that uses gocode to provide suggestions.",
   "devDependencies": {
-    "standard": "^8.2.0"
+    "standard": "^8.3.0"
   },
   "engines": {
     "atom": ">=1.5.3 <2.0.0"
@@ -190,5 +190,5 @@
       "waitsForPromise"
     ]
   },
-  "version": "1.2.0"
+  "version": "1.3.0"
 }

@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11696-51972-1obdlo"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116912-88342-lzkt2b"
     ]
   ],
-  "_from": "../d-11696-51972-numn1r/package.tgz",
-  "_id": "file-icons@1.7.20",
+  "_from": "../d-116912-88342-1gptg2p/package.tgz",
+  "_id": "file-icons@1.7.21",
   "_inCache": true,
   "_installable": true,
   "_location": "/file-icons",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11696-51972-numn1r/package.tgz",
-  "_shasum": "fbb4684001d373528cd2f4940ba8bfc93a69bdf8",
+  "_resolved": "file:../d-116912-88342-1gptg2p/package.tgz",
+  "_shasum": "c56cb4a07af0fd3787f7ae15c262d705791200ac",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11696-51972-numn1r/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11696-51972-1obdlo",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116912-88342-1gptg2p/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116912-88342-lzkt2b",
   "bugs": {
     "url": "https://github.com/DanBrooker/file-icons/issues"
   },
@@ -57,5 +57,5 @@
     "type": "git",
     "url": "git+https://github.com/DanBrooker/file-icons.git"
   },
-  "version": "1.7.20"
+  "version": "1.7.21"
 }
