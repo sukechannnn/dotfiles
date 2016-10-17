@@ -36,16 +36,18 @@
       "auto-encoding"
       "autocomplete-elixir"
       "atom-ternjs"
-      "color-picker"
       "css-snippets"
       "environment"
       "language-elixir"
+      "minimap"
+      "minimap-git-diff"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
       "symbols-view"
     ]
+    telemetryConsent: "limited"
     themes: [
       "atom-dark-ui"
       "atom-dark-syntax"

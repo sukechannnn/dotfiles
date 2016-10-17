@@ -5,7 +5,7 @@ describe('Environment', () => {
   let service = null
   beforeEach(() => {
     waitsForPromise(() => {
-      return atom.packages.activatePackage('environment').then(pack => {
+      return atom.packages.activatePackage('environment').then((pack) => {
         environmentMain = pack.mainModule
       })
     })
