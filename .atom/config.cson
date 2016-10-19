@@ -68,6 +68,7 @@
   "file-types":
     erb: "text.html.ruby"
     rb: "source.ruby.rails"
+    "js.erb": "source.js"
   "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
