@@ -2,6 +2,10 @@ RsenseProvider = require './autocomplete-ruby-provider.coffee'
 
 module.exports =
   config:
+    rsensePath:
+      description: 'The location of the rsense executable'
+      type: 'string'
+      default: '~/.gem/ruby/2.3.0/bin/rsense'
     port:
       description: 'The port the rsense server is running on'
       type: 'integer'
@@ -15,7 +19,7 @@ module.exports =
     @rsenseProvider = new RsenseProvider()
 
   provideAutocompletion: ->
-    {providers: [@rsenseProvider]}
+    @rsenseProvider
 
   deactivate: ->
     @rsenseProvider?.dispose()

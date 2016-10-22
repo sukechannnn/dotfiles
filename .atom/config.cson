@@ -37,8 +37,6 @@
       "css-snippets"
       "environment"
       "language-elixir"
-      "minimap"
-      "minimap-git-diff"
       "vim-mode-plus"
       "language-slim"
       "navigator-go"
@@ -67,10 +65,10 @@
   "exception-reporting":
     userId: "5cbdbbef-3435-207a-5ec9-b94dc729fc98"
   "file-types":
-    erb: "text.html.ruby"
-    rb: "source.ruby.rails"
-    "js.erb": "source.js"
     "coffee.erb": "source.coffee"
+    erb: "text.html.ruby"
+    "js.erb": "source.js"
+    rb: "source.ruby.rails"
   "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true

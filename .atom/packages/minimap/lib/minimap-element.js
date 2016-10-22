@@ -25,16 +25,12 @@ const removeOverlayStyle = () => {
 
 const updateOverlayStyle = (basis) => {
   if (overlayStyle) {
-    if (basis) {
-      overlayStyle.textContent = `
-      atom-text-editor[with-minimap]::shadow atom-overlay,
-      atom-text-editor[with-minimap] atom-overlay {
-        margin-left: ${basis}px;
-      }
-      `
-    } else {
-      overlayStyle.textContent = ''
+    overlayStyle.textContent = `
+    atom-text-editor[with-minimap]::shadow atom-overlay,
+    atom-text-editor[with-minimap] atom-overlay {
+      margin-left: ${basis}px;
     }
+    `
   }
 }
 
@@ -998,18 +994,17 @@ export default class MinimapElement {
           canvasWidth = width
           updateOverlayStyle(width)
         } else {
+          updateOverlayStyle(canvasWidth)
           delete this.flexBasis
-          updateOverlayStyle()
         }
       } else {
+        updateOverlayStyle(canvasWidth)
         delete this.flexBasis
-        updateOverlayStyle()
       }
 
       this.updateCanvasesSize(canvasWidth)
     } else {
       this.style.flexBasis = safeFlexBasis
-      updateOverlayStyle(safeFlexBasis)
     }
   }
 
