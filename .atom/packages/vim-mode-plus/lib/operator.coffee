@@ -4,12 +4,11 @@ _ = require 'underscore-plus'
 
 {inspect} = require 'util'
 {
-  haveSomeSelection
+  haveSomeNonEmptySelection
   highlightRanges
   isEndsWithNewLineForBufferRow
   getValidVimBufferRow
   cursorIsAtEmptyRow
-  scanInRanges
   getVisibleBufferRange
   getWordPatternAtBufferPosition
   destroyNonLastSelection
@@ -22,7 +21,6 @@ _ = require 'underscore-plus'
 swrap = require './selection-wrapper'
 settings = require './settings'
 Base = require './base'
-CursorPositionManager = require './cursor-position-manager'
 
 class Operator extends Base
   @extend(false)
@@ -87,7 +85,7 @@ class Operator extends Base
     return unless @needFlash()
 
     @onDidFinishOperation =>
-      ranges = @mutationTracker.getMarkerBufferRanges().filter (range) -> not range.isEmpty()
+      ranges = @mutationManager.getMarkerBufferRanges().filter (range) -> not range.isEmpty()
       if ranges.length
         @flashIfNecessary(ranges)
 
@@ -95,12 +93,12 @@ class Operator extends Base
     return unless @trackChange
 
     @onDidFinishOperation =>
-      if marker = @mutationTracker.getMutationForSelection(@editor.getLastSelection())?.marker
+      if marker = @mutationManager.getMutationForSelection(@editor.getLastSelection())?.marker
         @setMarkForChange(marker.getBufferRange())
 
   constructor: ->
     super
-    {@mutationTracker, @occurrenceManager, @persistentSelection} = @vimState
+    {@mutationManager, @occurrenceManager, @persistentSelection} = @vimState
 
     @initialize()
 
@@ -167,17 +165,6 @@ class Operator extends Base
     @emitDidSetTarget(this)
     this
 
-  forceTargetWise: ->
-    switch @wise
-      when 'characterwise'
-        if @target.linewise
-          @target.linewise = false
-          @target.inclusive = false
-        else
-          @target.inclusive = not @target.inclusive
-      when 'linewise'
-        @target.linewise = true
-
   setTextToRegisterForSelection: (selection) ->
     @setTextToRegister(selection.getText(), selection)
 
@@ -207,20 +194,21 @@ class Operator extends Base
     @patternForOccurrence ?= @occurrenceManager.buildPattern()
 
     selectedRanges = @editor.getSelectedBufferRanges()
-    if ranges = @occurrenceManager.getMarkerRangesIntersectsWithRanges(selectedRanges, @isMode('visual'))
+    ranges = @occurrenceManager.getMarkerRangesIntersectsWithRanges(selectedRanges, @isMode('visual'))
+    if ranges.length
       @vimState.modeManager.deactivate() if @isMode('visual')
       @editor.setSelectedBufferRanges(ranges)
     else
-      @mutationTracker.restoreInitialPositions() # Restoreing position also clear selection.
+      @mutationManager.restoreInitialPositions() # Restoreing position also clear selection.
     @occurrenceManager.resetPatterns()
 
   # Return true unless all selection is empty.
   selectTarget: ->
     options = {isSelect: @instanceof('Select'), useMarker: @useMarkerForStay}
-    @mutationTracker.init(options)
-    @mutationTracker.setCheckPoint('will-select')
+    @mutationManager.init(options)
+    @mutationManager.setCheckPoint('will-select')
 
-    @forceTargetWise() if @wise
+    @target.forceWise(@wise) if @wise and @target.isMotion()
     @emitWillSelectTarget()
 
     # To use CURRENT cursor position, this has to be BEFORE @target.select() which move cursors.
@@ -231,13 +219,14 @@ class Operator extends Base
     if @isOccurrence()
       @selectOccurrence()
 
-    isExplicitEmptyTarget = @target.getName() is "Empty"
-    if haveSomeSelection(@editor) or isExplicitEmptyTarget
-      @mutationTracker.setCheckPoint('did-select')
+    if haveSomeNonEmptySelection(@editor) or @target.getName() is "Empty"
+      @mutationManager.setCheckPoint('did-select')
       @emitDidSelectTarget()
       @flashChangeIfNecessary()
       @trackChangeIfNecessary()
-    haveSomeSelection(@editor) or isExplicitEmptyTarget
+      true
+    else
+      false
 
   restoreCursorPositionsIfNecessary: ->
     return unless @restorePositions
@@ -249,7 +238,7 @@ class Operator extends Base
       isBlockwise: @target?.isBlockwise?()
       mutationEnd: @restorePositionsToMutationEnd
 
-    @mutationTracker.restoreCursorPositions(options)
+    @mutationManager.restoreCursorPositions(options)
     @emitDidRestoreCursorPositions()
 
 # Select
@@ -394,7 +383,7 @@ class Delete extends Operator
   adjustCursor: (cursor) ->
     row = getValidVimBufferRow(@editor, cursor.getBufferRow())
     if @needStay()
-      point = @mutationTracker.getInitialPointForSelection(cursor.selection)
+      point = @mutationManager.getInitialPointForSelection(cursor.selection)
       cursor.setBufferPosition([row, point.column])
     else
       cursor.setBufferPosition([row, 0])
@@ -445,6 +434,7 @@ class YankLine extends Yank
   wise: 'linewise'
 
   initialize: ->
+    super
     @target = 'MoveToRelativeLine' if @isMode('normal')
     if @isMode('visual', 'characterwise')
       @stayOnLinewise = false
@@ -546,7 +536,7 @@ class PutBefore extends Operator
   location: 'before'
 
   initialize: ->
-    @target = "Empty" if @isMode('normal')
+    @target = 'Empty' if @isMode('normal')
 
   mutateSelection: (selection) ->
     {text, type} = @vimState.register.get(null, selection)

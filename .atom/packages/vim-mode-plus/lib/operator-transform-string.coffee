@@ -1,13 +1,15 @@
 LineEndingRegExp = /(?:\n|\r\n)$/
 _ = require 'underscore-plus'
-{BufferedProcess} = require 'atom'
+{BufferedProcess, Range} = require 'atom'
 
-{haveSomeSelection, isSingleLine, saveCursorPositions} = require './utils'
+{
+  haveSomeNonEmptySelection
+  isSingleLine
+} = require './utils'
 swrap = require './selection-wrapper'
 settings = require './settings'
 Base = require './base'
 Operator = Base.getClass('Operator')
-CursorPositionManager = require './cursor-position-manager'
 
 # TransformString
 # ================================
@@ -77,24 +79,21 @@ class Replace extends TransformString
 
   initialize: ->
     super
+    if @isMode('normal')
+      @target = 'MoveRightBufferColumn'
     @focusInput()
 
   getInput: ->
     super or "\n"
 
   mutateSelection: (selection) ->
+    if @target.is('MoveRightBufferColumn')
+      return unless selection.getText().length is @getCount()
+
     input = @getInput()
     @restorePositions = false if input is "\n"
     text = selection.getText().replace(/./g, input)
     selection.insertText(text, autoIndentNewline: true)
-
-class ReplaceAndMoveRight extends Replace
-  @extend()
-  target: "MoveRight"
-
-  mutateSelection: (selection) ->
-    if selection.getText().length is @getCount()
-      super
 
 # -------------------------
 # DUP meaning with SplitString need consolidate.
@@ -186,6 +185,47 @@ class CompactSpaces extends TransformString
       # Don't compact for leading and trailing white spaces.
       text.replace /^(\s*)(.*?)(\s*)$/gm, (m, leading, middle, trailing) ->
         leading + middle.split(/[ \t]+/).join(' ') + trailing
+
+class ConvertToSoftTab extends TransformString
+  @extend()
+  @registerToSelectList()
+  displayName: 'Soft Tab'
+  wise: 'linewise'
+
+  mutateSelection: (selection) ->
+    scanRange = selection.getBufferRange()
+    @editor.scanInBufferRange /\t/g, scanRange, ({range, replace}) =>
+      # Replace \t to spaces which length is vary depending on tabStop and tabLenght
+      # So we directly consult it's screen representing length.
+      length = @editor.screenRangeForBufferRange(range).getExtent().column
+      replace(" ".repeat(length))
+
+class ConvertToHardTab extends TransformString
+  @extend()
+  @registerToSelectList()
+  displayName: 'Hard Tab'
+
+  mutateSelection: (selection) ->
+    tabLength = @editor.getTabLength()
+    scanRange = selection.getBufferRange()
+    @editor.scanInBufferRange /[ \t]+/g, scanRange, ({range, replace}) =>
+      screenRange = @editor.screenRangeForBufferRange(range)
+      {start: {column: startColumn}, end: {column: endColumn}} = screenRange
+
+      # We can't naively replace spaces to tab, we have to consider valid tabStop column
+      # If nextTabStop column exceeds replacable range, we pad with spaces.
+      newText = ''
+      loop
+        remainder = startColumn %% tabLength
+        nextTabStop = startColumn + (if remainder is 0 then tabLength else remainder)
+        if nextTabStop > endColumn
+          newText += " ".repeat(endColumn - startColumn)
+        else
+          newText += "\t"
+        startColumn = nextTabStop
+        break if startColumn >= endColumn
+
+      replace(newText)
 
 # -------------------------
 class TransformStringByExternalCommand extends TransformString
@@ -460,23 +500,30 @@ class ChangeSurroundAnyPair extends ChangeSurround
   charsMax: 1
   target: "AAnyPair"
 
-  initialize: ->
-    @onDidSetTarget =>
-      @preSelectPositions = new CursorPositionManager(@editor)
-      @preSelectPositions.save('head')
-      hoverPosition = @editor.getCursorBufferPosition()
+  highlightTargetRange: (selection) ->
+    if range = @target.getRange(selection)
+      marker = @editor.markBufferRange(range)
+      @editor.decorateMarker(marker, type: 'highlight', class: 'vim-mode-plus-target-range')
+      marker
+    else
+      null
 
-      @target.select()
-      unless haveSomeSelection(@editor)
+  initialize: ->
+    marker = null
+    @onDidSetTarget =>
+      if marker = @highlightTargetRange(@editor.getLastSelection())
+        textRange = Range.fromPointWithDelta(marker.getBufferRange().start, 0, 1)
+        char = @editor.getTextInBufferRange(textRange)
+        @addHover(char, {}, @editor.getCursorBufferPosition())
+      else
         @vimState.input.cancel()
         @abort()
-      @addHover(@editor.getSelectedText()[0], {}, hoverPosition)
+
+    @onDidResetOperationStack ->
+      marker?.destroy()
     super
 
   onConfirm: (@char) ->
-    # Clear pre-selected selection to start mutation from non-selection.
-    @preSelectPositions.restore()
-    @preSelectPositions = null
     @input = @char
     @processOperation()
 

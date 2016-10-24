@@ -6,9 +6,10 @@ _ = require 'underscore-plus'
 
 settings = require './settings'
 {HoverElement} = require './hover'
-{InputElement, SearchInputElement} = require './input'
+{InputElement} = require './input'
+{SearchInputElement} = require './search-input'
 {
-  haveSomeSelection
+  haveSomeNonEmptySelection
   highlightRanges
   getVisibleEditors
   matchScopes
@@ -26,7 +27,7 @@ CursorStyleManager = require './cursor-style-manager'
 BlockwiseSelection = require './blockwise-selection'
 OccurrenceManager = require './occurrence-manager'
 HighlightSearchManager = require './highlight-search-manager'
-MutationTracker = require './mutation-tracker'
+MutationManager = require './mutation-manager'
 PersistentSelectionManager = require './persistent-selection-manager'
 
 packageScope = 'vim-mode-plus'
@@ -53,7 +54,7 @@ class VimState
     @highlightSearch = new HighlightSearchManager(this)
     @persistentSelection = new PersistentSelectionManager(this)
     @occurrenceManager = new OccurrenceManager(this)
-    @mutationTracker = new MutationTracker(this)
+    @mutationManager = new MutationManager(this)
 
     @input = new InputElement().initialize(this)
     @searchInput = new SearchInputElement().initialize(this)
@@ -160,6 +161,9 @@ class VimState
 
   onDidFinishOperation: (fn) -> @subscribe @emitter.on('did-finish-operation', fn)
 
+  onDidResetOperationStack: (fn) -> @subscribe @emitter.on('did-reset-operation-stack', fn)
+  emitDidResetOperationStack: -> @emitter.emit('did-reset-operation-stack')
+
   # Select list view
   onDidConfirmSelectList: (fn) -> @subscribe @emitter.on('did-confirm-select-list', fn)
   onDidCancelSelectList: (fn) -> @subscribe @emitter.on('did-cancel-select-list', fn)
@@ -233,7 +237,7 @@ class VimState
 
     _checkSelection = =>
       return if @operationStack.isProcessing()
-      if haveSomeSelection(@editor)
+      if haveSomeNonEmptySelection(@editor)
         submode = swrap.detectVisualModeSubmode(@editor)
         if @isMode('visual', submode)
           @updateCursorsVisibility()
@@ -281,7 +285,7 @@ class VimState
     @searchHistory.reset()
     @hover.reset()
     @operationStack.reset()
-    @mutationTracker.reset()
+    @mutationManager.reset()
 
   isVisible: ->
     @editor in getVisibleEditors()

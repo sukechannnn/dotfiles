@@ -577,6 +577,127 @@ describe "Motion general", ->
           set cursor: [0, 0]
           ensure 'v E E y', register: '"': text: 'ab  cde1+-'
 
+  describe "the (,) sentence keybinding", ->
+    describe "as a motion", ->
+      beforeEach ->
+        set
+          cursor: [0, 0]
+          text: """
+          sentence one.])'"    sen.tence .two.
+          here.  sentence three
+          more three
+
+             sentence four
+
+
+          sentence five.
+          more five
+          more six
+
+           last sentence
+          all done seven
+          """
+
+      it "moves the cursor to the end of the sentence", ->
+        ensure ')', cursor: [0, 21]
+        ensure ')', cursor: [1, 0]
+        ensure ')', cursor: [1, 7]
+        ensure ')', cursor: [3, 0]
+        ensure ')', cursor: [4, 3]
+        ensure ')', cursor: [5, 0] # boundary is different by direction
+        ensure ')', cursor: [7, 0]
+        ensure ')', cursor: [8, 0]
+        ensure ')', cursor: [10, 0]
+        ensure ')', cursor: [11, 1]
+
+        ensure ')', cursor: [12, 13]
+        ensure ')', cursor: [12, 13]
+
+        ensure '(', cursor: [11, 1]
+        ensure '(', cursor: [10, 0]
+        ensure '(', cursor: [8, 0]
+        ensure '(', cursor: [7, 0]
+        ensure '(', cursor: [6, 0] # boundary is different by direction
+        ensure '(', cursor: [4, 3]
+        ensure '(', cursor: [3, 0]
+        ensure '(', cursor: [1, 7]
+        ensure '(', cursor: [1, 0]
+        ensure '(', cursor: [0, 21]
+
+        ensure '(', cursor: [0, 0]
+        ensure '(', cursor: [0, 0]
+
+      it "skips to beginning of sentence", ->
+        set cursor: [4, 15]
+        ensure '(', cursor: [4, 3]
+
+      it "supports a count", ->
+        set cursor: [0, 0]
+        ensure '3 )', cursor: [1, 7]
+        ensure '3 (', cursor: [0, 0]
+
+      it "can move start of buffer or end of buffer at maximum", ->
+        set cursor: [0, 0]
+        ensure '2 0 )', cursor: [12, 13]
+        ensure '2 0 (', cursor: [0, 0]
+
+      describe "sentence motion with skip-blank-row", ->
+        beforeEach ->
+          atom.keymaps.add "test",
+            'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+              'g )': 'vim-mode-plus:move-to-next-sentence-skip-blank-row'
+              'g (': 'vim-mode-plus:move-to-previous-sentence-skip-blank-row'
+
+        it "moves the cursor to the end of the sentence", ->
+          ensure 'g )', cursor: [0, 21]
+          ensure 'g )', cursor: [1, 0]
+          ensure 'g )', cursor: [1, 7]
+          ensure 'g )', cursor: [4, 3]
+          ensure 'g )', cursor: [7, 0]
+          ensure 'g )', cursor: [8, 0]
+          ensure 'g )', cursor: [11, 1]
+
+          ensure 'g )', cursor: [12, 13]
+          ensure 'g )', cursor: [12, 13]
+
+          ensure 'g (', cursor: [11, 1]
+          ensure 'g (', cursor: [8, 0]
+          ensure 'g (', cursor: [7, 0]
+          ensure 'g (', cursor: [4, 3]
+          ensure 'g (', cursor: [1, 7]
+          ensure 'g (', cursor: [1, 0]
+          ensure 'g (', cursor: [0, 21]
+
+          ensure 'g (', cursor: [0, 0]
+          ensure 'g (', cursor: [0, 0]
+
+    describe "moving inside a blank document", ->
+      beforeEach ->
+        set
+          text_: """
+          _____
+          _____
+          """
+
+      it "moves without crashing", ->
+        set cursor: [0, 0]
+        ensure ')', cursor: [1, 4]
+        ensure ')', cursor: [1, 4]
+        ensure '(', cursor: [0, 0]
+        ensure '(', cursor: [0, 0]
+
+    describe "as a selection", ->
+      beforeEach ->
+        set text: "sentence one. sentence two.\n  sentence three."
+
+      it 'selects to the end of the current sentence', ->
+        set cursor: [0, 20]
+        ensure 'y )', register: '"': text: "ce two.\n  "
+
+      it 'selects to the beginning of the current sentence', ->
+        set cursor: [0, 20]
+        ensure 'y (', register: '"': text: "senten"
+
   describe "the {,} keybinding", ->
     beforeEach ->
       set

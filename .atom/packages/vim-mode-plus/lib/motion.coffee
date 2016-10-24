@@ -24,37 +24,52 @@ Select = null
   detectScopeStartPositionForScope
   getBufferRows
   getStartPositionForPattern
-  getEndPositionForPattern
   getFirstCharacterPositionForBufferRow
   getFirstCharacterBufferPositionForScreenRow
   getTextInScreenRange
   cursorIsAtEndOfLineAtNonEmptyRow
+  getFirstCharacterColumForBufferRow
 
   debug
 } = require './utils'
 
 swrap = require './selection-wrapper'
-{MatchList} = require './match'
 settings = require './settings'
 Base = require './base'
 
 class Motion extends Base
   @extend(false)
   inclusive: false
-  linewise: false
+  wise: 'characterwise'
 
   constructor: ->
     super
+
+    # visual mode can overwrite default wise and inclusiveness
+    if @isMode('visual')
+      @inclusive = true
+      @wise = @vimState.submode # ['characterwise', 'linewise', 'blockwise']
     @initialize()
 
-  isBlockwise: ->
-    @isMode('visual', 'blockwise')
-
   isInclusive: ->
-    @isMode('visual') or @isAsOperatorTarget() and @inclusive
+    @inclusive
+
+  isCharacterwise: ->
+    @wise is 'characterwise'
 
   isLinewise: ->
-    @isMode('visual', 'linewise') or @isAsOperatorTarget() and @linewise
+    @wise is 'linewise'
+
+  isBlockwise: ->
+    @wise is 'blockwise'
+
+  forceWise: (wise) ->
+    if wise is 'characterwise'
+      if @wise is 'linewise'
+        @inclusive = false
+      else
+        @inclusive = not @inclusive
+    @wise = wise
 
   setBufferPositionSafely: (cursor, point) ->
     cursor.setBufferPosition(point) if point?
@@ -78,9 +93,9 @@ class Motion extends Base
     @updateSelectionProperties() if @isMode('visual')
 
     # Modify selection to submode-wisely
-    switch
-      when @isLinewise() then @vimState.selectLinewise()
-      when @isBlockwise() then @vimState.selectBlockwise()
+    switch @wise
+      when 'linewise' then @vimState.selectLinewise()
+      when 'blockwise' then @vimState.selectBlockwise()
 
   selectByMotion: (selection) ->
     {cursor} = selection
@@ -113,14 +128,11 @@ class CurrentSelection extends Motion
   moveCursor: (cursor) ->
     if @isMode('visual')
       if @isBlockwise()
-        @isBlockwise = -> true
         {start, end} = cursor.selection.getBufferRange()
         [head, tail] = if cursor.selection.isReversed() then [start, end] else [end, start]
         @selectionExtent = new Point(head.row - tail.row, head.column - tail.column)
       else
         @selectionExtent = @editor.getSelectedBufferRange().getExtent()
-
-      @linewise = @isLinewise() # Cache it in case repeated.
     else
       point = cursor.getBufferPosition()
       if @isBlockwise()
@@ -174,9 +186,15 @@ class MoveRight extends Motion
       if cursor.isAtEndOfLine() and allowWrap and not cursorIsAtVimEndOfFile(cursor)
         moveCursorRight(cursor, {allowWrap})
 
+class MoveRightBufferColumn extends Motion
+  @extend(true)
+  moveCursor: (cursor) ->
+    newPoint = cursor.getBufferPosition().translate([0, @getCount()])
+    cursor.setBufferPosition(newPoint)
+
 class MoveUp extends Motion
   @extend()
-  linewise: true
+  wise: 'linewise'
 
   getPoint: (cursor) ->
     row = @getRow(cursor.getBufferRow())
@@ -197,7 +215,7 @@ class MoveUp extends Motion
 
 class MoveDown extends MoveUp
   @extend()
-  linewise: true
+  wise: 'linewise'
 
   getRow: (row) ->
     if @editor.isFoldedAtBufferRow(row)
@@ -206,7 +224,7 @@ class MoveDown extends MoveUp
 
 class MoveUpScreen extends Motion
   @extend()
-  linewise: true
+  wise: 'linewise'
   direction: 'up'
 
   moveCursor: (cursor) ->
@@ -215,7 +233,7 @@ class MoveUpScreen extends Motion
 
 class MoveDownScreen extends MoveUpScreen
   @extend()
-  linewise: true
+  wise: 'linewise'
   direction: 'down'
 
   moveCursor: (cursor) ->
@@ -229,7 +247,7 @@ class MoveDownScreen extends MoveUpScreen
 # when row is folded.
 class MoveUpToEdge extends Motion
   @extend()
-  linewise: true
+  wise: 'linewise'
   direction: 'up'
   @description: "Move cursor up to **edge** char at same-column"
 
@@ -422,6 +440,82 @@ class MoveToEndOfSmartWord extends MoveToEndOfWord
   @description: "Move to end of smart word (`/[\w-]+/`) word"
   wordRegex: /[\w-]+/
 
+# Sentence
+# -------------------------
+# Sentence is defined as below
+#  - end with ['.', '!', '?']
+#  - optionally followed by [')', ']', '"', "'"]
+#  - followed by ['$', ' ', '\t']
+#  - paragraph boundary is also sentence boundary
+#  - section boundary is also sentence boundary(ignore)
+class MoveToNextSentence extends Motion
+  @extend()
+  sentenceRegex: ///(?:[\.!\?][\)\]"']*\s+)|(\n|\r\n)///g
+  direction: 'next'
+
+  moveCursor: (cursor) ->
+    point = cursor.getBufferPosition()
+    @countTimes =>
+      point = @getPoint(point)
+    cursor.setBufferPosition(point)
+
+  getPoint: (fromPoint) ->
+    if @direction is 'next'
+      @getNextStartOfSentence(fromPoint)
+    else if @direction is 'previous'
+      @getPreviousStartOfSentence(fromPoint)
+
+  getFirstCharacterPositionForRow: (row) ->
+    new Point(row, getFirstCharacterColumForBufferRow(@editor, row))
+
+  isBlankRow: (row) ->
+    @editor.isBufferRowBlank(row)
+
+  getNextStartOfSentence: (fromPoint) ->
+    scanRange = new Range(fromPoint, @getVimEofBufferPosition())
+    foundPoint = null
+    @editor.scanInBufferRange @sentenceRegex, scanRange, ({range, matchText, match, stop}) =>
+      if match[1]?
+        {start: {row: startRow}, end: {row: endRow}} = range
+        return if @skipBlankRow and @isBlankRow(endRow)
+        if @isBlankRow(startRow) isnt @isBlankRow(endRow)
+          foundPoint = @getFirstCharacterPositionForRow(endRow)
+      else
+        foundPoint = range.end
+      stop() if foundPoint?
+    foundPoint ? scanRange.end
+
+  getPreviousStartOfSentence: (fromPoint) ->
+    scanRange = new Range(fromPoint, [0, 0])
+    foundPoint = null
+    @editor.backwardsScanInBufferRange @sentenceRegex, scanRange, ({range, match, stop, matchText}) =>
+      if match[1]?
+        {start: {row: startRow}, end: {row: endRow}} = range
+        if not @isBlankRow(endRow) and @isBlankRow(startRow)
+          point = @getFirstCharacterPositionForRow(endRow)
+          if point.isLessThan(fromPoint)
+            foundPoint = point
+          else
+            return if @skipBlankRow
+            foundPoint = @getFirstCharacterPositionForRow(startRow)
+      else
+        if range.end.isLessThan(fromPoint)
+          foundPoint = range.end
+      stop() if foundPoint?
+    foundPoint ? scanRange.start
+
+class MoveToPreviousSentence extends MoveToNextSentence
+  @extend()
+  direction: 'previous'
+
+class MoveToNextSentenceSkipBlankRow extends MoveToNextSentence
+  @extend()
+  skipBlankRow: true
+
+class MoveToPreviousSentenceSkipBlankRow extends MoveToPreviousSentence
+  @extend()
+  skipBlankRow: true
+
 # Paragraph
 # -------------------------
 class MoveToNextParagraph extends Motion
@@ -435,13 +529,15 @@ class MoveToNextParagraph extends Motion
     cursor.setBufferPosition(point)
 
   getPoint: (fromPoint) ->
-    wasAtNonBlankRow = not @editor.isBufferRowBlank(fromPoint.row)
-    for row in getBufferRows(@editor, {startRow: fromPoint.row, @direction})
+    startRow = fromPoint.row
+    wasAtNonBlankRow = not @editor.isBufferRowBlank(startRow)
+    for row in getBufferRows(@editor, {startRow, @direction})
       if @editor.isBufferRowBlank(row)
         return new Point(row, 0) if wasAtNonBlankRow
       else
         wasAtNonBlankRow = true
 
+    # fallback
     switch @direction
       when 'previous' then new Point(0, 0)
       when 'next' then @getVimEofBufferPosition()
@@ -517,7 +613,7 @@ class MoveToFirstCharacterOfLine extends Motion
 
 class MoveToFirstCharacterOfLineUp extends MoveToFirstCharacterOfLine
   @extend()
-  linewise: true
+  wise: 'linewise'
   moveCursor: (cursor) ->
     @countTimes ->
       moveCursorUpBuffer(cursor)
@@ -525,7 +621,7 @@ class MoveToFirstCharacterOfLineUp extends MoveToFirstCharacterOfLine
 
 class MoveToFirstCharacterOfLineDown extends MoveToFirstCharacterOfLine
   @extend()
-  linewise: true
+  wise: 'linewise'
   moveCursor: (cursor) ->
     @countTimes ->
       moveCursorDownBuffer(cursor)
@@ -538,27 +634,23 @@ class MoveToFirstCharacterOfLineAndDown extends MoveToFirstCharacterOfLineDown
 
 class MoveToFirstLine extends Motion
   @extend()
-  linewise: true
-  defaultCount: null
+  wise: 'linewise'
+
+  getCount: ->
+    super - 1
 
   moveCursor: (cursor) ->
     cursor.setBufferPosition(@getPoint())
-    cursor.autoscroll({center: true})
+    cursor.autoscroll(center: true)
 
   getPoint: ->
-    getFirstCharacterPositionForBufferRow(@editor, @getRow())
-
-  getRow: ->
-    if (count = @getCount()) then count - 1 else @getDefaultRow()
-
-  getDefaultRow: ->
-    0
+    row = getValidVimBufferRow(@editor, @getCount())
+    getFirstCharacterPositionForBufferRow(@editor, row)
 
 # keymap: G
 class MoveToLastLine extends MoveToFirstLine
   @extend()
-  getDefaultRow: ->
-    @getVimLastBufferRow()
+  defaultCount: Infinity
 
 # keymap: N% e.g. 10%
 class MoveToLineByPercent extends MoveToFirstLine
@@ -569,7 +661,7 @@ class MoveToLineByPercent extends MoveToFirstLine
 
 class MoveToRelativeLine extends Motion
   @extend(false)
-  linewise: true
+  wise: 'linewise'
 
   moveCursor: (cursor) ->
     point = @getPoint(cursor.getBufferPosition())
@@ -593,7 +685,7 @@ class MoveToRelativeLineWithMinimum extends MoveToRelativeLine
 # keymap: H
 class MoveToTopOfScreen extends Motion
   @extend()
-  linewise: true
+  wise: 'linewise'
   scrolloff: 2
   defaultCount: 0
 
@@ -813,7 +905,7 @@ class MoveToMark extends Motion
       point ?= [0, 0] # if mark was not set, go to the beginning of the file
       @vimState.mark.set('`', fromPoint)
 
-    if point? and @linewise
+    if point? and @isLinewise()
       point = getFirstCharacterPositionForBufferRow(@editor, point.row)
     point
 
@@ -825,331 +917,14 @@ class MoveToMark extends Motion
 class MoveToMarkLine extends MoveToMark
   @extend()
   hover: icon: ":move-to-mark:'", emoji: ":round_pushpin:'"
-  linewise: true
-
-# Search
-# -------------------------
-class SearchBase extends Motion
-  @extend(false)
-  backwards: false
-  useRegexp: true
-  configScope: null
-  updateSearchHistory: true
-  scanRanges: null
-  landingPoint: null # ['start' or 'end']
-  defaultLandingPoint: 'start' # ['start' or 'end']
-  caseSensitivity: null
-  quiet: false
-
-  isQuiet: ->
-    @quiet
-
-  getCount: ->
-    count = super - 1
-    count = -count if @isBackwards()
-    count
-
-  isBackwards: ->
-    @backwards
-
-  getVisualEffectFor: (key) ->
-    if @isQuiet()
-      false
-    else
-      settings.get(key)
-
-  needToUpdateSearchHistory: ->
-    @updateSearchHistory
-
-  isCaseSensitive: (term) ->
-    switch @getCaseSensitivity()
-      when 'smartcase' then term.search('[A-Z]') isnt -1
-      when 'insensitive' then false
-      when 'sensitive' then true
-
-  getCaseSensitivity: ->
-    @caseSensitivity ?=
-      if settings.get("useSmartcaseFor#{@configScope}")
-        'smartcase'
-      else if settings.get("ignoreCaseFor#{@configScope}")
-        'insensitive'
-      else
-        'sensitive'
-
-  finish: ->
-    if @isIncrementalSearch?() and @getVisualEffectFor('showHoverSearchCounter')
-      @vimState.hoverSearchCounter.reset()
-    @scanRanges = null
-    @matches?.destroy()
-    @matches = null
-
-  flashScreen: ->
-    highlightRanges @editor, getVisibleBufferRange(@editor),
-      class: 'vim-mode-plus-flash'
-      timeout: 100
-    atom.beep()
-
-  getLandingPoint: ->
-    @landingPoint ?= @defaultLandingPoint
-
-  getPoint: (cursor) ->
-    input = @getInput()
-    @matches ?= @getMatchList(cursor, input)
-    if @matches.isEmpty()
-      null
-    else
-      if @getLandingPoint() is 'start'
-        @matches.getCurrentStartPosition()
-      else
-        @matches.getCurrentEndPosition()
-
-  moveCursor: (cursor) ->
-    input = @getInput()
-    if input is ''
-      @finish()
-      return
-
-    if point = @getPoint(cursor)
-      @visitMatch "current",
-        timeout: settings.get('showHoverSearchCounterDuration')
-        landing: true
-      cursor.setBufferPosition(point, autoscroll: false)
-    else
-      @flashScreen() if @getVisualEffectFor('flashScreenOnSearchHasNoMatch')
-
-    if @needToUpdateSearchHistory()
-      @globalState.set('currentSearch', this)
-      @vimState.searchHistory.save(input)
-
-    unless @isQuiet()
-      @globalState.set('lastSearchPattern', @getPattern(input))
-    @finish()
-
-  getFromPoint: (cursor) ->
-    if @isMode('visual', 'linewise') and @isIncrementalSearch?()
-      swrap(cursor.selection).getBufferPositionFor('head', fromProperty: true)
-    else
-      cursor.getBufferPosition()
-
-  getScanRanges: ->
-    @scanRanges ? []
-
-  getMatchList: (cursor, input) ->
-    MatchList.fromScan @editor,
-      fromPoint: @getFromPoint(cursor)
-      pattern: @getPattern(input)
-      direction: (if @isBackwards() then 'backward' else 'forward')
-      countOffset: @getCount()
-      scanRanges: @getScanRanges()
-
-  visitMatch: (direction=null, options={}) ->
-    {timeout, landing} = options
-    landing ?= false
-    match = @matches.get(direction)
-    match.scrollToStartPoint()
-
-    flashOptions =
-      class: 'vim-mode-plus-flash'
-      timeout: settings.get('flashOnSearchDuration')
-
-    if landing
-      if @getVisualEffectFor('flashOnSearch') and not @isIncrementalSearch?()
-        match.flash(flashOptions)
-    else
-      @matches.refresh()
-      if @getVisualEffectFor('flashOnSearch')
-        match.flash(flashOptions)
-
-    if @getVisualEffectFor('showHoverSearchCounter')
-      @vimState.hoverSearchCounter.withTimeout match.getStartPoint(),
-        text: @matches.getCounterText()
-        classList: match.getClassList()
-        timeout: timeout
-
-# /, ?
-# -------------------------
-class Search extends SearchBase
-  @extend()
-  configScope: "Search"
-  requireInput: true
-
-  isIncrementalSearch: ->
-    settings.get('incrementalSearch')
-
-  initialize: ->
-    super
-    @activateIncrementalSearch() if @isIncrementalSearch()
-
-    @onDidConfirmSearch ({@input, @landingPoint}) =>
-      unless @isIncrementalSearch()
-        searchChar = if @isBackwards() then '?' else '/'
-        if @input in ['', searchChar]
-          @input = @vimState.searchHistory.get('prev')
-          atom.beep() unless @input
-      @processOperation()
-
-    @onDidCancelSearch =>
-      unless @isMode('visual') or @isMode('insert')
-        @vimState.resetNormalMode()
-      @restoreEditorState?()
-      @vimState.reset()
-      @finish()
-
-    @onDidChangeSearch (@input) =>
-      # If input starts with space, remove first space and disable useRegexp.
-      if @input.startsWith(' ')
-        @useRegexp = false
-        @input = input.replace(/^ /, '')
-      else
-        @useRegexp = true
-      @vimState.searchInput.updateOptionSettings({@useRegexp})
-
-      @visitCursors() if @isIncrementalSearch()
-    @vimState.searchInput.focus({@backwards})
-
-  activateIncrementalSearch: ->
-    @restoreEditorState = saveEditorState(@editor)
-    refresh = => @matches?.refresh()
-    @subscribe @editorElement.onDidChangeScrollTop(refresh)
-    @subscribe @editorElement.onDidChangeScrollLeft(refresh)
-
-    @onDidCommandSearch (command) =>
-      return unless @input
-      return if @matches.isEmpty()
-      switch command.name
-        when 'visit'
-          direction = command.direction
-          if @isBackwards() and settings.get('incrementalSearchVisitDirection') is 'relative'
-            direction = switch direction
-              when 'next' then 'prev'
-              when 'prev' then 'next'
-          @visitMatch(direction)
-        when 'occurrence'
-          if command.operation?
-            @vimState.occurrenceManager.resetPatterns()
-
-          @vimState.occurrenceManager.addPattern(@matches.pattern)
-          @vimState.searchHistory.save(@input)
-          @vimState.searchInput.cancel()
-
-          if command.operation?
-            @vimState.operationStack.run(command.operation)
-
-  visitCursors: ->
-    visitCursor = (cursor) =>
-      @matches ?= @getMatchList(cursor, input)
-      if @matches.isEmpty()
-        @flashScreen() if @getVisualEffectFor('flashScreenOnSearchHasNoMatch')
-      else
-        @visitMatch()
-
-    @matches?.destroy()
-    @matches = null
-    @vimState.hoverSearchCounter.reset() if @getVisualEffectFor('showHoverSearchCounter')
-
-    input = @getInput()
-    if input isnt ''
-      visitCursor(cursor) for cursor in @editor.getCursors()
-
-  getPattern: (term) ->
-    modifiers = if @isCaseSensitive(term) then 'g' else 'gi'
-
-    # FIXME this prevent search \\c itself.
-    # DONT thinklessly mimic pure Vim. Instead, provide ignorecase button and shortcut.
-    if term.indexOf('\\c') >= 0
-      term = term.replace('\\c', '')
-      modifiers += 'i' unless 'i' in modifiers
-
-    if @useRegexp
-      try
-        new RegExp(term, modifiers)
-      catch
-        new RegExp(_.escapeRegExp(term), modifiers)
-    else
-      new RegExp(_.escapeRegExp(term), modifiers)
-
-class SearchBackwards extends Search
-  @extend()
-  backwards: true
-
-class SearchCurrentLine extends Search
-  @extend()
-  quiet: true
-  getScanRanges: ->
-    [@editor.getLastCursor().getCurrentLineBufferRange()]
-
-class SearchCurrentLineBackwards extends SearchCurrentLine
-  @extend()
-  backwards: true
-
-# *, #
-# -------------------------
-class SearchCurrentWord extends SearchBase
-  @extend()
-  configScope: "SearchCurrentWord"
-
-  # NOTE: have side-effect. moving cursor to start of current word.
-  getInput: ->
-    @input ?= (
-      wordRange = @getCurrentWordBufferRange()
-      if wordRange?
-        @editor.setCursorBufferPosition(wordRange.start)
-        @editor.getTextInBufferRange(wordRange)
-      else
-        ''
-    )
-
-  getPattern: (term) ->
-    modifiers = if @isCaseSensitive(term) then 'g' else 'gi'
-    pattern = _.escapeRegExp(term)
-    if /\W/.test(term)
-      new RegExp("#{pattern}\\b", modifiers)
-    else
-      new RegExp("\\b#{pattern}\\b", modifiers)
-
-  getNextNonWhiteSpacePoint: (from) ->
-    point = null
-    scanRange = [from, [from.row, Infinity]]
-    @editor.scanInBufferRange /\S/, scanRange, ({range, stop}) ->
-      point = range.start
-    point
-
-  getCurrentWordBufferRange: ->
-    cursor = @editor.getLastCursor()
-    originalPoint = cursor.getBufferPosition()
-    fromPoint = @getNextNonWhiteSpacePoint(originalPoint)
-    return unless fromPoint
-    cursor.setBufferPosition(fromPoint)
-    options = {}
-    options.includeNonWordCharacters = false if cursor.isBetweenWordAndNonWord()
-    wordRange = cursor.getCurrentWordBufferRange(options)
-    cursor.setBufferPosition(originalPoint)
-    wordRange
-
-class SearchCurrentWordBackwards extends SearchCurrentWord
-  @extend()
-  backwards: true
-
-class RepeatSearch extends SearchBase
-  @extend()
-
-  initialize: ->
-    super
-    unless search = @globalState.get('currentSearch')
-      @abort()
-    {@input, @backwards, @getPattern, @getCaseSensitivity, @configScope, @quiet} = search
-
-class RepeatSearchReverse extends RepeatSearch
-  @extend()
-  isBackwards: ->
-    not @backwards
+  wise: 'linewise'
 
 # Fold
 # -------------------------
 class MoveToPreviousFoldStart extends Motion
   @extend()
   @description: "Move to previous fold start"
-  linewise: false
+  wise: 'characterwise'
   which: 'start'
   direction: 'prev'
 
