@@ -9,7 +9,8 @@
     minimumPrefixLength: 2
   "autocomplete-plus":
     minimumWordLength: 1
-  "autocomplete-ruby": {}
+  "autocomplete-ruby":
+    rsensePath: "/Users/obatayousuke/.anyenv/envs/rbenv/shims/rsense"
   autosave:
     enabled: true
   core:
