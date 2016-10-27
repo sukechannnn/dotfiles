@@ -74,7 +74,7 @@
 		<key>0xf702-0x320000</key>
 		<dict>
 			<key>Action</key>
-			<integer>33</integer>
+			<integer>18</integer>
 			<key>Text</key>
 			<string></string>
 		</dict>
@@ -88,7 +88,7 @@
 		<key>0xf703-0x320000</key>
 		<dict>
 			<key>Action</key>
-			<integer>34</integer>
+			<integer>19</integer>
 			<key>Text</key>
 			<string></string>
 		</dict>
@@ -249,12 +249,14 @@
 	<string>438 289 606 456 0 0 1366 745 </string>
 	<key>NSWindow Frame SUUpdateAlert</key>
 	<string>375 264 620 392 0 0 1366 745 </string>
+	<key>NSWindow Frame SessionsPreferences</key>
+	<string>269 139 606 456 0 0 1366 745 </string>
 	<key>NSWindow Frame SharedPreferences</key>
-	<string>269 148 1018 447 0 0 1366 745 </string>
+	<string>157 166 796 473 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>4 9 1361 736 0 0 1366 745 </string>
+	<string>4 9 1346 736 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
-	<string>4 0 1361 745 0 0 1366 745 </string>
+	<string>4 0 1210 745 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 2</key>
 	<string>4 7 1225 731 0 0 1366 745 </string>
 	<key>New Bookmarks</key>
@@ -1785,6 +1787,8 @@
 	<integer>8</integer>
 	<key>RightOption</key>
 	<integer>3</integer>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedAlternateAppNameKey</key>
@@ -1794,7 +1798,7 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2016-09-03T09:06:09Z</date>
+	<date>2016-10-27T05:45:42Z</date>
 	<key>SavePasteHistory</key>
 	<false/>
 	<key>ShowBookmarkName</key>
@@ -1840,6 +1844,6 @@
 	<key>findRegex_iTerm</key>
 	<false/>
 	<key>iTerm Version</key>
-	<string>3.0.9</string>
+	<string>3.0.10</string>
 </dict>
 </plist>
