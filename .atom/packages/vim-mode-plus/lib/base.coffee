@@ -18,12 +18,10 @@ vimStateMethods = [
   "onDidChangeInput"
   "onDidConfirmInput"
   "onDidCancelInput"
-  "onDidUnfocusInput"
-  "onDidCommandInput"
+
   "onDidChangeSearch"
   "onDidConfirmSearch"
   "onDidCancelSearch"
-  "onDidUnfocusSearch"
   "onDidCommandSearch"
 
   "onDidSetTarget"
@@ -55,9 +53,9 @@ class Base
   Delegato.includeInto(this)
   @delegatesMethods(vimStateMethods..., toProperty: 'vimState')
 
-  constructor: (@vimState, properties) ->
+  constructor: (@vimState, properties=null) ->
     {@editor, @editorElement, @globalState} = @vimState
-    _.extend(this, properties)
+    _.extend(this, properties) if properties?
     if settings.get('showHoverOnOperate')
       hover = @hover?[settings.get('showHoverOnOperateIcon')]
       if hover? and not @isComplete()
@@ -111,17 +109,14 @@ class Base
   # -------------------------
   count: null
   defaultCount: 1
-  getDefaultCount: ->
-    @defaultCount
-
   getCount: ->
-    @count ?= @vimState.getCount() ? @getDefaultCount()
+    @count ?= @vimState.getCount() ? @defaultCount
 
   resetCount: ->
     @count = null
 
   isDefaultCount: ->
-    @count is @getDefaultCount()
+    @count is @defaultCount
 
   # Register
   # -------------------------
@@ -162,7 +157,7 @@ class Base
     else
       @vimState.hover.add(text, point)
 
-  new: (name, properties={}) ->
+  new: (name, properties) ->
     klass = Base.getClass(name)
     new klass(@vimState, properties)
 
@@ -190,22 +185,22 @@ class Base
   hasInput: -> @input?
   getInput: -> @input
 
-  focusInput: (options={}) ->
-    options.charsMax ?= 1
+  focusInput: (charsMax) ->
     @onDidConfirmInput (@input) =>
       @processOperation()
 
     # From 2nd addHover, we replace last section of hover
     # to sync content with input mini editor.
-    replace = false
-    @onDidChangeInput (input) =>
-      @addHover(input, {replace})
-      replace = true
+    unless charsMax is 1
+      replace = false
+      @onDidChangeInput (input) =>
+        @addHover(input, {replace})
+        replace = true
 
     @onDidCancelInput =>
       @cancelOperation()
 
-    @vimState.input.focus(options)
+    @vimState.input.focus(charsMax)
 
   getVimEofBufferPosition: ->
     getVimEofBufferPosition(@editor)
@@ -343,7 +338,6 @@ class Base
     atom.commands.add @getCommandScope(), @getCommandName(), (event) ->
       vimState = getEditorState(@getModel()) ? getEditorState(atom.workspace.getActiveTextEditor())
       if vimState?
-        vimState.domEvent = event
         # Reason: https://github.com/t9md/atom-vim-mode-plus/issues/85
         vimState.operationStack.run(klass)
       event.stopPropagation()

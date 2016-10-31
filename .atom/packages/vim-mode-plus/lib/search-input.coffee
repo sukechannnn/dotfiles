@@ -7,7 +7,6 @@ class SearchInput extends HTMLElement
   onDidChange: (fn) -> @emitter.on 'did-change', fn
   onDidConfirm: (fn) -> @emitter.on 'did-confirm', fn
   onDidCancel: (fn) -> @emitter.on 'did-cancel', fn
-  onDidUnfocus: (fn) -> @emitter.on 'did-unfocus', fn
   onDidCommand: (fn) -> @emitter.on 'did-command', fn
 
   createdCallback: ->
@@ -72,7 +71,6 @@ class SearchInput extends HTMLElement
     atom.workspace.getActivePane().activate()
     @editor.setText ''
     @panel?.hide()
-    @emitter.emit('did-unfocus')
 
   updateOptionSettings: ({useRegexp}={}) ->
     @regexSearchStatus.classList.toggle('btn-primary', useRegexp)
@@ -146,9 +144,5 @@ class SearchInput extends HTMLElement
       'core:move-down': => @editor.setText @vimState.searchHistory.get('next')
     )
 
-SearchInputElement = registerElement 'vim-mode-plus-search-input',
+module.exports = registerElement 'vim-mode-plus-search-input',
   prototype: SearchInput.prototype
-
-module.exports = {
-  SearchInputElement
-}
