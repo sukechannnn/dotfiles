@@ -145,30 +145,33 @@ class ModeManager
       when 'linewise'
         @vimState.selectLinewise()
       when 'blockwise'
-        @vimState.selectBlockwise() unless swrap(@editor.getLastSelection()).isLinewise()
+        @vimState.selectBlockwise()
 
     new Disposable =>
       @normalizeSelections()
       selection.clear(autoscroll: false) for selection in @editor.getSelections()
       @updateNarrowedState(false)
 
+  eachNonEmptySelection: (fn) ->
+    for selection in @editor.getSelections() when not selection.isEmpty()
+      fn(selection)
+
   normalizeSelections: ->
     switch @submode
       when 'characterwise'
-        null
+        @eachNonEmptySelection (selection) ->
+          swrap(selection).translateSelectionEndAndClip('backward')
       when 'linewise'
-        for selection in @editor.getSelections() when not selection.isEmpty()
+        @eachNonEmptySelection (selection) ->
           swrap(selection).restoreColumnFromProperties()
-          swrap(selection).translateSelectionEndAndClip('forward')
       when 'blockwise'
         for bs in @vimState.getBlockwiseSelections()
           bs.restoreCharacterwise()
         @vimState.clearBlockwiseSelections()
+        @eachNonEmptySelection (selection) ->
+          swrap(selection).translateSelectionEndAndClip('backward')
 
     swrap.clearProperties(@editor)
-    for selection in @editor.getSelections() when not selection.isEmpty()
-
-      swrap(selection).translateSelectionEndAndClip('backward')
 
   # Narrow to selection
   # -------------------------

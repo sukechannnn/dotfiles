@@ -40,6 +40,7 @@
       "vim-mode-plus"
       "language-slim"
       "navigator-go"
+      "auto-encoding"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
