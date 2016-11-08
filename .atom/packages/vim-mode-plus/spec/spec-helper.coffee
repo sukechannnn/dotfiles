@@ -217,6 +217,7 @@ class VimEditor
     'occurrenceCount', 'occurrenceText'
     'characterwiseHead'
     'scrollTop',
+    'mark'
     'mode',
   ]
   # Public
@@ -323,6 +324,11 @@ class VimEditor
     actual = @editorElement.getScrollTop()
     expect(actual).toEqual scrollTop
 
+  ensureMark: (mark) ->
+    for name, point of mark
+      actual = @vimState.mark.get(name)
+      expect(actual).toEqual(point)
+
   ensureMode: (mode) ->
     mode = toArray(mode)
     expect(@vimState.isMode(mode...)).toBe(true)
@@ -362,7 +368,7 @@ class VimEditor
             # if settings.
             rawKeystroke(_key, target) for _key in k.input.split('')
           when k.search?
-            @vimState.searchInput.editor.insertText(k.search)
+            @vimState.searchInput.editor.insertText(k.search) if k.search
             atom.commands.dispatch(@vimState.searchInput.editorElement, 'core:confirm')
           else
             rawKeystroke(k, target)
