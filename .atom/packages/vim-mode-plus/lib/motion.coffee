@@ -26,7 +26,7 @@ Select = null
   getStartPositionForPattern
   getFirstCharacterPositionForBufferRow
   getFirstCharacterBufferPositionForScreenRow
-  getTextInScreenRange
+  screenPositionIsAtWhiteSpace
   cursorIsAtEndOfLineAtNonEmptyRow
   getFirstCharacterColumForBufferRow
 
@@ -276,9 +276,9 @@ class MoveUpToEdge extends Motion
     @setScreenPositionSafely(cursor, point)
 
   getPoint: (fromPoint) ->
-    for row in @getScanRows(fromPoint)
-      if @isMovablePoint(point = new Point(row, fromPoint.column))
-        return point
+    column = fromPoint.column
+    for row in @getScanRows(fromPoint) when point = new Point(row, column)
+      return point if @isEdge(point)
 
   getScanRows: ({row}) ->
     validRow = getValidVimScreenRow.bind(null, @editor)
@@ -286,49 +286,25 @@ class MoveUpToEdge extends Motion
       when 'up' then [validRow(row - 1)..0]
       when 'down' then [validRow(row + 1)..@getVimLastScreenRow()]
 
-  isMovablePoint: (point) ->
-    if @isStoppablePoint(point)
-      # first and last row is always edge.
-      if point.row in [0, @getVimLastScreenRow()]
-        true
-      else
-        @isEdge(point)
-    else
-      false
-
   isEdge: (point) ->
-    # If one of above/below row is not stoppable, it's Edge!
-    above = point.translate([-1, 0])
-    below = point.translate([+1, 0])
-    (not @isStoppablePoint(above)) or (not @isStoppablePoint(below))
-
-  # Avoid stopping on leading and trailing whitespace,
-  isValidStoppablePoint: ({row, column}) ->
-    text = getTextInScreenRange(@editor, [[row, 0], [row, Infinity]])
-    softTabText = _.multiplyString(' ', @editor.getTabLength())
-    text = text.replace(/\t/g, softTabText)
-    if (match = text.match(/\S/g))?
-      [firstChar, ..., lastChar] = match
-      text.indexOf(firstChar) <= column <= text.lastIndexOf(lastChar)
+    if @isStoppablePoint(point)
+      # If one of above/below point was not stoppable, it's Edge!
+      above = point.translate([-1, 0])
+      below = point.translate([+1, 0])
+      (not @isStoppablePoint(above)) or (not @isStoppablePoint(below))
     else
       false
 
   isStoppablePoint: (point) ->
-    if point.row in [0, @getVimLastScreenRow()]
+    if @isNonWhiteSpacePoint(point)
       true
-    else if @isNonBlankPoint(point)
-      true
-    else if @isValidStoppablePoint(point)
-      left = point.translate([0, -1])
-      right = point.translate([0, +1])
-      @isNonBlankPoint(left) and @isNonBlankPoint(right)
     else
-      false
+      leftPoint = point.translate([0, -1])
+      rightPoint = point.translate([0, +1])
+      @isNonWhiteSpacePoint(leftPoint) and @isNonWhiteSpacePoint(rightPoint)
 
-  isNonBlankPoint: (point) ->
-    screenRange = Range.fromPointWithDelta(point, 0, 1)
-    char = getTextInScreenRange(@editor, screenRange)
-    char? and /\S/.test(char)
+  isNonWhiteSpacePoint: (point) ->
+    screenPositionIsAtWhiteSpace(@editor, point)
 
 class MoveDownToEdge extends MoveUpToEdge
   @extend()
@@ -407,6 +383,33 @@ class MoveToEndOfWord extends Motion
         cursor.moveRight()
         @moveToNextEndOfWord(cursor)
 
+# [TODO: Improve, accuracy]
+class MoveToPreviousEndOfWord extends MoveToPreviousWord
+  @extend()
+  inclusive: true
+
+  moveCursor: (cursor) ->
+    times = @getCount()
+    wordRange = cursor.getCurrentWordBufferRange()
+    cursorPosition = cursor.getBufferPosition()
+
+    # if we're in the middle of a word then we need to move to its start
+    if cursorPosition.isGreaterThan(wordRange.start) and cursorPosition.isLessThan(wordRange.end)
+      times += 1
+
+    for [1..times]
+      point = cursor.getBeginningOfCurrentWordBufferPosition({@wordRegex})
+      cursor.setBufferPosition(point)
+
+    @moveToNextEndOfWord(cursor)
+    if cursor.getBufferPosition().isGreaterThanOrEqual(cursorPosition)
+      cursor.setBufferPosition([0, 0])
+
+  moveToNextEndOfWord: (cursor) ->
+    point = cursor.getEndOfCurrentWordBufferPosition({@wordRegex}).translate([0, -1])
+    point = Point.min(point, @getVimEofBufferPosition())
+    cursor.setBufferPosition(point)
+
 # Whole word
 # -------------------------
 class MoveToNextWholeWord extends MoveToNextWord
@@ -418,6 +421,11 @@ class MoveToPreviousWholeWord extends MoveToPreviousWord
   wordRegex: /^\s*$|\S+/
 
 class MoveToEndOfWholeWord extends MoveToEndOfWord
+  @extend()
+  wordRegex: /\S+/
+
+# [TODO: Improve, accuracy]
+class MoveToPreviousEndOfWholeWord extends MoveToPreviousEndOfWord
   @extend()
   wordRegex: /\S+/
 

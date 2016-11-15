@@ -202,11 +202,6 @@ describe "Motion general", ->
     describe "move-(up/down)-to-edge", ->
       text = null
       beforeEach ->
-        atom.keymaps.add "test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-            '[': 'vim-mode-plus:move-up-to-edge'
-            ']': 'vim-mode-plus:move-down-to-edge'
-
         text = new TextData """
           0:  4 67  01234567890123456789
           1:         1234567890123456789
@@ -219,9 +214,31 @@ describe "Motion general", ->
           """
         set text: text.getRaw(), cursor: [4, 3]
 
-      it "move first-row or last-row even if it's blank char", ->
-        ensure '[', cursor: [0, 3]
-        ensure ']', cursor: [7, 3]
+      describe "edgeness of first-line and last-line", ->
+        beforeEach ->
+          set
+            text_: """
+            ____this is line 0
+            ____this is text of line 1
+            ____this is text of line 2
+            ______hello line 3
+            ______hello line 4
+            """
+            cursor: [2, 2]
+
+        describe "when column is leading spaces", ->
+          it "doesn't move cursor", ->
+            ensure '[', cursor: [2, 2]
+            ensure ']', cursor: [2, 2]
+
+        describe "when column is trailing spaces", ->
+          it "doesn't move cursor", ->
+            set cursor: [1, 20]
+            ensure ']', cursor: [2, 20]
+            ensure ']', cursor: [2, 20]
+            ensure '[', cursor: [1, 20]
+            ensure '[', cursor: [1, 20]
+
       it "move to non-blank-char on both first and last row", ->
         set cursor: [4, 4]
         ensure '[', cursor: [0, 4]
@@ -542,6 +559,66 @@ describe "Motion general", ->
           set cursor: [0, 2]
           ensure 'y e', register: '"': text: ' cde1'
 
+  describe "the ge keybinding", ->
+    describe "as a motion", ->
+      it "moves the cursor to the end of the previous word", ->
+        set text: "1234 5678 wordword"
+        set cursor: [0, 16]
+        ensure 'g e', cursor: [0, 8]
+        ensure 'g e', cursor: [0, 3]
+        ensure 'g e', cursor: [0, 0]
+        ensure 'g e', cursor: [0, 0]
+
+      it "moves corrently when starting between words", ->
+        set text: "1 leading     end"
+        set cursor: [0, 12]
+        ensure 'g e', cursor: [0, 8]
+
+      it "takes a count", ->
+        set text: "vim mode plus is getting there"
+        set cursor: [0, 28]
+        ensure '5 g e', cursor: [0, 2]
+
+      # test will fail until the code is fixed
+      xit "handles non-words inside words like vim", ->
+        set text: "1234 5678 word-word"
+        set cursor: [0, 18]
+        ensure 'g e', cursor: [0, 14]
+        ensure 'g e', cursor: [0, 13]
+        ensure 'g e', cursor: [0, 8]
+
+      # test will fail until the code is fixed
+      xit "handles newlines like vim", ->
+        set text: "1234\n\n\n\n5678"
+        set cursor: [5, 2]
+        # vim seems to think an end-of-word is at every blank line
+        ensure 'g e', cursor: [4, 0]
+        ensure 'g e', cursor: [3, 0]
+        ensure 'g e', cursor: [2, 0]
+        ensure 'g e', cursor: [1, 0]
+        ensure 'g e', cursor: [1, 0]
+        ensure 'g e', cursor: [0, 3]
+        ensure 'g e', cursor: [0, 0]
+
+    describe "when used by Change operator", ->
+      it "changes word fragments", ->
+        set text: "cet document"
+        set cursor: [0, 7]
+        ensure 'c g e', cursor: [0, 2], text: "cement", mode: 'insert'
+        # TODO: I'm not sure how to check the register after checking the document
+        # ensure register: '"', text: 't docu'
+
+      it "changes whitespace properly", ->
+        set text: "ce    doc"
+        set cursor: [0, 4]
+        ensure 'c g e', cursor: [0, 1], text: "c doc", mode: 'insert'
+
+    describe "in characterwise visual mode", ->
+      it "selects word fragments", ->
+        set text: "cet document"
+        set cursor: [0, 7]
+        ensure 'v g e', cursor: [0, 2], selectedText: "t docu"
+
   describe "the E keybinding", ->
     beforeEach ->
       set text_: """
@@ -577,6 +654,16 @@ describe "Motion general", ->
         it "selects to the end of the current word", ->
           set cursor: [0, 0]
           ensure 'v E E y', register: '"': text: 'ab  cde1+-'
+
+  describe "the gE keybinding", ->
+    describe "as a motion", ->
+      it "moves the cursor to the end of the previous word", ->
+        set text: "12.4 5~7- word-word"
+        set cursor: [0, 16]
+        ensure 'g E', cursor: [0, 8]
+        ensure 'g E', cursor: [0, 3]
+        ensure 'g E', cursor: [0, 0]
+        ensure 'g E', cursor: [0, 0]
 
   describe "the (,) sentence keybinding", ->
     describe "as a motion", ->

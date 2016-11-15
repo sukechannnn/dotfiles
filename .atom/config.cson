@@ -37,10 +37,10 @@
       "css-snippets"
       "environment"
       "language-elixir"
-      "vim-mode-plus"
       "language-slim"
       "navigator-go"
       "auto-encoding"
+      "vim-mode-plus"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
