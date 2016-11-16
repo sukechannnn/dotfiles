@@ -662,16 +662,16 @@ class MoveToFirstLine extends Motion
   wise: 'linewise'
   jump: true
 
-  getCount: ->
-    super - 1
-
   moveCursor: (cursor) ->
     cursor.setBufferPosition(@getPoint())
     cursor.autoscroll(center: true)
 
   getPoint: ->
-    row = getValidVimBufferRow(@editor, @getCount())
+    row = getValidVimBufferRow(@editor, @getRow())
     getFirstCharacterPositionForBufferRow(@editor, row)
+
+  getRow: ->
+    @getCount() - 1
 
 # keymap: G
 class MoveToLastLine extends MoveToFirstLine
@@ -681,6 +681,7 @@ class MoveToLastLine extends MoveToFirstLine
 # keymap: N% e.g. 10%
 class MoveToLineByPercent extends MoveToFirstLine
   @extend()
+
   getRow: ->
     percent = Math.min(100, @getCount())
     Math.floor(@getVimLastScreenRow() * (percent / 100))

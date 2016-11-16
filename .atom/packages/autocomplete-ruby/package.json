@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116924-70029-16p6831"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-1161016-15451-13kmx1n"
     ]
   ],
-  "_from": "../d-116924-70029-4grci0/package.tgz",
-  "_id": "autocomplete-ruby@0.2.1",
+  "_from": "../d-1161016-15451-11kiojx/package.tgz",
+  "_id": "autocomplete-ruby@0.2.3",
   "_inCache": true,
   "_installable": true,
   "_location": "/autocomplete-ruby",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-116924-70029-4grci0/package.tgz",
-  "_shasum": "512239d4704b5a21677cbc5e2570353d85e8844f",
+  "_resolved": "file:../d-1161016-15451-11kiojx/package.tgz",
+  "_shasum": "2b1c044d22bd0de01d1262a2edc4de3984e9e35f",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-116924-70029-4grci0/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-116924-70029-16p6831",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161016-15451-11kiojx/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-1161016-15451-13kmx1n",
   "author": {
     "name": "Ian Hattendorf",
     "email": "ianhattendorf@gmail.com",
@@ -78,5 +78,5 @@
     "type": "git",
     "url": "git+https://github.com/ianhattendorf/autocomplete-ruby.git"
   },
-  "version": "0.2.1"
+  "version": "0.2.3"
 }
