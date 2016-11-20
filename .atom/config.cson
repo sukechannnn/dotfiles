@@ -63,7 +63,6 @@
     preferredLineLength: 128
     showIndentGuide: true
     showInvisibles: true
-    softWrap: true
   "exception-reporting":
     userId: "5cbdbbef-3435-207a-5ec9-b94dc729fc98"
   "file-types":
