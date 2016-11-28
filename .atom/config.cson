@@ -74,6 +74,7 @@
   linter: {}
   "markdown-pdf": {}
   "markdown-preview":
+    breakOnSingleNewline: true
     useGitHubStyle: true
   "merge-conflicts": {}
   minimap:
