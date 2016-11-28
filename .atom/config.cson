@@ -17,7 +17,6 @@
     audioBeep: false
     disabledPackages: [
       "vim-mode"
-      "sync-settings"
       "autocomplete-go"
       "builder-go"
       "go-config"
@@ -26,7 +25,6 @@
       "gofmt"
       "gometalinter-linter"
       "gorename"
-      "navigator-godef"
       "tester-go"
       "language-gfm"
       "atom-ctags"
@@ -34,13 +32,11 @@
       "react"
       "react-snippets"
       "autocomplete-elixir"
-      "css-snippets"
       "environment"
       "language-elixir"
       "language-slim"
-      "navigator-go"
-      "auto-encoding"
       "vim-mode-plus"
+      "navigator-go"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -128,6 +124,15 @@
 ".js.jsx.source":
   editor:
     preferredLineLength: 130
+".js.regexp.replacement.source":
+  editor:
+    tabLength: 4
+".js.regexp.source":
+  editor:
+    tabLength: 4
+".js.source":
+  editor:
+    tabLength: 4
 ".json.source":
   editor:
     preferredLineLength: 130
