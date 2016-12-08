@@ -35,7 +35,6 @@
       "environment"
       "language-elixir"
       "language-slim"
-      "vim-mode-plus"
       "navigator-go"
     ]
     followSymlinks: false
