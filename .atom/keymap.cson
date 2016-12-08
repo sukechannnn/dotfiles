@@ -39,6 +39,3 @@
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
-
-'body':
-  'shift-cmd-u': 'core:redo'
