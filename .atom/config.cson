@@ -52,10 +52,10 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 15
     invisibles:
       tab: "·"
     preferredLineLength: 128
+    scrollPastEnd: true
     showIndentGuide: true
     showInvisibles: true
   "exception-reporting":
@@ -139,6 +139,9 @@
 ".md.text":
   editor:
     preferredLineLength: 128
+".rspec.ruby.source":
+  editor:
+    scrollPastEnd: false
 ".source.sql":
   editor:
     preferredLineLength: 130
