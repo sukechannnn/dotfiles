@@ -1,0 +1,68 @@
+# frozen_string_literal: true
+require 'rails_helper'
+
+RSpec.describe AccountsController, type: :controller do
+  login_user
+  describe 'GET #index' do
+    it 'returns http success' do
+      get :index
+      expect(response).to have_http_status(:success)
+    end
+
+    it 'セッションが切れてた時に、ログアウトしてかつメッセージが表示されること' do
+      session['warden.user.user.key'] = nil
+      get :index
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq I18n.t 'devise.failure.unauthenticated'
+    end
+
+    it 'セッションが切れているかつAjaxの場合に、ログアウトの案内のメッセージが表示されること' do
+      session['warden.user.user.key'] = nil
+      post :search
+      expect(flash[:warning]).to eq I18n.t 'devise.failure.unauthenticated_when_ajax'
+    end
+
+    context 'GET #index' do
+      before do
+        create :only_follow
+        create :mutually_follow
+        create :removed
+        create :not_follow
+      end
+      it 'followingが正しい値になること' do
+        get :index
+        expect(assigns(:following)).to eq 3
+      end
+    end
+
+    context 'login_user_statusがsuccessのとき' do
+      it 'login_user_status は success' do
+        get :index
+        expect(assigns(:account_status)).to eq I18n.t 'login_user_status.success'
+      end
+    end
+
+    context 'login_user_statusがwarningのとき' do
+      it 'login_user_status は warning' do
+        User.first.update(status: 1)
+        get :index
+        expect(assigns(:account_status)).to eq I18n.t 'login_user_status.warning'
+      end
+    end
+
+    context 'login_user_statusがdangerのとき' do
+      it 'login_user_status は danger' do
+        User.first.update(status: 2)
+        get :index
+        expect(assigns(:account_status)).to eq I18n.t 'login_user_status.danger'
+      end
+    end
+  end
+
+  describe 'PUT #update_user' do
+    it 'アップデートが成功すること' do
+      put :update_user
+      expect(flash[:success]).to eq I18n.t 'devise.registrations.updated'
+    end
+  end
+end
