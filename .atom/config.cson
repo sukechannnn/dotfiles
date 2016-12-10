@@ -36,6 +36,7 @@
       "language-elixir"
       "language-slim"
       "navigator-go"
+      "autocomplete-ruby"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -141,7 +142,7 @@
     preferredLineLength: 128
 ".rspec.ruby.source":
   editor:
-    scrollPastEnd: false
+    scrollPastEnd: true
 ".source.sql":
   editor:
     preferredLineLength: 130
