@@ -45,7 +45,7 @@
     ]
     telemetryConsent: "limited"
     themes: [
-      "atom-dark-ui"
+      "one-dark-ui"
       "atom-dark-syntax"
     ]
   editor:
@@ -72,6 +72,9 @@
   "japanese-wrap":
     characterWidth: {}
   linter: {}
+  "linter-erb": {}
+  "linter-matlab": {}
+  "linter-sass-lint": {}
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -84,6 +87,7 @@
       "git-diffDecorationsZIndex": 0
     useHardwareAcceleration: false
   "one-dark-ui":
+    fontSize: 9
     layoutMode: "Compact"
   "open-recent":
     listDirectoriesAddedToProject: true
