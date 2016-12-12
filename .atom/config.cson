@@ -87,7 +87,7 @@
       "git-diffDecorationsZIndex": 0
     useHardwareAcceleration: false
   "one-dark-ui":
-    fontSize: 9
+    fontSize: 10
     layoutMode: "Compact"
   "open-recent":
     listDirectoriesAddedToProject: true
