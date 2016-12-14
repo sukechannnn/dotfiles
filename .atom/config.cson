@@ -89,6 +89,7 @@
   "one-dark-ui":
     fontSize: 10
     layoutMode: "Compact"
+    tabSizing: "Minimum"
   "open-recent":
     listDirectoriesAddedToProject: true
   react: {}
