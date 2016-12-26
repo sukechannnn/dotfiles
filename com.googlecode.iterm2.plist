@@ -230,7 +230,7 @@
 		BAtzdHJlYW10eXBlZIHoA4QBQISEhAhOU1N0cmluZwGEhAhOU09iamVjdACF
 		hAErATGG
 		</data>
-		<string>307</string>
+		<string>322</string>
 	</array>
 	<key>NSTableView Hidden Columns KeyBingingTable</key>
 	<array/>
@@ -252,11 +252,11 @@
 	<key>NSWindow Frame SessionsPreferences</key>
 	<string>239 154 606 456 0 0 1280 777 </string>
 	<key>NSWindow Frame SharedPreferences</key>
-	<string>321 109 796 473 0 0 1280 777 </string>
+	<string>321 135 796 473 0 0 1280 777 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>4 9 1258 768 0 0 1280 777 </string>
+	<string>0 30 1280 747 0 0 1280 777 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
-	<string>4 7 1225 731 0 0 1366 745 </string>
+	<string>-1280 4 1273 997 -1280 0 1280 1001 </string>
 	<key>NSWindow Frame iTerm Window 2</key>
 	<string>4 7 1225 731 0 0 1366 745 </string>
 	<key>New Bookmarks</key>
@@ -850,9 +850,9 @@
 			<key>Semantic History</key>
 			<dict>
 				<key>action</key>
-				<string>best editor</string>
+				<string>editor</string>
 				<key>editor</key>
-				<string>com.sublimetext.3</string>
+				<string>com.github.atom</string>
 				<key>text</key>
 				<string></string>
 			</dict>
@@ -1804,7 +1804,7 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2016-11-24T07:59:35Z</date>
+	<date>2016-12-26T09:24:49Z</date>
 	<key>SavePasteHistory</key>
 	<false/>
 	<key>ShowBookmarkName</key>
@@ -1850,6 +1850,6 @@
 	<key>findRegex_iTerm</key>
 	<false/>
 	<key>iTerm Version</key>
-	<string>3.0.12</string>
+	<string>3.0.13</string>
 </dict>
 </plist>
