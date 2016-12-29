@@ -65,6 +65,7 @@
     "coffee.erb": "source.coffee"
     erb: "text.html.ruby"
     "js.erb": "source.js"
+    md: "text.html.basic"
     rb: "source.ruby.rails"
   "goto-definition": {}
   "highlight-selected":
