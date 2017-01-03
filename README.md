@@ -1,11 +1,17 @@
-MacBook Pro用のdotfileです。
+# dotfile
 
-## Vim
+## Usage
 
-### dein
+### dotfiles
+- ```bash dotfilesLink.sh```
 
-```mkdir -p ~/.vim/dein/repos/github.com/Shougo/dein.vim```
+### Vim
 
-```git clone https://github.com/Shougo/dein.vim.git ~/.vim/dein/repos/github.com/Shougo/dein.vim```
+- dein
+  - ```mkdir -p ~/.vim/dein/repos/github.com/Shougo/dein.vim```
+  - ```git clone https://github.com/Shougo/dein.vim.git ~/.vim/dein/repos/github.com/Shougo/dein.vim```
+  - ```:call dein#install()```
 
-```:call dein#install()```
+### Ruby Gems
+- local install
+  - ```bash localRubyGems.sh```
