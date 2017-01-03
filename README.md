@@ -8,8 +8,8 @@
 ### Vim
 
 - dein
-  - ```mkdir -p ~/.vim/dein/repos/github.com/Shougo/dein.vim```
-  - ```git clone https://github.com/Shougo/dein.vim.git ~/.vim/dein/repos/github.com/Shougo/dein.vim```
+  - ```curl https://raw.githubusercontent.com/Shougo/dein.vim/master/bin/installer.sh > installer.sh```
+  - ```sh ./installer.sh ~/.vim/dein```
   - ```:call dein#install()```
 
 ### Ruby Gems
