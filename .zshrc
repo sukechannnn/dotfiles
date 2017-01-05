@@ -17,4 +17,4 @@ export GOPATH="$HOME/Develop/Golang/gopath"
 
 export PGDATA="/usr/local/var/postgres"
 
-export HOMEBREW_GITHUB_API_TOKEN="bc9eb5e9b7eb8a7144443199b84e3d324d4cc343"
+alias be='bundle exec'
