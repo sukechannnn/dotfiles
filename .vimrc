@@ -15,8 +15,6 @@ call dein#add('Shougo/neomru.vim')
 call dein#add('Shougo/neosnippet')
 call dein#add('scrooloose/nerdtree')
 call dein#add('tomtom/tcomment_vim')
-call dein#add('vim-airline/vim-airline')
-call dein#add('vim-airline/vim-airline-themes')
 call dein#add('Shougo/context_filetype.vim')
 
 call dein#end()
