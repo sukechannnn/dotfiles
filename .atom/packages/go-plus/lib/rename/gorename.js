@@ -6,9 +6,8 @@ import RenameDialog from './rename-dialog'
 import {isValidEditor} from '../utils'
 
 class Gorename {
-  constructor (goconfig, goget) {
+  constructor (goconfig) {
     this.goconfig = goconfig
-    this.goget = goget
     this.subscriptions = new CompositeDisposable()
     this.subscriptions.add(atom.commands.add(
       'atom-text-editor', 'golang:gorename',
@@ -16,14 +15,19 @@ class Gorename {
     ))
   }
 
+  dispose () {
+    this.subscriptions.dispose()
+    this.subscriptions = null
+    this.goconfig = null
+  }
+
   commandInvoked () {
     const editor = atom.workspace.getActiveTextEditor()
     if (!isValidEditor(editor)) {
       return
     }
-    this.checkForTool(editor).then((cmd) => {
+    this.goconfig.locator.findTool('gorename').then((cmd) => {
       if (!cmd) {
-        // TODO: Show a notification?
         return
       }
 
@@ -95,10 +99,21 @@ class Gorename {
     const args = ['-offset', `${file}:#${offset}`, '-to', newName]
     const options = {
       cwd: cwd,
-      env: this.goconfig.environment()
+      env: this.goconfig.environment(),
+      timeout: 20000
     }
+    const notification = atom.notifications.addInfo('Renaming...', {
+      dismissable: true
+    })
     return this.goconfig.executor.exec(cmd, args, options).then((r) => {
-      if (r.error) {
+      notification.dismiss()
+      if (r.exitcode === 124) {
+        atom.notifications.addError('Operation timed out', {
+          detail: 'gorename ' + args.join(' '),
+          dismissable: true
+        })
+        return {success: false, result: r}
+      } else if (r.error) {
         if (r.error.code === 'ENOENT') {
           atom.notifications.addError('Missing Rename Tool', {
             detail: 'The gorename tool is required to perform a rename. Please run go get -u golang.org/x/tools/cmd/gorename to get it.',
@@ -125,51 +140,6 @@ class Gorename {
       atom.notifications.addSuccess(message.trim())
       return {success: true, result: r}
     })
-  }
-
-  checkForTool (editor) {
-    if (!this.goconfig) {
-      return Promise.resolve(false)
-    }
-
-    return this.goconfig.locator.findTool('gorename').then((cmd) => {
-      if (cmd) {
-        return cmd
-      }
-
-      if (!this.goget) {
-        return false
-      }
-
-      if (this.toolCheckComplete) {
-        return false
-      }
-
-      this.toolCheckComplete = true
-      return this.goget.get({
-        name: 'gorename',
-        packageName: 'gorename',
-        packagePath: 'golang.org/x/tools/cmd/gorename',
-        type: 'missing'
-      }).then((r) => {
-        if (r.success) {
-          return this.goconfig.locator.findTool('gorename')
-        }
-
-        console.log('gorename is not available and could not be installed via "go get -u golang.org/x/tools/cmd/gorename"; please manually install it to enable gorename behavior.')
-        return false
-      }).catch((e) => {
-        console.log(e)
-        return false
-      })
-    })
-  }
-
-  dispose () {
-    this.subscriptions.dispose()
-    this.subscriptions = null
-    this.goconfig = null
-    this.goget = null
   }
 }
 

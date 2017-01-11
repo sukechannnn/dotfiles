@@ -36,7 +36,6 @@
       "language-elixir"
       "language-slim"
       "navigator-go"
-      "autocomplete-ruby"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false

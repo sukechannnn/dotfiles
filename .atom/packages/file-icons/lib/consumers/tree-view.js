@@ -2,7 +2,7 @@
 
 const {isAbsolute, join, sep} = require("path");
 const {CompositeDisposable, Disposable, Emitter} = require("atom");
-const FileRegistry  = require("../filesystem/file-registry.js");
+const FileSystem    = require("../filesystem/filesystem.js");
 const TreeEntry     = require("./tree-entry.js");
 
 
@@ -19,31 +19,34 @@ class TreeView{
 			atom.packages.onDidActivatePackage(_=> this.checkPanes()),
 			atom.packages.onDidDeactivatePackage(_=> this.checkPanes()),
 			atom.packages.onDidActivateInitialPackages(() => {
-				
-				// [#472] HACK: Show the tree-view if it's not visible at startup.
-				const state = atom.packages.packageStates["tree-view"];
-				if((!state || state.attached) && !this.visible){
-					const workspace = atom.views.getView(atom.workspace);
-					setImmediate(() => atom.commands.dispatch(workspace, "tree-view:show"));
-				}
-				
+				const workspace = atom.views.getView(atom.workspace);
+				atom.commands.dispatch(workspace, "tree-view:show");
 				this.checkPanes();
 			}),
 			
-			this.onDidAttach(_=> {
+			this.onDidAttach(() => {
+				if(this.metadata.consumedServices["file-icons.element-icons"]){
+					this.isRedundant = true;
+					return;
+				}
+				
 				this.entryElements = this.element[0].getElementsByClassName("entry");
-				this.entriesByElement = new WeakMap();
 				
 				// TODO: Remove check when atom/tree-view#966 is merged/shipped
 				if("function" === typeof this.element.onEntryMoved){
 					const onMove = this.element.onEntryMoved(paths => {
-						FileRegistry.fixPath(paths.oldPath, paths.newPath);
+						FileSystem.fixPath(paths.oldPath, paths.newPath);
 					});
 					this.disposables.add(onMove);
 				}
-				const onAddPath = atom.project.onDidChangePaths(_=> this.updateRoots());
-				this.disposables.add(onAddPath);
-				this.updateRoots();
+				this.disposables.add(
+					atom.project.onDidChangePaths(_=> this.rebuild()),
+					atom.config.onDidChange("tree-view.hideIgnoredNames", _=> this.rebuild()),
+					atom.config.onDidChange("tree-view.hideVcsIgnoredFiles", _=> this.rebuild()),
+					atom.config.onDidChange("tree-view.squashDirectoryNames", _=> this.rebuild()),
+					atom.config.onDidChange("tree-view.sortFoldersBeforeFiles", _=> this.rebuild())
+				);
+				this.rebuild();
 			})
 		);
 	}
@@ -54,7 +57,6 @@ class TreeView{
 		this.emitter.dispose();
 		this.entries.clear();
 		
-		this.entriesByElement = null;
 		this.entryElements = null;
 		this.disposables = null;
 		this.entries = null;
@@ -83,6 +85,7 @@ class TreeView{
 		
 		if(treePackage && !this.element){
 			const {treeView} = treePackage.mainModule;
+			this.metadata = treePackage.metadata;
 			
 			if(treeView){
 				this.element = treeView;
@@ -112,7 +115,10 @@ class TreeView{
 	
 	
 
-	updateRoots(){
+	rebuild(){
+		if(!this.element || !this.element.roots)
+			return;
+		
 		for(const root of this.element.roots)
 			this.track(root.directory);
 	}
@@ -125,7 +131,6 @@ class TreeView{
 				const element     = this.elementForEntry(entry);
 				const resource    = new TreeEntry(entry, element, isDirectory);
 				this.entries.set(entry, resource);
-				this.entriesByElement.set(element, resource);
 				
 				const disposables = new CompositeDisposable(
 					entry.onDidDestroy(_=> disposables.dispose()),
@@ -163,24 +168,6 @@ class TreeView{
 	}
 	
 	
-	/**
-	 * Return a list of each currently visible tree-view entry.
-	 *
-	 * TODO: Delete this. Use Chai.
-	 * @return {ResourceList}
-	 */
-	ls(){
-		const ResourceList = require("../filesystem/resource-list.js");
-		if(!this.entryElements)
-			return new ResourceList();
-		
-		const resources = [];
-		for(const el of this.entryElements)
-			resources.push(this.entriesByElement.get(el));
-		
-		return new ResourceList(...resources.filter(Boolean));
-	}
-
 
 	/**
 	 * Select an entry-element by its path.

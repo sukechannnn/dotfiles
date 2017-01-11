@@ -31,6 +31,11 @@ class UI {
 
 	observe(){
 		this.disposables.add(
+			atom.workspace.observePaneItems(paneItem => {
+				if("ArchiveEditor" === paneItem.constructor.name)
+					this.emitter.emit("open-archive", paneItem);
+			}),
+			
 			atom.workspace.observeTextEditors(editor => {
 				this.emitter.emit("open-editor", editor);
 				
@@ -88,6 +93,7 @@ class UI {
 	
 	/* Event subscription */
 	onMotifChanged   (fn){ return this.subscribe("motif-changed",  fn)}
+	onOpenArchive    (fn){ return this.subscribe("open-archive",   fn)}
 	onOpenEditor     (fn){ return this.subscribe("open-editor",    fn)}
 	onOpenFile       (fn){ return this.subscribe("open-file",      fn)}
 	onOpenBlank      (fn){ return this.subscribe("open-blank",     fn)}
@@ -118,7 +124,9 @@ class UI {
 		for(const rule of styleSheet.cssRules)
 			if(rule.selectorText === ".theme-colour-check"){
 				const match = rule.cssText.match(/rgb\(.+\)/);
-				return match[0].match(/[\d.]+(?=[,)])/g).map(Number);
+				return match
+					? match[0].match(/[\d.]+(?=[,)])/g).map(Number)
+					: null;
 			}
 		return null;
 	}

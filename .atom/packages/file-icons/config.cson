@@ -91,6 +91,11 @@ directoryIcons:
 		match: /^(Dropbox|\.dropbox\.cache)$/
 		colour: "medium-blue"
 
+	Emacs:
+		icon: "emacs"
+		match: /^\.emacs\.d$/
+		colour: "medium-purple"
+
 	Framework:
 		icon: "dylib"
 		match: ".framework"
@@ -972,7 +977,7 @@ fileIcons:
 	Docker:
 		icon: "docker"
 		match: [
-			[/^(Dockerfile|docker-compose)|\.docker(file|ignore)$/i, "dark-blue", scope: "dockerfile"]
+			[/^(Dockerfile|docker-compose)|\.docker(file|ignore)$/i, "dark-blue", scope: "dockerfile", priority: 2]
 			[/^docker-sync\.yml$/i, "dark-orange", priority: 2]
 		]
 
@@ -1072,6 +1077,7 @@ fileIcons:
 			[/(^|\.)(elc|eld)$/i, "dark-purple", signature: /^;ELC\x17\0{3}/]
 			[".gnus", "medium-red"]
 			[".viper", "dark-green"]
+			[/^Cask$/, "dark-blue"]
 			[/^Project\.ede$/i, "medium-blue"]
 		]
 
@@ -1637,6 +1643,7 @@ fileIcons:
 			[".scaml", "dark-red", "scaml"]
 			[".swig", "medium-green", "swig"]
 			[".vash", "medium-red", "vash"]
+			[".dtml", "medium-blue", "dtml"]
 			[/\.html?\.ecr$/i, "medium-cyan", priority: 2]
 			[/\.(html?\.erb|rhtml)$/i, "medium-red", scope: "html.erb", priority: 2]
 		]
@@ -2987,7 +2994,7 @@ fileIcons:
 			[/^\.?(irbrc|gemrc|pryrc|rspec|ruby-(gemset|version))$/i, "medium-red"]
 			[/^(Appraisals|(Rake|Gem|[bB]uild|Berks|Cap|Danger|Deliver|Fast|Guard|Jar|Maven|Pod|Puppet|Snap)file(\.lock)?)$/, "medium-red"]
 			[/\.(jbuilder|rbuild|rb[wx]|builder)$/i, "dark-red"]
-			["_spec.rb", "light-green"]
+			["_spec.rb", "light-green", priority: 2]
 			[/^rails$/, "medium-red"]
 			[".watchr", "dark-yellow"]
 		]
@@ -3201,8 +3208,14 @@ fileIcons:
 
 	SQL:
 		icon: "sql"
-		scope: "sql"
-		match: /\.(sql|ddl|udf|viw|db2|prc)$/i
+		match: [
+			[/\.(my)?sql$/i, "medium-orange", "sql"]
+			[".ddl", "medium-blue"]
+			[".udf", "medium-green"]
+			[".viw", "dark-cyan"]
+			[".prc", "dark-blue"]
+			[".db2", "medium-purple"]
+		]
 
 	SQLite:
 		icon: "sqlite"

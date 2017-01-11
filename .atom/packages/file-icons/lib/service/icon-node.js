@@ -1,9 +1,13 @@
 "use strict";
 
-const {CompositeDisposable} = require("atom");
-const IconService = require("./icon-service.js");
+const {CompositeDisposable, Disposable} = require("atom");
+const {isString} = require("../utils/general.js");
+const FileSystem = require("../filesystem/filesystem.js");
 const Options = require("../options.js");
 const UI = require("../ui.js");
+
+const iconsByElement = new WeakMap();
+const iconDisposables = new WeakMap();
 
 
 class IconNode{
@@ -16,10 +20,11 @@ class IconNode{
 		this.element = element;
 		this.visible = true;
 		this.classes = null;
-		this.appliedClasses = delegate.appliedClasses || null;
+		this.appliedClasses = null;
+		iconsByElement.set(element, this);
 		
 		this.disposables.add(
-			UI.onMotifChanged(_=> IconService.isReady && this.refresh()),
+			UI.onMotifChanged(_=> this.refresh()),
 			Options.onDidChange("coloured", _=> this.refresh()),
 			Options.onDidChange("colourChangedOnly", _=> this.refresh()),
 			delegate.onDidChangeIcon(_=> this.refresh()),
@@ -30,23 +35,22 @@ class IconNode{
 			})
 		);
 		
-		if(!resource.isDirectory)
+		if(resource.isFile)
 			this.disposables.add(
 				Options.onDidChange("defaultIconClass", _=> this.refresh())
 			);
 		
 		else if(delegate.getCurrentIcon())
-			this.element.classList.remove("icon-file-directory");
+			element.classList.remove(...delegate.getFallbackClasses());
 		
-		IconService.isReady
-			? this.refresh()
-			: setImmediate(_=> this.refresh());
+		this.refresh();
 	}
 	
 	
 	destroy(){
 		if(!this.destroyed){
 			this.disposables.dispose();
+			iconsByElement.delete(this.element);
 			this.resource  = null;
 			this.element   = null;
 			this.destroyed = true;
@@ -119,6 +123,61 @@ class IconNode{
 		return (a && b)
 			? !(a[0] === b[0] && a[1] === b[1])
 			: true;
+	}
+	
+	
+	
+	/**
+	 * Create and apply an {IconNode} to a DOM element the `File-Icons`
+	 * package has no control over. This method is invoked by the service's
+	 * `addIconToElement` method, which ensures icon elements created by
+	 * consumers continue to display accurate icons even when matches change.
+	 *
+	 * @public
+	 * @static
+	 *
+	 * @param {HTMLElement} element - DOM element receiving the icon-classes.
+	 * @param {String}         path - Absolute filesystem path
+	 *
+	 * @returns {Disposable}
+	 *    A Disposable that destroys the {IconNode} when disposed of. Authors
+	 *    are encouraged to do so once the element is no longer needed.
+	 */
+	static forElement(element, path){
+		if(!element) return null;
+		const icon = iconsByElement.get(element);
+		
+		if(icon && !icon.destroyed && iconDisposables.has(icon))
+			return iconDisposables.get(icon);
+		
+		else{
+			if(!path)
+				throw new TypeError("Cannot create icon-node for empty path");
+			
+			const rsrc = FileSystem.get(path);
+			const node = new IconNode(rsrc, element);
+			
+			const disp = new Disposable(() => {
+				iconDisposables.delete(node);
+				node.destroy();
+			});
+			iconDisposables.set(node, disp);
+			return disp;
+		}
+	}
+	
+	
+	/**
+	 * Retrieve a previously-created {IconNode} for a DOM element.
+	 *
+	 * @param {HTMLElement} element
+	 * @return {IconNode}
+	 * @private
+	 */
+	static getIcon(element){
+		return element
+			? iconsByElement.get(element) || null
+			: null;
 	}
 }
 
