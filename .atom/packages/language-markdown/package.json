@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117012-61435-17ykc6h"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117018-24195-6o5ltj"
     ]
   ],
-  "_from": "../d-117012-61435-12fgqcd/package.tgz",
-  "_id": "language-markdown@0.18.2",
+  "_from": "../d-117018-24195-1l0rbg/package.tgz",
+  "_id": "language-markdown@0.19.1",
   "_inCache": true,
   "_installable": true,
   "_location": "/language-markdown",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-117012-61435-12fgqcd/package.tgz",
-  "_shasum": "81d228863119296d3933659da42b2ebf0cb68170",
+  "_resolved": "file:../d-117018-24195-1l0rbg/package.tgz",
+  "_shasum": "ee9de2258e915fcc0f50e9eb75f89d0b9a361ad3",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117012-61435-12fgqcd/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117012-61435-17ykc6h",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117018-24195-1l0rbg/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117018-24195-6o5ltj",
   "bugs": {
     "url": "https://github.com/burodepeper/language-markdown/issues"
   },
@@ -78,5 +78,5 @@
     "type": "git",
     "url": "git+https://github.com/burodepeper/language-markdown.git"
   },
-  "version": "0.18.2"
+  "version": "0.19.1"
 }
