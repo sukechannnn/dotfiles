@@ -17,7 +17,7 @@
 
 }
 
-atom-text-editor::shadow {
+atom-text-editor.editor {
   .gutter .cursor-line {
     background-color: fade(cyan, 14%);
   }
@@ -31,7 +31,7 @@ atom-text-editor::shadow {
   }
 }
 
-:host, atom-text-editor, atom-text-editor::shadow {
+:host, atom-text-editor, atom-text-editor.editor {
   .highlights {
     .ruby-block-highlight .region {
       background-color: fade(white, 20%);
@@ -47,10 +47,10 @@ atom-text-editor {
 
 // To style other content in the text editor's shadow DOM, use the ::shadow
 // expression
-atom-text-editor::shadow .cursor {
+atom-text-editor.editor .cursor {
 
 }
 
-atom-text-editor::shadow .gutter .line-numbers {
+atom-text-editor.editor .gutter .line-numbers {
   max-width: 40px;
 }
