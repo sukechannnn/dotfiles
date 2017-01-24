@@ -1,5 +1,6 @@
 {Range, Point} = require 'atom'
 _ = require 'underscore-plus'
+settings = require './settings'
 
 # [TODO] Need overhaul
 #  - [ ] must have getRange(selection) ->
@@ -9,27 +10,28 @@ _ = require 'underscore-plus'
 Base = require './base'
 swrap = require './selection-wrapper'
 {
-  sortRanges, sortRangesByEndPosition, countChar, pointIsAtEndOfLine,
-  getTextToPoint
+  getLineTextToBufferPosition
   getIndentLevelForBufferRow
   getCodeFoldRowRangesContainesForRow
   getBufferRangeForRowRange
   isIncludeFunctionScopeForRow
-  getStartPositionForPattern
-  getEndPositionForPattern
+  expandRangeToWhiteSpaces
   getVisibleBufferRange
   translatePointAndClip
-  getRangeByTranslatePointAndClip
   getBufferRows
   getValidVimBufferRow
-
-  getStartPositionForPattern
   trimRange
+
+  sortRanges
+  pointIsAtEndOfLine
 } = require './utils'
+{BracketFinder, QuoteFinder, TagFinder} = require './pair-finder.coffee'
 
 class TextObject extends Base
   @extend(false)
-  allowSubmodeChange: true
+  wise: null
+  supportCount: false # FIXME #472, #66
+
   constructor: ->
     @constructor::inner = @getName().startsWith('Inner')
     super
@@ -41,17 +43,23 @@ class TextObject extends Base
   isA: ->
     not @isInner()
 
-  isAllowSubmodeChange: ->
-    @allowSubmodeChange
+  isSuportCount: ->
+    @supportCount
+
+  getWise: ->
+    if @wise? and @getOperator().isOccurrence()
+      'characterwise'
+    else
+      @wise
+
+  isCharacterwise: ->
+    @getWise() is 'characterwise'
 
   isLinewise: ->
-    if @isAllowSubmodeChange()
-      swrap.detectVisualModeSubmode(@editor) is 'linewise'
-    else
-      @isMode('visual', 'linewise')
+    @getWise() is 'linewise'
 
-  stopSelection: ->
-    @canSelect = false
+  isBlockwise: ->
+    @getWise() is 'blockwise'
 
   getNormalizedHeadBufferPosition: (selection) ->
     head = selection.getHeadBufferPosition()
@@ -63,18 +71,68 @@ class TextObject extends Base
     bufferPosition = @getNormalizedHeadBufferPosition(selection)
     @editor.screenPositionForBufferPosition(bufferPosition)
 
-  select: ->
-    @canSelect = true
+  needToKeepColumn: ->
+    @wise is 'linewise' and
+      settings.get('keepColumnOnSelectTextObject') and
+      @getOperator().instanceof('Select')
 
-    @countTimes =>
-      for selection in @editor.getSelections() when @canSelect
-        @selectTextObject(selection)
+  execute: ->
+    # Whennever TextObject is executed, it has @operator
+    # Called from Operator::selectTarget()
+    #  - `v i p`, is `Select` operator with @target = `InnerParagraph`.
+    #  - `d i p`, is `Delete` operator with @target = `InnerParagraph`.
+    if @hasOperator()
+      @select()
+    else
+      throw new Error('in TextObject: Must not happen')
+
+  select: ->
+    selectResults = []
+    @countTimes @getCount(), ({stop}) =>
+      @stopSelection = stop
+
+      for selection in @editor.getSelections()
+        selectResults.push(@selectTextObject(selection))
+        unless @isSuportCount()
+          @stopSelection() # FIXME: quick-fix for #560
+
+
+    if @needToKeepColumn()
+      for selection in @editor.getSelections()
+        swrap(selection).clipPropertiesTillEndOfLine()
+
     @editor.mergeIntersectingSelections()
-    @updateSelectionProperties() if @isMode('visual')
+    if @isMode('visual') and @wise is 'characterwise'
+      swrap.saveProperties(@editor)
+
+    if selectResults.some((value) -> value)
+      @wise ?= swrap.detectVisualModeSubmode(@editor)
+    else
+      @wise = null
 
   selectTextObject: (selection) ->
-    range = @getRange(selection)
-    swrap(selection).setBufferRangeSafely(range)
+    if range = @getRange(selection)
+      oldRange = selection.getBufferRange()
+
+      needToKeepColumn = @needToKeepColumn()
+      if needToKeepColumn and not @isMode('visual', 'linewise')
+        @vimState.modeManager.activate('visual', 'linewise')
+
+      # Prevent autoscroll to closing char on `change-surround-any-pair`.
+      options = {
+        autoscroll: selection.isLastSelection() and not @getOperator().supportEarlySelect
+        keepGoalColumn: needToKeepColumn
+      }
+      swrap(selection).setBufferRangeSafely(range, options)
+
+      newRange = selection.getBufferRange()
+      if newRange.isEqual(oldRange)
+        @stopSelection() # FIXME: quick-fix for #560
+
+      true
+    else
+      @stopSelection() # FIXME: quick-fix for #560
+      false
 
   getRange: ->
     # I want to
@@ -86,24 +144,14 @@ class Word extends TextObject
 
   getRange: (selection) ->
     point = @getNormalizedHeadBufferPosition(selection)
-    {range, kind} = @getWordBufferRangeAndKindAtBufferPosition(point, {@wordRegex})
-    if @isA() and kind is 'word'
-      range = @expandRangeToWhiteSpaces(range)
-    range
-
-  expandRangeToWhiteSpaces: (range) ->
-    if newEnd = getEndPositionForPattern(@editor, range.end, /\s+/, containedOnly: true)
-      return new Range(range.start, newEnd)
-
-    if newStart = getStartPositionForPattern(@editor, range.start, /\s+/, containedOnly: true)
-      # To comform with pure vim, expand as long as it's not indent(white spaces starting with column 0).
-      return new Range(newStart, range.end) unless newStart.column is 0
-
-    range # return original range as fallback
+    {range} = @getWordBufferRangeAndKindAtBufferPosition(point, {@wordRegex})
+    if @isA()
+      expandRangeToWhiteSpaces(@editor, range)
+    else
+      range
 
 class AWord extends Word
   @extend()
-
 class InnerWord extends Word
   @extend()
 
@@ -114,7 +162,6 @@ class WholeWord extends Word
 
 class AWholeWord extends WholeWord
   @extend()
-
 class InnerWholeWord extends WholeWord
   @extend()
 
@@ -127,140 +174,79 @@ class SmartWord extends Word
 class ASmartWord extends SmartWord
   @description: "A word that consists of alphanumeric chars(`/[A-Za-z0-9_]/`) and hyphen `-`"
   @extend()
-
 class InnerSmartWord extends SmartWord
   @description: "Currently No diff from `a-smart-word`"
   @extend()
 
 # -------------------------
+# Just include _, -
+class Subword extends Word
+  @extend(false)
+  getRange: (selection) ->
+    @wordRegex = selection.cursor.subwordRegExp()
+    super
+
+class ASubword extends Subword
+  @extend()
+class InnerSubword extends Subword
+  @extend()
+
+# -------------------------
 class Pair extends TextObject
   @extend(false)
-  allowNextLine: false
-  allowSubmodeChange: false
+  allowNextLine: null
   adjustInnerRange: true
   pair: null
+  wise: 'characterwise'
+  supportCount: true
 
-  getPattern: ->
-    [open, close] = @pair
-    if open is close
-      new RegExp("(#{_.escapeRegExp(open)})", 'g')
+  isAllowNextLine: ->
+    @allowNextLine ? (@pair? and @pair[0] isnt @pair[1])
+
+  constructor: ->
+    # auto-set property from class name.
+    @allowForwarding ?= @getName().endsWith('AllowForwarding')
+    super
+
+  adjustRange: ({start, end}) ->
+    # Dirty work to feel natural for human, to behave compatible with pure Vim.
+    # Where this adjustment appear is in following situation.
+    # op-1: `ci{` replace only 2nd line
+    # op-2: `di{` delete only 2nd line.
+    # text:
+    #  {
+    #    aaa
+    #  }
+    if pointIsAtEndOfLine(@editor, start)
+      start = start.traverse([1, 0])
+
+    if getLineTextToBufferPosition(@editor, end).match(/^\s*$/)
+      if @isMode('visual')
+        # This is slightly innconsistent with regular Vim
+        # - regular Vim: select new line after EOL
+        # - vim-mode-plus: select to EOL(before new line)
+        # This is intentional since to make submode `characterwise` when auto-detect submode
+        # innerEnd = new Point(innerEnd.row - 1, Infinity)
+        end = new Point(end.row - 1, Infinity)
+      else
+        end = new Point(end.row, 0)
+
+    new Range(start, end)
+
+  getFinder: ->
+    options = {allowNextLine: @isAllowNextLine(), @allowForwarding, @pair}
+    if @pair[0] is @pair[1]
+      new QuoteFinder(@editor, options)
     else
-      new RegExp("(#{_.escapeRegExp(open)})|(#{_.escapeRegExp(close)})", 'g')
-
-  # Return 'open' or 'close'
-  getPairState: ({matchText, range, match}) ->
-    switch match.length
-      when 2
-        @pairStateInBufferRange(range, matchText)
-      when 3
-        switch
-          when match[1] then 'open'
-          when match[2] then 'close'
-
-  backSlashPattern = _.escapeRegExp('\\')
-  pairStateInBufferRange: (range, char) ->
-    text = getTextToPoint(@editor, range.end)
-    escapedChar = _.escapeRegExp(char)
-    bs = backSlashPattern
-    patterns = [
-      "#{bs}#{bs}#{escapedChar}"
-      "[^#{bs}]?#{escapedChar}"
-    ]
-    pattern = new RegExp(patterns.join('|'))
-    ['close', 'open'][(countChar(text, pattern) % 2)]
-
-  # Take start point of matched range.
-  isEscapedCharAtPoint: (point) ->
-    found = false
-
-    bs = backSlashPattern
-    pattern = new RegExp("[^#{bs}]#{bs}")
-    scanRange = [[point.row, 0], point]
-    @editor.backwardsScanInBufferRange pattern, scanRange, ({matchText, range, stop}) ->
-      if range.end.isEqual(point)
-        stop()
-        found = true
-    found
-
-  findPair: (which, options, fn) ->
-    {from, pattern, scanFunc, scanRange} = options
-    @editor[scanFunc] pattern, scanRange, (event) =>
-      {matchText, range, stop} = event
-      unless @allowNextLine or (from.row is range.start.row)
-        return stop()
-      return if @isEscapedCharAtPoint(range.start)
-      fn(event)
-
-  findOpen: (from,  pattern) ->
-    scanFunc = 'backwardsScanInBufferRange'
-    scanRange = new Range([0, 0], from)
-    stack = []
-    found = null
-    @findPair 'open', {from, pattern, scanFunc, scanRange}, (event) =>
-      {matchText, range, stop} = event
-      pairState = @getPairState(event)
-      if pairState is 'close'
-        stack.push({pairState, matchText, range})
-      else
-        stack.pop()
-        if stack.length is 0
-          found = range
-      stop() if found?
-    found
-
-  findClose: (from,  pattern) ->
-    scanFunc = 'scanInBufferRange'
-    scanRange = new Range(from, @editor.buffer.getEndPosition())
-    stack = []
-    found = null
-    @findPair 'close', {from, pattern, scanFunc, scanRange}, (event) =>
-      {range, stop} = event
-      pairState = @getPairState(event)
-      if pairState is 'open'
-        stack.push({pairState, range})
-      else
-        entry = stack.pop()
-        if stack.length is 0
-          if (openStart = entry?.range.start)
-            if @allowForwarding
-              return if openStart.row > from.row
-            else
-              return if openStart.isGreaterThan(from)
-          found = range
-      stop() if found?
-    found
+      new BracketFinder(@editor, options)
 
   getPairInfo: (from) ->
-    pairInfo = null
-    pattern = @getPattern()
-    closeRange = @findClose from, pattern
-    openRange = @findOpen closeRange.end, pattern if closeRange?
-
-    unless (openRange? and closeRange?)
+    pairInfo = @getFinder().find(from)
+    unless pairInfo?
       return null
-
-    aRange = new Range(openRange.start, closeRange.end)
-    [innerStart, innerEnd] = [openRange.end, closeRange.start]
-    if @adjustInnerRange
-      # Dirty work to feel natural for human, to behave compatible with pure Vim.
-      # Where this adjustment appear is in following situation.
-      # op-1: `ci{` replace only 2nd line
-      # op-2: `di{` delete only 2nd line.
-      # text:
-      #  {
-      #    aaa
-      #  }
-      innerStart = new Point(innerStart.row + 1, 0) if pointIsAtEndOfLine(@editor, innerStart)
-      innerEnd = new Point(innerEnd.row, 0) if getTextToPoint(@editor, innerEnd).match(/^\s*$/)
-      if (innerEnd.column is 0) and (innerStart.column isnt 0)
-        innerEnd = new Point(innerEnd.row - 1, Infinity)
-
-    innerRange = new Range(innerStart, innerEnd)
-    targetRange = if @isInner() then innerRange else aRange
-    if @skipEmptyPair and innerRange.isEmpty()
-      @getPairInfo(aRange.end)
-    else
-      {openRange, closeRange, aRange, innerRange, targetRange}
+    pairInfo.innerRange = @adjustRange(pairInfo.innerRange) if @adjustInnerRange
+    pairInfo.targetRange = if @isInner() then pairInfo.innerRange else pairInfo.aRange
+    pairInfo
 
   getPointToSearchFrom: (selection, searchFrom) ->
     switch searchFrom
@@ -279,24 +265,28 @@ class Pair extends TextObject
       pairInfo = @getPairInfo(pairInfo.aRange.end)
     pairInfo?.targetRange
 
+# Used by DeleteSurround
+class APair extends Pair
+  @extend(false)
+
 # -------------------------
 class AnyPair extends Pair
   @extend(false)
   allowForwarding: false
-  allowNextLine: null
-  skipEmptyPair: false
   member: [
     'DoubleQuote', 'SingleQuote', 'BackTick',
-    'CurlyBracket', 'AngleBracket', 'Tag', 'SquareBracket', 'Parenthesis'
+    'CurlyBracket', 'AngleBracket', 'SquareBracket', 'Parenthesis'
   ]
 
   getRangeBy: (klass, selection) ->
-    options = {@inner, @skipEmptyPair}
-    options.allowNextLine = @allowNextLine if @allowNextLine?
-    @new(klass, options).getRange(selection, {@allowForwarding, @searchFrom})
+    @new(klass).getRange(selection, {@allowForwarding, @searchFrom})
 
   getRanges: (selection) ->
-    (range for klass in @member when (range = @getRangeBy(klass, selection)))
+    prefix = if @isInner() then 'Inner' else 'A'
+    ranges = []
+    for klass in @member when range = @getRangeBy(prefix + klass, selection)
+      ranges.push(range)
+    ranges
 
   getRange: (selection) ->
     ranges = @getRanges(selection)
@@ -304,7 +294,6 @@ class AnyPair extends Pair
 
 class AAnyPair extends AnyPair
   @extend()
-
 class InnerAnyPair extends AnyPair
   @extend()
 
@@ -313,7 +302,6 @@ class AnyPairAllowForwarding extends AnyPair
   @extend(false)
   @description: "Range surrounded by auto-detected paired chars from enclosed and forwarding area"
   allowForwarding: true
-  skipEmptyPair: false
   searchFrom: 'start'
   getRange: (selection) ->
     ranges = @getRanges(selection)
@@ -334,7 +322,6 @@ class AnyPairAllowForwarding extends AnyPair
 
 class AAnyPairAllowForwarding extends AnyPairAllowForwarding
   @extend()
-
 class InnerAnyPairAllowForwarding extends AnyPairAllowForwarding
   @extend()
 
@@ -350,7 +337,6 @@ class AnyQuote extends AnyPair
 
 class AAnyQuote extends AnyQuote
   @extend()
-
 class InnerAnyQuote extends AnyQuote
   @extend()
 
@@ -358,15 +344,14 @@ class InnerAnyQuote extends AnyQuote
 class Quote extends Pair
   @extend(false)
   allowForwarding: true
-  allowNextLine: false
 
+# -------------------------
 class DoubleQuote extends Quote
   @extend(false)
   pair: ['"', '"']
 
 class ADoubleQuote extends DoubleQuote
   @extend()
-
 class InnerDoubleQuote extends DoubleQuote
   @extend()
 
@@ -377,7 +362,6 @@ class SingleQuote extends Quote
 
 class ASingleQuote extends SingleQuote
   @extend()
-
 class InnerSingleQuote extends SingleQuote
   @extend()
 
@@ -388,7 +372,6 @@ class BackTick extends Quote
 
 class ABackTick extends BackTick
   @extend()
-
 class InnerBackTick extends BackTick
   @extend()
 
@@ -397,61 +380,43 @@ class InnerBackTick extends BackTick
 class CurlyBracket extends Pair
   @extend(false)
   pair: ['{', '}']
-  allowNextLine: true
 
 class ACurlyBracket extends CurlyBracket
   @extend()
-
 class InnerCurlyBracket extends CurlyBracket
   @extend()
-
 class ACurlyBracketAllowForwarding extends CurlyBracket
   @extend()
-  allowForwarding: true
-
 class InnerCurlyBracketAllowForwarding extends CurlyBracket
   @extend()
-  allowForwarding: true
 
 # -------------------------
 class SquareBracket extends Pair
   @extend(false)
   pair: ['[', ']']
-  allowNextLine: true
 
 class ASquareBracket extends SquareBracket
   @extend()
-
 class InnerSquareBracket extends SquareBracket
   @extend()
-
 class ASquareBracketAllowForwarding extends SquareBracket
   @extend()
-  allowForwarding: true
-
 class InnerSquareBracketAllowForwarding extends SquareBracket
   @extend()
-  allowForwarding: true
 
 # -------------------------
 class Parenthesis extends Pair
   @extend(false)
   pair: ['(', ')']
-  allowNextLine: true
 
 class AParenthesis extends Parenthesis
   @extend()
-
 class InnerParenthesis extends Parenthesis
   @extend()
-
 class AParenthesisAllowForwarding extends Parenthesis
   @extend()
-  allowForwarding: true
-
 class InnerParenthesisAllowForwarding extends Parenthesis
   @extend()
-  allowForwarding: true
 
 # -------------------------
 class AngleBracket extends Pair
@@ -460,102 +425,38 @@ class AngleBracket extends Pair
 
 class AAngleBracket extends AngleBracket
   @extend()
-
 class InnerAngleBracket extends AngleBracket
   @extend()
-
 class AAngleBracketAllowForwarding extends AngleBracket
   @extend()
-  allowForwarding: true
-
 class InnerAngleBracketAllowForwarding extends AngleBracket
   @extend()
-  allowForwarding: true
 
+# Tag
 # -------------------------
-tagPattern = /(<(\/?))([^\s>]+)[^>]*>/g
 class Tag extends Pair
   @extend(false)
   allowNextLine: true
   allowForwarding: true
   adjustInnerRange: false
-  getPattern: ->
-    tagPattern
-
-  getPairState: ({match, matchText}) ->
-    [__, __, slash, tagName] = match
-    if slash is ''
-      ['open', tagName]
-    else
-      ['close', tagName]
 
   getTagStartPoint: (from) ->
     tagRange = null
-    scanRange = @editor.bufferRangeForBufferRow(from.row)
-    @editor.scanInBufferRange tagPattern, scanRange, ({range, stop}) ->
+    pattern = TagFinder::pattern
+    @scanForward pattern, {from: [from.row, 0]}, ({range, stop}) ->
       if range.containsPoint(from, true)
         tagRange = range
         stop()
-    tagRange?.start ? from
+    tagRange?.start
 
-  findTagState: (stack, tagState) ->
-    return null if stack.length is 0
-    for i in [(stack.length - 1)..0]
-      entry = stack[i]
-      if entry.tagState is tagState
-        return entry
-    null
+  getFinder: ->
+    new TagFinder(@editor, {allowNextLine: @isAllowNextLine(), @allowForwarding})
 
-  findOpen: (from,  pattern) ->
-    scanFunc = 'backwardsScanInBufferRange'
-    scanRange = new Range([0, 0], from)
-    stack = []
-    found = null
-    @findPair 'open', {from, pattern, scanFunc, scanRange}, (event) =>
-      {range, stop} = event
-      [pairState, tagName] = @getPairState(event)
-      if pairState is 'close'
-        tagState = pairState + tagName
-        stack.push({tagState, range})
-      else
-        if entry = @findTagState(stack, "close#{tagName}")
-          stack = stack[0...stack.indexOf(entry)]
-        if stack.length is 0
-          found = range
-      stop() if found?
-    found
-
-  findClose: (from,  pattern) ->
-    scanFunc = 'scanInBufferRange'
-    from = @getTagStartPoint(from)
-    scanRange = new Range(from, @editor.buffer.getEndPosition())
-    stack = []
-    found = null
-    @findPair 'close', {from, pattern, scanFunc, scanRange}, (event) =>
-      {range, stop} = event
-      [pairState, tagName] = @getPairState(event)
-      if pairState is 'open'
-        tagState = pairState + tagName
-        stack.push({tagState, range})
-      else
-        if entry = @findTagState(stack, "open#{tagName}")
-          stack = stack[0...stack.indexOf(entry)]
-        else
-          # I'm very torelant for orphan tag like 'br', 'hr', or unclosed tag.
-          stack = []
-        if stack.length is 0
-          if (openStart = entry?.range.start)
-            if @allowForwarding
-              return if openStart.row > from.row
-            else
-              return if openStart.isGreaterThan(from)
-          found = range
-      stop() if found?
-    found
+  getPairInfo: (from) ->
+    super(@getTagStartPoint(from) ? from)
 
 class ATag extends Tag
   @extend()
-
 class InnerTag extends Tag
   @extend()
 
@@ -564,6 +465,8 @@ class InnerTag extends Tag
 # Paragraph is defined as consecutive (non-)blank-line.
 class Paragraph extends TextObject
   @extend(false)
+  wise: 'linewise'
+  supportCount: true
 
   findRow: (fromRow, direction, fn) ->
     fn.reset?()
@@ -607,6 +510,7 @@ class Paragraph extends TextObject
     predict
 
   getRange: (selection) ->
+    originalRange = selection.getBufferRange()
     fromRow = @getNormalizedHeadBufferPosition(selection).row
 
     if @isMode('visual', 'linewise')
@@ -621,7 +525,6 @@ class Paragraph extends TextObject
 
 class AParagraph extends Paragraph
   @extend()
-
 class InnerParagraph extends Paragraph
   @extend()
 
@@ -644,34 +547,35 @@ class Indentation extends Paragraph
 
 class AIndentation extends Indentation
   @extend()
-
 class InnerIndentation extends Indentation
   @extend()
 
 # -------------------------
 class Comment extends TextObject
   @extend(false)
+  wise: 'linewise'
 
   getRange: (selection) ->
-    row = selection.getBufferRange().start.row
+    row = swrap(selection).getStartRow()
     rowRange = @editor.languageMode.rowRangeForCommentAtBufferRow(row)
     rowRange ?= [row, row] if @editor.isBufferRowCommented(row)
-
     if rowRange
       getBufferRangeForRowRange(selection.editor, rowRange)
 
 class AComment extends Comment
   @extend()
-
 class InnerComment extends Comment
   @extend()
 
 # -------------------------
 class Fold extends TextObject
   @extend(false)
+  wise: 'linewise'
 
-  adjustRowRange: ([startRow, endRow]) ->
-    return [startRow, endRow] unless @isInner()
+  adjustRowRange: (rowRange) ->
+    return rowRange unless @isInner()
+
+    [startRow, endRow] = rowRange
     startRowIndentLevel = getIndentLevelForBufferRow(@editor, startRow)
     endRowIndentLevel = getIndentLevelForBufferRow(@editor, endRow)
     endRow -= 1 if (startRowIndentLevel is endRowIndentLevel)
@@ -679,24 +583,19 @@ class Fold extends TextObject
     [startRow, endRow]
 
   getFoldRowRangesContainsForRow: (row) ->
-    getCodeFoldRowRangesContainesForRow(@editor, row, includeStartRow: false)?.reverse()
+    getCodeFoldRowRangesContainesForRow(@editor, row, includeStartRow: true).reverse()
 
   getRange: (selection) ->
-    range = selection.getBufferRange()
-    rowRanges = @getFoldRowRangesContainsForRow(range.start.row)
+    rowRanges = @getFoldRowRangesContainsForRow(swrap(selection).getStartRow())
     return unless rowRanges.length
 
-    if (rowRange = rowRanges.shift())?
-      rowRange = @adjustRowRange(rowRange)
-      targetRange = getBufferRangeForRowRange(@editor, rowRange)
-      if targetRange.isEqual(range) and rowRanges.length
-        rowRange = @adjustRowRange(rowRanges.shift())
-
-    getBufferRangeForRowRange(@editor, rowRange)
+    range = getBufferRangeForRowRange(@editor, @adjustRowRange(rowRanges.shift()))
+    if rowRanges.length and range.isEqual(selection.getBufferRange())
+      range = getBufferRangeForRowRange(@editor, @adjustRowRange(rowRanges.shift()))
+    range
 
 class AFold extends Fold
   @extend()
-
 class InnerFold extends Fold
   @extend()
 
@@ -706,11 +605,7 @@ class Function extends Fold
   @extend(false)
 
   # Some language don't include closing `}` into fold.
-  omittingClosingCharLanguages: ['go']
-
-  initialize: ->
-    super
-    @language = @editor.getGrammar().scopeName.replace(/^source\./, '')
+  scopeNamesOmittingEndRow: ['source.go', 'source.elixir']
 
   getFoldRowRangesContainsForRow: (row) ->
     rowRanges = getCodeFoldRowRangesContainesForRow(@editor, row)?.reverse()
@@ -719,13 +614,12 @@ class Function extends Fold
 
   adjustRowRange: (rowRange) ->
     [startRow, endRow] = super
-    if @isA() and (@language in @omittingClosingCharLanguages)
+    if @isA() and @editor.getGrammar().scopeName in @scopeNamesOmittingEndRow
       endRow += 1
     [startRow, endRow]
 
 class AFunction extends Function
   @extend()
-
 class InnerFunction extends Function
   @extend()
 
@@ -742,25 +636,22 @@ class CurrentLine extends TextObject
 
 class ACurrentLine extends CurrentLine
   @extend()
-
 class InnerCurrentLine extends CurrentLine
   @extend()
 
 # -------------------------
 class Entire extends TextObject
   @extend(false)
+
   getRange: (selection) ->
     @stopSelection()
     @editor.buffer.getRange()
 
 class AEntire extends Entire
   @extend()
-
 class InnerEntire extends Entire
   @extend()
-
-# Alias as accessible name
-class All extends Entire
+class All extends Entire # Alias as accessible name
   @extend(false)
 
 # -------------------------
@@ -776,9 +667,7 @@ class LatestChange extends TextObject
 
 class ALatestChange extends LatestChange
   @extend()
-
-# No diff from ALatestChange
-class InnerLatestChange extends LatestChange
+class InnerLatestChange extends LatestChange # No diff from ALatestChange
   @extend()
 
 # -------------------------
@@ -788,9 +677,8 @@ class SearchMatchForward extends TextObject
 
   findMatch: (fromPoint, pattern) ->
     fromPoint = translatePointAndClip(@editor, fromPoint, "forward") if @isMode('visual')
-    scanRange = [[fromPoint.row, 0], @getVimEofBufferPosition()]
     found = null
-    @editor.scanInBufferRange pattern, scanRange, ({range, stop}) ->
+    @scanForward pattern, {from: [fromPoint.row, 0]}, ({range, stop}) ->
       if range.end.isGreaterThan(fromPoint)
         found = range
         stop()
@@ -825,6 +713,7 @@ class SearchMatchForward extends TextObject
     reversed = @reversed ? @backward
     swrap(selection).setBufferRange(range, {reversed})
     selection.cursor.autoscroll()
+    true
 
 class SearchMatchBackward extends SearchMatchForward
   @extend()
@@ -832,9 +721,8 @@ class SearchMatchBackward extends SearchMatchForward
 
   findMatch: (fromPoint, pattern) ->
     fromPoint = translatePointAndClip(@editor, fromPoint, "backward") if @isMode('visual')
-    scanRange = [[fromPoint.row, Infinity], [0, 0]]
     found = null
-    @editor.backwardsScanInBufferRange pattern, scanRange, ({range, stop}) ->
+    @scanBackward pattern, {from: [fromPoint.row, Infinity]}, ({range, stop}) ->
       if range.start.isLessThan(fromPoint)
         found = range
         stop()
@@ -845,24 +733,25 @@ class SearchMatchBackward extends SearchMatchForward
 # is always vC range.
 class PreviousSelection extends TextObject
   @extend()
+
   select: ->
-    {properties, @submode} = @vimState.previousSelection
-    if properties? and @submode?
+    {properties, submode} = @vimState.previousSelection
+    if properties? and submode?
       selection = @editor.getLastSelection()
       swrap(selection).selectByProperties(properties)
+      @wise = submode
 
 class PersistentSelection extends TextObject
   @extend(false)
 
   select: ->
-    ranges = @vimState.persistentSelection.getMarkerBufferRanges()
-    if ranges.length
-      @editor.setSelectedBufferRanges(ranges)
-    @vimState.clearPersistentSelections()
+    {persistentSelection} = @vimState
+    unless persistentSelection.isEmpty()
+      persistentSelection.setSelectedBufferRanges()
+      @wise = swrap.detectVisualModeSubmode(@editor)
 
 class APersistentSelection extends PersistentSelection
   @extend()
-
 class InnerPersistentSelection extends PersistentSelection
   @extend()
 
@@ -874,11 +763,14 @@ class VisibleArea extends TextObject # 822 to 863
     @stopSelection()
     # [BUG?] Need translate to shilnk top and bottom to fit actual row.
     # The reason I need -2 at bottom is because of status bar?
-    getVisibleBufferRange(@editor).translate([+1, 0], [-3, 0])
+    bufferRange = getVisibleBufferRange(@editor)
+    if bufferRange.getRows() > @editor.getRowsPerPage()
+      bufferRange.translate([+1, 0], [-3, 0])
+    else
+      bufferRange
 
 class AVisibleArea extends VisibleArea
   @extend()
-
 class InnerVisibleArea extends VisibleArea
   @extend()
 
@@ -886,13 +778,7 @@ class InnerVisibleArea extends VisibleArea
 # [FIXME] wise mismatch sceenPosition vs bufferPosition
 class Edge extends TextObject
   @extend(false)
-
-  select: ->
-    @success = null
-
-    super
-
-    @vimState.activate('visual', 'linewise') if @success
+  wise: 'linewise'
 
   getRange: (selection) ->
     fromPoint = @getNormalizedHeadScreenPosition(selection)
@@ -911,62 +797,11 @@ class Edge extends TextObject
       endScreenPoint = moveDownToEdge.getPoint(fromPoint)
 
     if startScreenPoint? and endScreenPoint?
-      @success ?= true
       screenRange = new Range(startScreenPoint, endScreenPoint)
       range = @editor.bufferRangeForScreenRange(screenRange)
-      getRangeByTranslatePointAndClip(@editor, range, 'end', 'forward')
+      getBufferRangeForRowRange(@editor, [range.start.row, range.end.row])
 
 class AEdge extends Edge
   @extend()
-
 class InnerEdge extends Edge
   @extend()
-
-# Meta text object
-# -------------------------
-class UnionTextObject extends TextObject
-  @extend(false)
-  member: []
-
-  getRange: (selection) ->
-    unionRange = null
-    for member in @member when range = @new(member).getRange(selection)
-      if unionRange?
-        unionRange = unionRange.union(range)
-      else
-        unionRange = range
-    unionRange
-
-class AFunctionOrInnerParagraph extends UnionTextObject
-  @extend()
-  member: ['AFunction', 'InnerParagraph']
-
-# FIXME: make Motion.CurrentSelection to TextObject then use concatTextObject
-class ACurrentSelectionAndAPersistentSelection extends TextObject
-  @extend()
-  select: ->
-    pesistentRanges = @vimState.getPersistentSelectionBuffferRanges()
-    selectedRanges = @editor.getSelectedBufferRanges()
-    ranges = pesistentRanges.concat(selectedRanges)
-
-    if ranges.length
-      @editor.setSelectedBufferRanges(ranges)
-    @vimState.clearPersistentSelections()
-    @editor.mergeIntersectingSelections()
-
-# -------------------------
-# Not used currently
-class TextObjectFirstFound extends TextObject
-  @extend(false)
-  member: []
-  memberOptoins: {allowNextLine: false}
-
-  getRangeBy: (klass, selection) ->
-    @new(klass, @memberOptoins).getRange(selection)
-
-  getRanges: (selection) ->
-    (range for klass in @member when (range = @getRangeBy(klass, selection)))
-
-  getRange: (selection) ->
-    for member in @member when range = @getRangeBy(member, selection)
-      return range

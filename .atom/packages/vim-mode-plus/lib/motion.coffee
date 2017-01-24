@@ -1,9 +1,7 @@
 _ = require 'underscore-plus'
 {Point, Range} = require 'atom'
-Select = null
 
 {
-  saveEditorState, getVisibleBufferRange
   moveCursorLeft, moveCursorRight
   moveCursorUpScreen, moveCursorDownScreen
   moveCursorDownBuffer
@@ -11,26 +9,28 @@ Select = null
   cursorIsAtVimEndOfFile
   getFirstVisibleScreenRow, getLastVisibleScreenRow
   getValidVimScreenRow, getValidVimBufferRow
-  highlightRanges
   moveCursorToFirstCharacterAtRow
   sortRanges
   getIndentLevelForBufferRow
-  cursorIsOnWhiteSpace
+  pointIsOnWhiteSpace
   moveCursorToNextNonWhitespace
-  cursorIsAtEmptyRow
+  isEmptyRow
   getCodeFoldRowRanges
   getLargestFoldRangeContainsBufferRow
   isIncludeFunctionScopeForRow
   detectScopeStartPositionForScope
   getBufferRows
-  getStartPositionForPattern
-  getFirstCharacterPositionForBufferRow
-  getFirstCharacterBufferPositionForScreenRow
-  screenPositionIsAtWhiteSpace
+  getTextInScreenRange
   cursorIsAtEndOfLineAtNonEmptyRow
-  getFirstCharacterColumForBufferRow
-
-  debug
+  setBufferRow
+  setBufferColumn
+  limitNumber
+  getIndex
+  smartScrollToBufferPosition
+  getKeystrokeForEvent
+  pointIsAtEndOfLineAtNonEmptyRow
+  getEndOfLineForBufferRow
+  findRangeInBufferRow
 } = require './utils'
 
 swrap = require './selection-wrapper'
@@ -42,14 +42,15 @@ class Motion extends Base
   inclusive: false
   wise: 'characterwise'
   jump: false
+  verticalMotion: false
 
   constructor: ->
     super
 
     # visual mode can overwrite default wise and inclusiveness
-    if @isMode('visual')
+    if @vimState.mode is 'visual'
       @inclusive = true
-      @wise = @vimState.submode # ['characterwise', 'linewise', 'blockwise']
+      @wise = @vimState.submode
     @initialize()
 
   isInclusive: ->
@@ -57,6 +58,9 @@ class Motion extends Base
 
   isJump: ->
     @jump
+
+  isVerticalMotion: ->
+    @verticalMotion
 
   isCharacterwise: ->
     @wise is 'characterwise'
@@ -92,24 +96,37 @@ class Motion extends Base
       @vimState.mark.set("'", cursorPosition)
 
   execute: ->
-    @editor.moveCursors (cursor) =>
-      @moveWithSaveJump(cursor)
+    if @hasOperator()
+      @select()
+    else
+      @editor.moveCursors (cursor) =>
+        @moveWithSaveJump(cursor)
 
   select: ->
-    @vimState.modeManager.normalizeSelections() if @isMode('visual')
-
     for selection in @editor.getSelections()
       @selectByMotion(selection)
 
     @editor.mergeCursors()
     @editor.mergeIntersectingSelections()
 
-    @updateSelectionProperties() if @isMode('visual')
+    if @isMode('visual')
+      # We have to update selection prop
+      # AFTER cursor move and BEFORE return to submode-wise state
+      swrap.saveProperties(@editor)
+
+    if @hasOperator()
+      if @isMode('visual')
+        if @isMode('visual', 'linewise') and @editor.getLastSelection().isReversed()
+          @vimState.mutationManager.setCheckpoint('did-move')
+      else
+        @vimState.mutationManager.setCheckpoint('did-move')
 
     # Modify selection to submode-wisely
     switch @wise
-      when 'linewise' then @vimState.selectLinewise()
-      when 'blockwise' then @vimState.selectBlockwise()
+      when 'linewise'
+        @vimState.selectLinewise()
+      when 'blockwise'
+        @vimState.selectBlockwise()
 
   selectByMotion: (selection) ->
     {cursor} = selection
@@ -117,7 +134,8 @@ class Motion extends Base
     selection.modifySelection =>
       @moveWithSaveJump(cursor)
 
-    return if not @isMode('visual') and selection.isEmpty() # Failed to move.
+    if not @isMode('visual') and not @is('CurrentSelection') and selection.isEmpty() # Failed to move.
+      return
     return unless @isInclusive() or @isLinewise()
 
     if @isMode('visual') and cursorIsAtEndOfLineAtNonEmptyRow(cursor)
@@ -126,31 +144,48 @@ class Motion extends Base
     # to select @inclusive-ly
     swrap(selection).translateSelectionEndAndClip('forward')
 
+  setCursorBuffeRow: (cursor, row, options) ->
+    if @isVerticalMotion() and settings.get('moveToFirstCharacterOnVerticalMotion')
+      cursor.setBufferPosition(@getFirstCharacterPositionForBufferRow(row), options)
+    else
+      setBufferRow(cursor, row, options)
+
+  # [NOTE]
+  # Since this function checks cursor position change, a cursor position MUST be
+  # updated IN callback(=fn)
+  # Updating point only in callback is wrong-use of this funciton,
+  # since it stops immediately because of not cursor position change.
+  moveCursorCountTimes: (cursor, fn) ->
+    oldPosition = cursor.getBufferPosition()
+    @countTimes @getCount(), (state) ->
+      fn(state)
+      if (newPosition = cursor.getBufferPosition()).isEqual(oldPosition)
+        state.stop()
+      oldPosition = newPosition
+
 # Used as operator's target in visual-mode.
 class CurrentSelection extends Motion
   @extend(false)
   selectionExtent: null
+  blockwiseSelectionExtent: null
   inclusive: true
 
   initialize: ->
     super
     @pointInfoByCursor = new Map
 
-  execute: ->
-    throw new Error("#{@getName()} should not be executed")
-
   moveCursor: (cursor) ->
     if @isMode('visual')
       if @isBlockwise()
-        {start, end} = cursor.selection.getBufferRange()
-        [head, tail] = if cursor.selection.isReversed() then [start, end] else [end, start]
-        @selectionExtent = new Point(head.row - tail.row, head.column - tail.column)
+        @blockwiseSelectionExtent = swrap(cursor.selection).getBlockwiseSelectionExtent()
       else
         @selectionExtent = @editor.getSelectedBufferRange().getExtent()
     else
+      # `.` repeat case
       point = cursor.getBufferPosition()
-      if @isBlockwise()
-        cursor.setBufferPosition(point.translate(@selectionExtent))
+
+      if @blockwiseSelectionExtent?
+        cursor.setBufferPosition(point.translate(@blockwiseSelectionExtent))
       else
         cursor.setBufferPosition(point.traverse(@selectionExtent))
 
@@ -181,7 +216,7 @@ class MoveLeft extends Motion
   @extend()
   moveCursor: (cursor) ->
     allowWrap = settings.get('wrapLeftRightMotion')
-    @countTimes ->
+    @moveCursorCountTimes cursor, ->
       moveCursorLeft(cursor, {allowWrap})
 
 class MoveRight extends Motion
@@ -193,7 +228,7 @@ class MoveRight extends Motion
       settings.get('wrapLeftRightMotion')
 
   moveCursor: (cursor) ->
-    @countTimes =>
+    @moveCursorCountTimes cursor, =>
       @editor.unfoldBufferRow(cursor.getBufferRow())
       allowWrap = @canWrapToNextLine(cursor)
       moveCursorRight(cursor)
@@ -201,40 +236,34 @@ class MoveRight extends Motion
         moveCursorRight(cursor, {allowWrap})
 
 class MoveRightBufferColumn extends Motion
-  @extend(true)
+  @extend(false)
+
   moveCursor: (cursor) ->
-    newPoint = cursor.getBufferPosition().translate([0, @getCount()])
-    cursor.setBufferPosition(newPoint)
+    setBufferColumn(cursor, cursor.getBufferColumn() + @getCount())
 
 class MoveUp extends Motion
   @extend()
   wise: 'linewise'
 
-  getPoint: (cursor) ->
-    row = @getRow(cursor.getBufferRow())
-    new Point(row, cursor.goalColumn)
-
-  getRow: (row) ->
-    row = Math.max(row - 1, 0)
+  getBufferRow: (row) ->
+    row = limitNumber(row - 1, min: 0)
     if @editor.isFoldedAtBufferRow(row)
-      row = getLargestFoldRangeContainsBufferRow(@editor, row).start.row
-    row
+      getLargestFoldRangeContainsBufferRow(@editor, row).start.row
+    else
+      row
 
   moveCursor: (cursor) ->
-    @countTimes =>
-      cursor.goalColumn ?= cursor.getBufferColumn()
-      {goalColumn} = cursor
-      cursor.setBufferPosition(@getPoint(cursor))
-      cursor.goalColumn = goalColumn
+    @moveCursorCountTimes cursor, =>
+      setBufferRow(cursor, @getBufferRow(cursor.getBufferRow()))
 
 class MoveDown extends MoveUp
   @extend()
   wise: 'linewise'
 
-  getRow: (row) ->
+  getBufferRow: (row) ->
     if @editor.isFoldedAtBufferRow(row)
       row = getLargestFoldRangeContainsBufferRow(@editor, row).end.row
-    Math.min(row + 1, @getVimLastBufferRow())
+    limitNumber(row + 1, max: @getVimLastBufferRow())
 
 class MoveUpScreen extends Motion
   @extend()
@@ -242,7 +271,7 @@ class MoveUpScreen extends Motion
   direction: 'up'
 
   moveCursor: (cursor) ->
-    @countTimes ->
+    @moveCursorCountTimes cursor, ->
       moveCursorUpScreen(cursor)
 
 class MoveDownScreen extends MoveUpScreen
@@ -251,7 +280,7 @@ class MoveDownScreen extends MoveUpScreen
   direction: 'down'
 
   moveCursor: (cursor) ->
-    @countTimes ->
+    @moveCursorCountTimes cursor, ->
       moveCursorDownScreen(cursor)
 
 # Move down/up to Edge
@@ -267,18 +296,13 @@ class MoveUpToEdge extends Motion
   @description: "Move cursor up to **edge** char at same-column"
 
   moveCursor: (cursor) ->
-    point = cursor.getScreenPosition()
-    @countTimes ({stop}) =>
-      if (newPoint = @getPoint(point))
-        point = newPoint
-      else
-        stop()
-    @setScreenPositionSafely(cursor, point)
+    @moveCursorCountTimes cursor, =>
+      @setScreenPositionSafely(cursor, @getPoint(cursor.getScreenPosition()))
 
   getPoint: (fromPoint) ->
     column = fromPoint.column
-    for row in @getScanRows(fromPoint) when point = new Point(row, column)
-      return point if @isEdge(point)
+    for row in @getScanRows(fromPoint) when @isEdge(point = new Point(row, column))
+      return point
 
   getScanRows: ({row}) ->
     validRow = getValidVimScreenRow.bind(null, @editor)
@@ -304,7 +328,8 @@ class MoveUpToEdge extends Motion
       @isNonWhiteSpacePoint(leftPoint) and @isNonWhiteSpacePoint(rightPoint)
 
   isNonWhiteSpacePoint: (point) ->
-    screenPositionIsAtWhiteSpace(@editor, point)
+    char = getTextInScreenRange(@editor, Range.fromPointWithDelta(point, 0, 1))
+    char? and /\S/.test(char)
 
 class MoveDownToEdge extends MoveUpToEdge
   @extend()
@@ -317,40 +342,54 @@ class MoveToNextWord extends Motion
   @extend()
   wordRegex: null
 
-  getPoint: (cursor) ->
-    cursorPoint = cursor.getBufferPosition()
-    pattern = @wordRegex ? cursor.wordRegExp()
-    scanRange = [cursorPoint, @getVimEofBufferPosition()]
-
+  getPoint: (pattern, from) ->
     wordRange = null
     found = false
-    @editor.scanInBufferRange pattern, scanRange, ({range, matchText, stop}) ->
+    vimEOF = @getVimEofBufferPosition(@editor)
+
+    @scanForward pattern, {from}, ({range, matchText, stop}) ->
       wordRange = range
       # Ignore 'empty line' matches between '\r' and '\n'
       return if matchText is '' and range.start.column isnt 0
-      if range.start.isGreaterThan(cursorPoint)
+      if range.start.isGreaterThan(from)
         found = true
         stop()
 
     if found
-      wordRange.start
+      point = wordRange.start
+      if pointIsAtEndOfLineAtNonEmptyRow(@editor, point) and not point.isEqual(vimEOF)
+        point.traverse([1, 0])
+      else
+        point
     else
-      wordRange?.end ? cursorPoint
+      wordRange?.end ? from
 
+  # Special case: "cw" and "cW" are treated like "ce" and "cE" if the cursor is
+  # on a non-blank.  This is because "cw" is interpreted as change-word, and a
+  # word does not include the following white space.  {Vi: "cw" when on a blank
+  # followed by other blanks changes only the first blank; this is probably a
+  # bug, because "dw" deletes all the blanks}
+  #
+  # Another special case: When using the "w" motion in combination with an
+  # operator and the last word moved over is at the end of a line, the end of
+  # that word becomes the end of the operated text, not the first word in the
+  # next line.
   moveCursor: (cursor) ->
     return if cursorIsAtVimEndOfFile(cursor)
-    wasOnWhiteSpace = cursorIsOnWhiteSpace(cursor)
-    @countTimes ({isFinal}) =>
-      cursorRow = cursor.getBufferRow()
-      if cursorIsAtEmptyRow(cursor) and @isAsOperatorTarget()
-        point = [cursorRow+1, 0]
+    wasOnWhiteSpace = pointIsOnWhiteSpace(@editor, cursor.getBufferPosition())
+    isAsOperatorTarget = @isAsOperatorTarget()
+    @moveCursorCountTimes cursor, ({isFinal}) =>
+      cursorPosition = cursor.getBufferPosition()
+      if isEmptyRow(@editor, cursorPosition.row) and isAsOperatorTarget
+        point = cursorPosition.traverse([1, 0])
       else
-        point = @getPoint(cursor)
-        if isFinal and @isAsOperatorTarget()
-          if @getOperator().getName() is 'Change' and (not wasOnWhiteSpace)
+        pattern = @wordRegex ? cursor.wordRegExp()
+        point = @getPoint(pattern, cursorPosition)
+        if isFinal and isAsOperatorTarget
+          if @getOperator().is('Change') and (not wasOnWhiteSpace)
             point = cursor.getEndOfCurrentWordBufferPosition({@wordRegex})
-          else if (point.row > cursorRow)
-            point = [cursorRow, Infinity]
+          else
+            point = Point.min(point, getEndOfLineForBufferRow(@editor, cursorPosition.row))
       cursor.setBufferPosition(point)
 
 # b
@@ -359,7 +398,7 @@ class MoveToPreviousWord extends Motion
   wordRegex: null
 
   moveCursor: (cursor) ->
-    @countTimes =>
+    @moveCursorCountTimes cursor, =>
       point = cursor.getBeginningOfCurrentWordBufferPosition({@wordRegex})
       cursor.setBufferPosition(point)
 
@@ -375,7 +414,7 @@ class MoveToEndOfWord extends Motion
     cursor.setBufferPosition(point)
 
   moveCursor: (cursor) ->
-    @countTimes =>
+    @moveCursorCountTimes cursor, =>
       originalPoint = cursor.getBufferPosition()
       @moveToNextEndOfWord(cursor)
       if originalPoint.isEqual(cursor.getBufferPosition())
@@ -414,11 +453,11 @@ class MoveToPreviousEndOfWord extends MoveToPreviousWord
 # -------------------------
 class MoveToNextWholeWord extends MoveToNextWord
   @extend()
-  wordRegex: /^\s*$|\S+/g
+  wordRegex: /^$|\S+/g
 
 class MoveToPreviousWholeWord extends MoveToPreviousWord
   @extend()
-  wordRegex: /^\s*$|\S+/
+  wordRegex: /^$|\S+/
 
 class MoveToEndOfWholeWord extends MoveToEndOfWord
   @extend()
@@ -463,6 +502,26 @@ class MoveToEndOfSmartWord extends MoveToEndOfWord
   @description: "Move to end of smart word (`/[\w-]+/`) word"
   wordRegex: /[\w-]+/
 
+# Subword
+# -------------------------
+class MoveToNextSubword extends MoveToNextWord
+  @extend()
+  moveCursor: (cursor) ->
+    @wordRegex = cursor.subwordRegExp()
+    super
+
+class MoveToPreviousSubword extends MoveToPreviousWord
+  @extend()
+  moveCursor: (cursor) ->
+    @wordRegex = cursor.subwordRegExp()
+    super
+
+class MoveToEndOfSubword extends MoveToEndOfWord
+  @extend()
+  moveCursor: (cursor) ->
+    @wordRegex = cursor.subwordRegExp()
+    super
+
 # Sentence
 # -------------------------
 # Sentence is defined as below
@@ -478,10 +537,8 @@ class MoveToNextSentence extends Motion
   direction: 'next'
 
   moveCursor: (cursor) ->
-    point = cursor.getBufferPosition()
-    @countTimes =>
-      point = @getPoint(point)
-    cursor.setBufferPosition(point)
+    @moveCursorCountTimes cursor, =>
+      @setBufferPositionSafely(cursor, @getPoint(cursor.getBufferPosition()))
 
   getPoint: (fromPoint) ->
     if @direction is 'next'
@@ -489,44 +546,39 @@ class MoveToNextSentence extends Motion
     else if @direction is 'previous'
       @getPreviousStartOfSentence(fromPoint)
 
-  getFirstCharacterPositionForRow: (row) ->
-    new Point(row, getFirstCharacterColumForBufferRow(@editor, row))
-
   isBlankRow: (row) ->
     @editor.isBufferRowBlank(row)
 
-  getNextStartOfSentence: (fromPoint) ->
-    scanRange = new Range(fromPoint, @getVimEofBufferPosition())
+  getNextStartOfSentence: (from) ->
     foundPoint = null
-    @editor.scanInBufferRange @sentenceRegex, scanRange, ({range, matchText, match, stop}) =>
+    @scanForward @sentenceRegex, {from}, ({range, matchText, match, stop}) =>
       if match[1]?
-        {start: {row: startRow}, end: {row: endRow}} = range
+        [startRow, endRow] = [range.start.row, range.end.row]
         return if @skipBlankRow and @isBlankRow(endRow)
         if @isBlankRow(startRow) isnt @isBlankRow(endRow)
-          foundPoint = @getFirstCharacterPositionForRow(endRow)
+          foundPoint = @getFirstCharacterPositionForBufferRow(endRow)
       else
         foundPoint = range.end
       stop() if foundPoint?
-    foundPoint ? scanRange.end
+    foundPoint ? @getVimEofBufferPosition()
 
-  getPreviousStartOfSentence: (fromPoint) ->
-    scanRange = new Range(fromPoint, [0, 0])
+  getPreviousStartOfSentence: (from) ->
     foundPoint = null
-    @editor.backwardsScanInBufferRange @sentenceRegex, scanRange, ({range, match, stop, matchText}) =>
+    @scanBackward @sentenceRegex, {from}, ({range, match, stop, matchText}) =>
       if match[1]?
-        {start: {row: startRow}, end: {row: endRow}} = range
+        [startRow, endRow] = [range.start.row, range.end.row]
         if not @isBlankRow(endRow) and @isBlankRow(startRow)
-          point = @getFirstCharacterPositionForRow(endRow)
-          if point.isLessThan(fromPoint)
+          point = @getFirstCharacterPositionForBufferRow(endRow)
+          if point.isLessThan(from)
             foundPoint = point
           else
             return if @skipBlankRow
-            foundPoint = @getFirstCharacterPositionForRow(startRow)
+            foundPoint = @getFirstCharacterPositionForBufferRow(startRow)
       else
-        if range.end.isLessThan(fromPoint)
+        if range.end.isLessThan(from)
           foundPoint = range.end
       stop() if foundPoint?
-    foundPoint ? scanRange.start
+    foundPoint ? [0, 0]
 
 class MoveToPreviousSentence extends MoveToNextSentence
   @extend()
@@ -548,10 +600,8 @@ class MoveToNextParagraph extends Motion
   direction: 'next'
 
   moveCursor: (cursor) ->
-    point = cursor.getBufferPosition()
-    @countTimes =>
-      point = @getPoint(point)
-    cursor.setBufferPosition(point)
+    @moveCursorCountTimes cursor, =>
+      @setBufferPositionSafely(cursor, @getPoint(cursor.getBufferPosition()))
 
   getPoint: (fromPoint) ->
     startRow = fromPoint.row
@@ -575,72 +625,49 @@ class MoveToPreviousParagraph extends MoveToNextParagraph
 class MoveToBeginningOfLine extends Motion
   @extend()
 
-  getPoint: ({row}) ->
-    new Point(row, 0)
-
   moveCursor: (cursor) ->
-    point = @getPoint(cursor.getBufferPosition())
-    cursor.setBufferPosition(point)
+    setBufferColumn(cursor, 0)
 
 class MoveToColumn extends Motion
   @extend()
-  getCount: ->
-    super - 1
-
-  getPoint: ({row}) ->
-    new Point(row, @getCount())
 
   moveCursor: (cursor) ->
-    point = @getPoint(cursor.getScreenPosition())
-    cursor.setScreenPosition(point)
+    setBufferColumn(cursor, @getCount(-1))
 
 class MoveToLastCharacterOfLine extends Motion
   @extend()
 
-  getCount: ->
-    super - 1
-
-  getPoint: ({row}) ->
-    row = getValidVimBufferRow(@editor, row + @getCount())
-    new Point(row, Infinity)
-
   moveCursor: (cursor) ->
-    point = @getPoint(cursor.getBufferPosition())
-    cursor.setBufferPosition(point)
+    row = getValidVimBufferRow(@editor, cursor.getBufferRow() + @getCount(-1))
+    cursor.setBufferPosition([row, Infinity])
     cursor.goalColumn = Infinity
 
 class MoveToLastNonblankCharacterOfLineAndDown extends Motion
   @extend()
   inclusive: true
 
-  getCount: ->
-    super - 1
-
   moveCursor: (cursor) ->
     point = @getPoint(cursor.getBufferPosition())
     cursor.setBufferPosition(point)
 
   getPoint: ({row}) ->
-    row = Math.min(row + @getCount(), @getVimLastBufferRow())
-    from = new Point(row, Infinity)
-    point = getStartPositionForPattern(@editor, from, /\s*$/)
-    (point ? from).translate([0, -1])
+    row = limitNumber(row + @getCount(-1), max: @getVimLastBufferRow())
+    range = findRangeInBufferRow(@editor, /\S|^/, row, direction: 'backward')
+    range?.start ? new Point(row, 0)
 
 # MoveToFirstCharacterOfLine faimily
 # ------------------------------------
 class MoveToFirstCharacterOfLine extends Motion
   @extend()
   moveCursor: (cursor) ->
-    @setBufferPositionSafely(cursor, @getPoint(cursor))
-
-  getPoint: (cursor) ->
-    getFirstCharacterPositionForBufferRow(@editor, cursor.getBufferRow())
+    point = @getFirstCharacterPositionForBufferRow(cursor.getBufferRow())
+    @setBufferPositionSafely(cursor, point)
 
 class MoveToFirstCharacterOfLineUp extends MoveToFirstCharacterOfLine
   @extend()
   wise: 'linewise'
   moveCursor: (cursor) ->
-    @countTimes ->
+    @moveCursorCountTimes cursor, ->
       moveCursorUpBuffer(cursor)
     super
 
@@ -648,7 +675,7 @@ class MoveToFirstCharacterOfLineDown extends MoveToFirstCharacterOfLine
   @extend()
   wise: 'linewise'
   moveCursor: (cursor) ->
-    @countTimes ->
+    @moveCursorCountTimes cursor, ->
       moveCursorDownBuffer(cursor)
     super
 
@@ -657,21 +684,19 @@ class MoveToFirstCharacterOfLineAndDown extends MoveToFirstCharacterOfLineDown
   defaultCount: 0
   getCount: -> super - 1
 
+# keymap: g g
 class MoveToFirstLine extends Motion
   @extend()
   wise: 'linewise'
   jump: true
+  verticalMotion: true
 
   moveCursor: (cursor) ->
-    cursor.setBufferPosition(@getPoint())
+    @setCursorBuffeRow(cursor, getValidVimBufferRow(@editor, @getRow()))
     cursor.autoscroll(center: true)
 
-  getPoint: ->
-    row = getValidVimBufferRow(@editor, @getRow())
-    getFirstCharacterPositionForBufferRow(@editor, row)
-
   getRow: ->
-    @getCount() - 1
+    @getCount(-1)
 
 # keymap: G
 class MoveToLastLine extends MoveToFirstLine
@@ -683,29 +708,21 @@ class MoveToLineByPercent extends MoveToFirstLine
   @extend()
 
   getRow: ->
-    percent = Math.min(100, @getCount())
-    Math.floor(@getVimLastScreenRow() * (percent / 100))
+    percent = limitNumber(@getCount(), max: 100)
+    Math.floor((@editor.getLineCount() - 1) * (percent / 100))
 
 class MoveToRelativeLine extends Motion
   @extend(false)
   wise: 'linewise'
 
   moveCursor: (cursor) ->
-    point = @getPoint(cursor.getBufferPosition())
-    cursor.setBufferPosition(point)
+    setBufferRow(cursor, cursor.getBufferRow() + @getCount(-1))
 
-  getCount: ->
-    super - 1
-
-  getPoint: ({row}) ->
-    [row + @getCount(), 0]
-
-class MoveToRelativeLineWithMinimum extends MoveToRelativeLine
+class MoveToRelativeLineMinimumOne extends MoveToRelativeLine
   @extend(false)
-  min: 0
 
   getCount: ->
-    Math.max(@min, super)
+    limitNumber(super, min: 1)
 
 # Position cursor without scrolling., H, M, L
 # -------------------------
@@ -716,15 +733,11 @@ class MoveToTopOfScreen extends Motion
   jump: true
   scrolloff: 2
   defaultCount: 0
-
-  getCount: ->
-    super - 1
+  verticalMotion: true
 
   moveCursor: (cursor) ->
-    cursor.setBufferPosition(@getPoint())
-
-  getPoint: ->
-    getFirstCharacterBufferPositionForScreenRow(@editor, @getRow())
+    bufferRow = @editor.bufferRowForScreenRow(@getScreenRow())
+    @setCursorBuffeRow(cursor, bufferRow)
 
   getScrolloff: ->
     if @isAsOperatorTarget()
@@ -732,36 +745,35 @@ class MoveToTopOfScreen extends Motion
     else
       @scrolloff
 
-  getRow: ->
-    row = getFirstVisibleScreenRow(@editor)
+  getScreenRow: ->
+    firstRow = getFirstVisibleScreenRow(@editor)
     offset = @getScrolloff()
-    offset = 0 if (row is 0)
-    offset = Math.max(@getCount(), offset)
-    row + offset
+    offset = 0 if firstRow is 0
+    offset = limitNumber(@getCount(-1), min: offset)
+    firstRow + offset
 
 # keymap: M
 class MoveToMiddleOfScreen extends MoveToTopOfScreen
   @extend()
-  getRow: ->
+  getScreenRow: ->
     startRow = getFirstVisibleScreenRow(@editor)
-    vimLastScreenRow = @getVimLastScreenRow()
-    endRow = Math.min(@editor.getLastVisibleScreenRow(), vimLastScreenRow)
+    endRow = limitNumber(@editor.getLastVisibleScreenRow(), max: @getVimLastScreenRow())
     startRow + Math.floor((endRow - startRow) / 2)
 
 # keymap: L
 class MoveToBottomOfScreen extends MoveToTopOfScreen
   @extend()
-  getRow: ->
+  getScreenRow: ->
     # [FIXME]
     # At least Atom v1.6.0, there are two implementation of getLastVisibleScreenRow()
     # editor.getLastVisibleScreenRow() and editorElement.getLastVisibleScreenRow()
     # Those two methods return different value, editor's one is corrent.
     # So I intentionally use editor.getLastScreenRow here.
     vimLastScreenRow = @getVimLastScreenRow()
-    row = Math.min(@editor.getLastVisibleScreenRow(), vimLastScreenRow)
+    row = limitNumber(@editor.getLastVisibleScreenRow(), max: vimLastScreenRow)
     offset = @getScrolloff() + 1
     offset = 0 if row is vimLastScreenRow
-    offset = Math.max(@getCount(), offset)
+    offset = limitNumber(@getCount(-1), min: offset)
     row - offset
 
 # Scrolling
@@ -769,9 +781,9 @@ class MoveToBottomOfScreen extends MoveToTopOfScreen
 # Full: ctrl-f, ctrl-b
 # -------------------------
 # [FIXME] count behave differently from original Vim.
-class ScrollFullScreenDown extends Motion
-  @extend()
-  amountOfPage: +1
+class Scroll extends Motion
+  @extend(false)
+  verticalMotion: true
 
   isSmoothScrollEnabled: ->
     if Math.abs(@amountOfPage) is 1
@@ -789,56 +801,60 @@ class ScrollFullScreenDown extends Motion
     point = new Point(row, 0)
     @editor.element.pixelRectForScreenRange(new Range(point, point)).top
 
-  smoothScroll: (fromRow, toRow, options) ->
+  smoothScroll: (fromRow, toRow, options={}) ->
     topPixelFrom = {top: @getPixelRectTopForSceenRow(fromRow)}
     topPixelTo = {top: @getPixelRectTopForSceenRow(toRow)}
     options.step = (newTop) => @editor.element.setScrollTop(newTop)
     options.duration = @getSmoothScrollDuation()
     @vimState.requestScrollAnimation(topPixelFrom, topPixelTo, options)
 
-  highlightScreenRow: (screenRow) ->
-    screenRange = new Range([screenRow, 0], [screenRow, Infinity])
-    marker = @editor.markScreenRange(screenRange)
-    @editor.decorateMarker(marker, type: 'highlight', class: 'vim-mode-plus-flash')
-    marker
-
   getAmountOfRows: ->
     Math.ceil(@amountOfPage * @editor.getRowsPerPage() * @getCount())
 
-  getPoint: (cursor) ->
-    row = getValidVimScreenRow(@editor, cursor.getScreenRow() + @getAmountOfRows())
-    new Point(row, 0)
+  getBufferRow: (cursor) ->
+    screenRow = getValidVimScreenRow(@editor, cursor.getScreenRow() + @getAmountOfRows())
+    @editor.bufferRowForScreenRow(screenRow)
 
   moveCursor: (cursor) ->
-    cursor.setScreenPosition(@getPoint(cursor), autoscroll: false)
+    bufferRow = @getBufferRow(cursor)
+    @setCursorBuffeRow(cursor, @getBufferRow(cursor), autoscroll: false)
 
     if cursor.isLastCursor()
       if @isSmoothScrollEnabled()
         @vimState.finishScrollAnimation()
 
-      currentTopRow = @editor.getFirstVisibleScreenRow()
-      finalTopRow = currentTopRow + @getAmountOfRows()
-      done = => @editor.setFirstVisibleScreenRow(finalTopRow)
+      firstVisibileScreenRow = @editor.getFirstVisibleScreenRow()
+      newFirstVisibileBufferRow = @editor.bufferRowForScreenRow(firstVisibileScreenRow + @getAmountOfRows())
+      newFirstVisibileScreenRow = @editor.screenRowForBufferRow(newFirstVisibileBufferRow)
+      done = =>
+        @editor.setFirstVisibleScreenRow(newFirstVisibileScreenRow)
+        # [FIXME] sometimes, scrollTop is not updated, calling this fix.
+        # Investigate and find better approach then remove this workaround.
+        @editor.element.component.updateSync()
 
       if @isSmoothScrollEnabled()
-        marker = @highlightScreenRow(cursor.getScreenRow())
-        complete = -> marker.destroy()
-        @smoothScroll(currentTopRow, finalTopRow, {done, complete})
+        @smoothScroll(firstVisibileScreenRow, newFirstVisibileScreenRow, {done})
       else
         done()
 
+
+# keymap: ctrl-f
+class ScrollFullScreenDown extends Scroll
+  @extend(true)
+  amountOfPage: +1
+
 # keymap: ctrl-b
-class ScrollFullScreenUp extends ScrollFullScreenDown
+class ScrollFullScreenUp extends Scroll
   @extend()
   amountOfPage: -1
 
 # keymap: ctrl-d
-class ScrollHalfScreenDown extends ScrollFullScreenDown
+class ScrollHalfScreenDown extends Scroll
   @extend()
   amountOfPage: +1 / 2
 
 # keymap: ctrl-u
-class ScrollHalfScreenUp extends ScrollHalfScreenDown
+class ScrollHalfScreenUp extends Scroll
   @extend()
   amountOfPage: -1 / 2
 
@@ -849,7 +865,6 @@ class Find extends Motion
   @extend()
   backwards: false
   inclusive: true
-  hover: icon: ':find:', emoji: ':mag_right:'
   offset: 0
   requireInput: true
 
@@ -875,10 +890,7 @@ class Find extends Motion
     points = []
     @editor[method] ///#{_.escapeRegExp(@input)}///g, scanRange, ({range}) ->
       points.push(range.start)
-    points[@getCount()]?.translate([0, offset])
-
-  getCount: ->
-    super - 1
+    points[@getCount(-1)]?.translate([0, offset])
 
   moveCursor: (cursor) ->
     point = @getPoint(cursor.getBufferPosition())
@@ -890,7 +902,6 @@ class FindBackwards extends Find
   @extend()
   inclusive: false
   backwards: true
-  hover: icon: ':find:', emoji: ':mag:'
 
 # keymap: t
 class Till extends Find
@@ -918,7 +929,6 @@ class MoveToMark extends Motion
   @extend()
   jump: true
   requireInput: true
-  hover: icon: ":move-to-mark:`", emoji: ":round_pushpin:`"
   input: null # set when instatntiated via vimState::moveToMark()
 
   initialize: ->
@@ -936,12 +946,11 @@ class MoveToMark extends Motion
 # keymap: '
 class MoveToMarkLine extends MoveToMark
   @extend()
-  hover: icon: ":move-to-mark:'", emoji: ":round_pushpin:'"
   wise: 'linewise'
 
   getPoint: ->
     if point = super
-      getFirstCharacterPositionForBufferRow(@editor, point.row)
+      @getFirstCharacterPositionForBufferRow(point.row)
 
 # Fold
 # -------------------------
@@ -974,7 +983,7 @@ class MoveToPreviousFoldStart extends Motion
     @getScanRows(cursor)[0]
 
   moveCursor: (cursor) ->
-    @countTimes =>
+    @moveCursorCountTimes cursor, =>
       if (row = @detectRow(cursor))?
         moveCursorToFirstCharacterAtRow(cursor, row)
 
@@ -1033,13 +1042,8 @@ class MoveToPositionByScope extends Motion
     detectScopeStartPositionForScope(@editor, fromPoint, @direction, @scope)
 
   moveCursor: (cursor) ->
-    point = cursor.getBufferPosition()
-    @countTimes ({stop}) =>
-      if (newPoint = @getPoint(point))
-        point = newPoint
-      else
-        stop()
-    @setBufferPositionSafely(cursor, point)
+    @moveCursorCountTimes cursor, =>
+      @setBufferPositionSafely(cursor, @getPoint(cursor.getBufferPosition()))
 
 class MoveToPreviousString extends MoveToPositionByScope
   @extend()
@@ -1062,6 +1066,63 @@ class MoveToNextNumber extends MoveToPreviousNumber
   @extend()
   @description: "Move to next number(searched by `constant.numeric` scope)"
   direction: 'forward'
+
+class MoveToNextOccurrence extends Motion
+  @extend()
+  jump: true
+  direction: 'next'
+
+  initialize: ->
+    if @vimState.occurrenceManager.hasMarkers()
+      super
+    else
+      if settings.get('fallbackTabAndShiftTabInNormalMode')
+        switch getKeystrokeForEvent(@vimState._event)
+          when 'tab'
+            atom.commands.dispatch(@editorElement, 'editor:indent')
+          when 'shift-tab'
+            atom.commands.dispatch(@editorElement, 'editor:outdent-selected-rows')
+      @abort()
+
+  getRanges: ->
+    @vimState.occurrenceManager.getMarkers().map (marker) ->
+      marker.getBufferRange()
+
+  execute: ->
+    @ranges = @getRanges()
+    super
+
+  moveCursor: (cursor) ->
+    index = @getIndex(cursor.getBufferPosition())
+    if index?
+      offset = switch @direction
+        when 'next' then @getCount(-1)
+        when 'previous' then -@getCount(-1)
+      range = @ranges[getIndex(index + offset, @ranges)]
+      point = range.start
+
+      cursor.setBufferPosition(point, autoscroll: false)
+
+      if cursor.isLastCursor()
+        @editor.unfoldBufferRow(point.row)
+        smartScrollToBufferPosition(@editor, point)
+
+      if settings.get('flashOnMoveToOccurrence')
+        @vimState.flash(range, type: 'search')
+
+  getIndex: (fromPoint) ->
+    for range, i in @ranges when range.start.isGreaterThan(fromPoint)
+      return i
+    0
+
+class MoveToPreviousOccurrence extends MoveToNextOccurrence
+  @extend()
+  direction: 'previous'
+
+  getIndex: (fromPoint) ->
+    for range, i in @ranges by -1 when range.end.isLessThan(fromPoint)
+      return i
+    @ranges.length - 1
 
 # -------------------------
 # keymap: %

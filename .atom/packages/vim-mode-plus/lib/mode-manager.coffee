@@ -37,27 +37,27 @@ class ModeManager
   # activate: Public
   #  Use this method to change mode, DONT use other direct method.
   # -------------------------
-  activate: (mode, submode=null) ->
+  activate: (newMode, newSubmode=null) ->
     # Avoid odd state(=visual-mode but selection is empty)
-    return if (mode is 'visual') and @editor.isEmpty()
+    return if (newMode is 'visual') and @editor.isEmpty()
 
-    @emitter.emit('will-activate-mode', {mode, submode})
+    @emitter.emit('will-activate-mode', mode: newMode, submode: newSubmode)
 
-    if (mode is 'visual') and (submode is @submode)
-      [mode, submode] = ['normal', null]
+    if (newMode is 'visual') and (newSubmode is @submode)
+      [newMode, newSubmode] = ['normal', null]
 
-    @deactivate() if (mode isnt @mode)
+    @deactivate() if (newMode isnt @mode)
 
-    @deactivator = switch mode
+    @deactivator = switch newMode
       when 'normal' then @activateNormalMode()
       when 'operator-pending' then @activateOperatorPendingMode()
-      when 'insert' then @activateInsertMode(submode)
-      when 'visual' then @activateVisualMode(submode)
+      when 'insert' then @activateInsertMode(newSubmode)
+      when 'visual' then @activateVisualMode(newSubmode)
 
     @editorElement.classList.remove("#{@mode}-mode")
     @editorElement.classList.remove(@submode)
 
-    [@mode, @submode] = [mode, submode]
+    [@mode, @submode] = [newMode, newSubmode]
 
     @editorElement.classList.add("#{@mode}-mode")
     @editorElement.classList.add(@submode) if @submode?
@@ -75,6 +75,10 @@ class ModeManager
     unless @deactivator?.disposed
       @emitter.emit('will-deactivate-mode', {@mode, @submode})
       @deactivator?.dispose()
+      # Remove css class here in-case @deactivate() called solely(occurrence in visual-mode)
+      @editorElement.classList.remove("#{@mode}-mode")
+      @editorElement.classList.remove(@submode)
+
       @emitter.emit('did-deactivate-mode', {@mode, @submode})
 
   # Normal
@@ -99,9 +103,6 @@ class ModeManager
     new Disposable =>
       replaceModeDeactivator?.dispose()
       replaceModeDeactivator = null
-
-      if settings.get('clearMultipleCursorsOnEscapeInsertMode')
-        @editor.clearSelections()
 
       # When escape from insert-mode, cursor move Left.
       needSpecialCareToPreventWrapLine = atom.config.get('editor.atomicSoftTabs') ? true
@@ -129,21 +130,27 @@ class ModeManager
 
   # Visual
   # -------------------------
-  # At this point @submode is not yet updated to final submode.
-  activateVisualMode: (submode) ->
-    @normalizeSelections() if @submode?
+  # We treat all selection is initially NOT normalized
+  #
+  # 1. First we normalize selection
+  # 2. Then update selection orientation(=wise).
+  #
+  # Regardless of selection is modified by vmp-command or outer-vmp-command like `cmd-l`.
+  # When normalize, we move cursor to left(selectLeft equivalent).
+  # Since Vim's visual-mode is always selectRighted.
+  #
+  # - un-normalized selection: This is the range we see in visual-mode.( So normal visual-mode range in user perspective ).
+  # - normalized selection: One column left selcted at selection end position
+  # - When selectRight at end position of normalized-selection, it become un-normalized selection
+  #   which is the range in visual-mode.
+  #
+  activateVisualMode: (newSubmode) ->
+    @normalizeSelections()
+    swrap.applyWise(@editor, 'characterwise')
 
-    # We only select-forward only when
-    #  -  submode shift(@submode? is true)
-    #  -  initial activation(@submode? is false) and selection was empty.
-    for selection in @editor.getSelections() when @submode? or selection.isEmpty()
-      swrap(selection).translateSelectionEndAndClip('forward')
-
-    @vimState.updateSelectionProperties()
-
-    switch submode
+    switch newSubmode
       when 'linewise'
-        @vimState.selectLinewise()
+        swrap.applyWise(@editor, 'linewise')
       when 'blockwise'
         @vimState.selectBlockwise()
 
@@ -152,26 +159,13 @@ class ModeManager
       selection.clear(autoscroll: false) for selection in @editor.getSelections()
       @updateNarrowedState(false)
 
-  eachNonEmptySelection: (fn) ->
-    for selection in @editor.getSelections() when not selection.isEmpty()
-      fn(selection)
-
   normalizeSelections: ->
-    switch @submode
-      when 'characterwise'
-        @eachNonEmptySelection (selection) ->
-          swrap(selection).translateSelectionEndAndClip('backward')
-      when 'linewise'
-        @eachNonEmptySelection (selection) ->
-          swrap(selection).restoreColumnFromProperties()
-      when 'blockwise'
-        for bs in @vimState.getBlockwiseSelections()
-          bs.restoreCharacterwise()
-        @vimState.clearBlockwiseSelections()
-        @eachNonEmptySelection (selection) ->
-          swrap(selection).translateSelectionEndAndClip('backward')
+    if @submode is 'blockwise'
+      for bs in @vimState.getBlockwiseSelections()
+        bs.restoreCharacterwise()
+      @vimState.clearBlockwiseSelections()
 
-    swrap.clearProperties(@editor)
+    swrap.normalize(@editor)
 
   # Narrow to selection
   # -------------------------

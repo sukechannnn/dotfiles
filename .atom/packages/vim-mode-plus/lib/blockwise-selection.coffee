@@ -1,7 +1,7 @@
 {Range} = require 'atom'
 _ = require 'underscore-plus'
 
-{sortRanges, getBufferRows} = require './utils'
+{sortRanges, getBufferRows, isEmpty} = require './utils'
 swrap = require './selection-wrapper'
 
 class BlockwiseSelection
@@ -14,6 +14,10 @@ class BlockwiseSelection
     {@editor} = selection
     @initialize(selection)
 
+    for memberSelection in @getSelections()
+      swrap(memberSelection).saveProperties()
+      swrap(memberSelection).setWise('blockwise')
+
   getSelections: ->
     @selections
 
@@ -21,8 +25,7 @@ class BlockwiseSelection
     true
 
   isEmpty: ->
-    @getSelections().every (selection) ->
-      selection.isEmpty()
+    @getSelections().every(isEmpty)
 
   initialize: (selection) ->
     {@goalColumn} = selection.cursor
@@ -31,7 +34,7 @@ class BlockwiseSelection
 
     range = selection.getBufferRange()
     if range.end.column is 0
-      range.end.row = range.end.row - 1
+      range.end.row -= 1
 
     if @goalColumn?
       if wasReversed
@@ -99,7 +102,7 @@ class BlockwiseSelection
     @getStartSelection().getBufferRange().start
 
   getEndBufferPosition: ->
-    @getStartSelection().getBufferRange().end
+    @getEndSelection().getBufferRange().end
 
   getBufferRowRange: ->
     startRow = @getStartSelection().getBufferRowRange()[0]
@@ -117,9 +120,6 @@ class BlockwiseSelection
     for range in ranges
       @selections.push @editor.addSelectionForBufferRange(range, {reversed})
     @updateGoalColumn()
-
-  sortSelections: ->
-    @selections?.sort (a, b) -> a.compare(b)
 
   # which must one of ['start', 'end', 'head', 'tail']
   setPositionForSelections: (which) ->
@@ -194,5 +194,13 @@ class BlockwiseSelection
       swrap(head).translateSelectionEndAndClip('forward')
 
     head.cursor.goalColumn ?= goalColumn if goalColumn?
+
+  autoscroll: (options) ->
+    @getHeadSelection().autoscroll(options)
+
+  autoscrollIfReversed: (options) ->
+    # See #546 cursor out-of-screen issue happens only in reversed.
+    # So skip here for performance(but don't know if it's worth)
+    @autoscroll(options) if @isReversed()
 
 module.exports = BlockwiseSelection

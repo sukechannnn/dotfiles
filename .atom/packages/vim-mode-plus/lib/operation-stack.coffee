@@ -62,6 +62,7 @@ class OperationStack
   # -------------------------
   run: (klass, properties) ->
     try
+      @vimState.init() if @isEmpty()
       type = typeof(klass)
       if type is 'object' # . repeat case we can execute as-it-is.
         operation = klass
@@ -81,7 +82,7 @@ class OperationStack
         @stack.push(operation)
         @process()
       else
-        @vimState.emitDidFailToSetTarget() if @peekTop().isOperator()
+        @vimState.emitDidFailToPushToOperationStack()
         @vimState.resetNormalMode()
     catch error
       @handleError(error)
@@ -94,9 +95,8 @@ class OperationStack
         operation.count = count
         operation.target?.count = count # Some opeartor have no target like ctrl-a(increase).
 
-      # [FIXME] Degradation, this `transact` should not be necessary
-      @editor.transact =>
-        @run(operation)
+      operation.subscribeResetOccurrencePatternIfNeeded()
+      @run(operation)
 
   runRecordedMotion: (key, {reverse}={}) ->
     return unless operation = @vimState.globalState.get(key)
@@ -127,12 +127,15 @@ class OperationStack
     if @stack.length is 2
       # [FIXME ideally]
       # If target is not complete, we postpone compsing target with operator to keep situation simple.
-      # We can assume, when target is set to operator it's complete.
+      # So that we can assume when target is set to operator it's complete.
+      # e.g. `y s t a'(surround for range from here to till a)
       return unless @peekTop().isComplete()
+
       operation = @stack.pop()
       @peekTop().setTarget(operation)
 
     top = @peekTop()
+
     if top.isComplete()
       @execute(@stack.pop())
     else
@@ -156,13 +159,17 @@ class OperationStack
   cancel: ->
     if @mode not in ['visual', 'insert']
       @vimState.resetNormalMode()
+      @vimState.restoreOriginalCursorPosition()
     @finish()
 
   finish: (operation=null) ->
     @recordedOperation = operation if operation?.isRecordable()
-    @vimState.emitter.emit('did-finish-operation')
+    @vimState.emitDidFinishOperation()
+    if operation?.isOperator()
+      operation.resetState()
 
     if @mode is 'normal'
+      swrap.clearProperties(@editor)
       @ensureAllSelectionsAreEmpty(operation)
       @ensureAllCursorsAreNotAtEndOfLine()
     else if @mode is 'visual'
@@ -172,11 +179,17 @@ class OperationStack
     @vimState.reset()
 
   ensureAllSelectionsAreEmpty: (operation) ->
+    # When @vimState.selectBlockwise() is called in non-visual-mode.
+    # e.g. `.` repeat of operation targeted blockwise `CurrentSelection`.
+    # We need to manually clear blockwiseSelection.
+    # See #647
+    @vimState.clearBlockwiseSelections()
+
     unless @editor.getLastSelection().isEmpty()
       if settings.get('throwErrorOnNonEmptySelectionInNormalMode')
         throw new Error("Selection is not empty in normal-mode: #{operation.toString()}")
       else
-        @editor.clearSelections()
+        @vimState.clearSelections()
 
   ensureAllCursorsAreNotAtEndOfLine: ->
     for cursor in @editor.getCursors() when cursor.isAtEndOfLine()
@@ -202,14 +215,18 @@ class OperationStack
       null
 
   setCount: (number) ->
-    if @mode is 'operator-pending'
-      mode = @mode
-    else
-      mode = 'normal'
+    mode = 'normal'
+    mode = @mode if @mode is 'operator-pending'
     @count[mode] ?= 0
     @count[mode] = (@count[mode] * 10) + number
-    @vimState.hover.add(number)
+    @vimState.hover.set(@buildCountString())
     @vimState.toggleClassList('with-count', true)
+
+  buildCountString: ->
+    [@count['normal'], @count['operator-pending']]
+      .filter (count) -> count?
+      .map (count) -> String(count)
+      .join('x')
 
   resetCount: ->
     @count = {}

@@ -3,8 +3,10 @@ _ = require 'underscore-plus'
 {BufferedProcess, Range} = require 'atom'
 
 {
-  haveSomeNonEmptySelection
-  isSingleLine
+  isSingleLineText
+  limitNumber
+  toggleCaseForCharacter
+  splitTextByNewLine
 } = require './utils'
 swrap = require './selection-wrapper'
 settings = require './settings'
@@ -13,18 +15,19 @@ Operator = Base.getClass('Operator')
 
 # TransformString
 # ================================
-transformerRegistry = []
 class TransformString extends Operator
   @extend(false)
   trackChange: true
-  stayOnLinewise: true
+  stayOptionName: 'stayOnTransformString'
   autoIndent: false
+  autoIndentNewline: false
+  @stringTransformers: []
 
   @registerToSelectList: ->
-    transformerRegistry.push(this)
+    @stringTransformers.push(this)
 
-  mutateSelection: (selection, stopMutation) ->
-    if text = @getNewText(selection.getText(), selection, stopMutation)
+  mutateSelection: (selection) ->
+    if text = @getNewText(selection.getText(), selection)
       selection.insertText(text, {@autoIndent})
 
 class ToggleCase extends TransformString
@@ -32,21 +35,12 @@ class ToggleCase extends TransformString
   @registerToSelectList()
   @description: "`Hello World` -> `hELLO wORLD`"
   displayName: 'Toggle ~'
-  hover: icon: ':toggle-case:', emoji: ':clap:'
-
-  toggleCase: (char) ->
-    charLower = char.toLowerCase()
-    if charLower is char
-      char.toUpperCase()
-    else
-      charLower
 
   getNewText: (text) ->
-    text.replace(/./g, @toggleCase.bind(this))
+    text.replace(/./g, toggleCaseForCharacter)
 
 class ToggleCaseAndMoveRight extends ToggleCase
   @extend()
-  hover: null
   flashTarget: false
   restorePositions: false
   target: 'MoveRight'
@@ -55,7 +49,6 @@ class UpperCase extends TransformString
   @extend()
   @registerToSelectList()
   @description: "`Hello World` -> `HELLO WORLD`"
-  hover: icon: ':upper-case:', emoji: ':point_up:'
   displayName: 'Upper'
   getNewText: (text) ->
     text.toUpperCase()
@@ -64,7 +57,6 @@ class LowerCase extends TransformString
   @extend()
   @registerToSelectList()
   @description: "`Hello World` -> `hello world`"
-  hover: icon: ':lower-case:', emoji: ':point_down:'
   displayName: 'Lower'
   getNewText: (text) ->
     text.toLowerCase()
@@ -74,26 +66,27 @@ class LowerCase extends TransformString
 class Replace extends TransformString
   @extend()
   input: null
-  hover: icon: ':replace:', emoji: ':tractor:'
+  flashCheckpoint: 'did-select-occurrence'
   requireInput: true
+  autoIndentNewline: true
+  supportEarlySelect: true
 
   initialize: ->
+    @onDidSelectTarget(@focusInput.bind(this))
     super
-    if @isMode('normal')
-      @target = 'MoveRightBufferColumn'
-    @focusInput()
 
-  getInput: ->
-    super or "\n"
+  getNewText: (text) ->
+    if @target.is('MoveRightBufferColumn') and text.length isnt @getCount()
+      return
 
-  mutateSelection: (selection) ->
-    if @target.is('MoveRightBufferColumn')
-      return unless selection.getText().length is @getCount()
+    input = @getInput() or "\n"
+    if input is "\n"
+      @restorePositions = false
+    text.replace(/./g, input)
 
-    input = @getInput()
-    @restorePositions = false if input is "\n"
-    text = selection.getText().replace(/./g, input)
-    selection.insertText(text, autoIndentNewline: true)
+class ReplaceCharacter extends Replace
+  @extend()
+  target: "MoveRightBufferColumn"
 
 # -------------------------
 # DUP meaning with SplitString need consolidate.
@@ -108,7 +101,6 @@ class CamelCase extends TransformString
   @registerToSelectList()
   displayName: 'Camelize'
   @description: "`hello-world` -> `helloWorld`"
-  hover: icon: ':camel-case:', emoji: ':camel:'
   getNewText: (text) ->
     _.camelize(text)
 
@@ -117,7 +109,6 @@ class SnakeCase extends TransformString
   @registerToSelectList()
   @description: "`HelloWorld` -> `hello_world`"
   displayName: 'Underscore _'
-  hover: icon: ':snake-case:', emoji: ':snake:'
   getNewText: (text) ->
     _.underscore(text)
 
@@ -126,7 +117,6 @@ class PascalCase extends TransformString
   @registerToSelectList()
   @description: "`hello_world` -> `HelloWorld`"
   displayName: 'Pascalize'
-  hover: icon: ':pascal-case:', emoji: ':triangular_ruler:'
   getNewText: (text) ->
     _.capitalize(_.camelize(text))
 
@@ -135,7 +125,6 @@ class DashCase extends TransformString
   @registerToSelectList()
   displayName: 'Dasherize -'
   @description: "HelloWorld -> hello-world"
-  hover: icon: ':dash-case:', emoji: ':dash:'
   getNewText: (text) ->
     _.dasherize(text)
 
@@ -152,7 +141,6 @@ class EncodeUriComponent extends TransformString
   @registerToSelectList()
   @description: "`Hello World` -> `Hello%20World`"
   displayName: 'Encode URI Component %'
-  hover: icon: 'encodeURI', emoji: 'encodeURI'
   getNewText: (text) ->
     encodeURIComponent(text)
 
@@ -161,7 +149,6 @@ class DecodeUriComponent extends TransformString
   @registerToSelectList()
   @description: "`Hello%20World` -> `Hello World`"
   displayName: 'Decode URI Component %%'
-  hover: icon: 'decodeURI', emoji: 'decodeURI'
   getNewText: (text) ->
     decodeURIComponent(text)
 
@@ -186,6 +173,15 @@ class CompactSpaces extends TransformString
       text.replace /^(\s*)(.*?)(\s*)$/gm, (m, leading, middle, trailing) ->
         leading + middle.split(/[ \t]+/).join(' ') + trailing
 
+class RemoveLeadingWhiteSpaces extends TransformString
+  @extend()
+  @registerToSelectList()
+  wise: 'linewise'
+  @description: "`  a b c` -> `a b c`"
+  getNewText: (text, selection) ->
+    trimLeft = (text) -> text.trimLeft()
+    splitTextByNewLine(text).map(trimLeft).join("\n") + "\n"
+
 class ConvertToSoftTab extends TransformString
   @extend()
   @registerToSelectList()
@@ -193,8 +189,7 @@ class ConvertToSoftTab extends TransformString
   wise: 'linewise'
 
   mutateSelection: (selection) ->
-    scanRange = selection.getBufferRange()
-    @editor.scanInBufferRange /\t/g, scanRange, ({range, replace}) =>
+    @scanForward /\t/g, {scanRange: selection.getBufferRange()}, ({range, replace}) =>
       # Replace \t to spaces which length is vary depending on tabStop and tabLenght
       # So we directly consult it's screen representing length.
       length = @editor.screenRangeForBufferRange(range).getExtent().column
@@ -207,10 +202,10 @@ class ConvertToHardTab extends TransformString
 
   mutateSelection: (selection) ->
     tabLength = @editor.getTabLength()
-    scanRange = selection.getBufferRange()
-    @editor.scanInBufferRange /[ \t]+/g, scanRange, ({range, replace}) =>
-      screenRange = @editor.screenRangeForBufferRange(range)
-      {start: {column: startColumn}, end: {column: endColumn}} = screenRange
+    @scanForward /[ \t]+/g, {scanRange: selection.getBufferRange()}, ({range, replace}) =>
+      {start, end} = @editor.screenRangeForBufferRange(range)
+      startColumn = start.column
+      endColumn = end.column
 
       # We can't naively replace spaces to tab, we have to consider valid tabStop column
       # If nextTabStop column exceeds replacable range, we pad with spaces.
@@ -236,6 +231,7 @@ class TransformStringByExternalCommand extends TransformString
   stdoutBySelection: null
 
   execute: ->
+    @normalizeSelectionsIfNecessary()
     if @selectTarget()
       new Promise (resolve) =>
         @collect(resolve)
@@ -287,14 +283,14 @@ class TransformStringByExternalCommand extends TransformString
   getStdout: (selection) -> @stdoutBySelection.get(selection)
 
 # -------------------------
-selectListItems = null
 class TransformStringBySelectList extends TransformString
   @extend()
   @description: "Interactively choose string transformation operator from select-list"
+  @selectListItems: null
   requireInput: true
 
   getItems: ->
-    selectListItems ?= transformerRegistry.map (klass) ->
+    @constructor.selectListItems ?= @constructor.stringTransformers.map (klass) ->
       if klass::hasOwnProperty('displayName')
         displayName = klass::displayName
       else
@@ -304,11 +300,16 @@ class TransformStringBySelectList extends TransformString
   initialize: ->
     super
 
-    @vimState.onDidConfirmSelectList (transformer) =>
+    @vimState.onDidConfirmSelectList (item) =>
+      transformer = item.name
+      @target = transformer::target if transformer::target?
       @vimState.reset()
-      target = @target?.constructor.name
-      @vimState.operationStack.run(transformer.name, {target})
-    @focusSelectList({items: @getItems()})
+      if @target?
+        @vimState.operationStack.run(transformer, {@target})
+      else
+        @vimState.operationStack.run(transformer)
+
+    @focusSelectList(items: @getItems())
 
   execute: ->
     # NEVER be executed since operationStack is replaced with selected transformer
@@ -327,7 +328,6 @@ class TransformSmartWordBySelectList extends TransformStringBySelectList
 class ReplaceWithRegister extends TransformString
   @extend()
   @description: "Replace target with specified register value"
-  hover: icon: ':replace-with-register:', emoji: ':pencil:'
   getNewText: (text) ->
     @vimState.register.getText()
 
@@ -344,10 +344,8 @@ class SwapWithRegister extends TransformString
 # -------------------------
 class Indent extends TransformString
   @extend()
-  hover: icon: ':indent:', emoji: ':point_right:'
-  stayOnLinewise: false
-  useMarkerForStay: true
-  clipToMutationEndOnStay: false
+  stayByMarker: true
+  wise: 'linewise'
 
   execute: ->
     unless @needStay()
@@ -356,67 +354,77 @@ class Indent extends TransformString
     super
 
   mutateSelection: (selection) ->
+    # Need count times indentation in visual-mode and its repeat(`.`).
+    if @target.is('CurrentSelection')
+      oldText = null
+       # limit to 100 to avoid freezing by accidental big number.
+      count = limitNumber(@getCount(), max: 100)
+      @countTimes count, ({stop}) =>
+        oldText = selection.getText()
+        @indent(selection)
+        stop() if selection.getText() is oldText
+    else
+      @indent(selection)
+
+  indent: (selection) ->
     selection.indentSelectedRows()
 
 class Outdent extends Indent
   @extend()
-  hover: icon: ':outdent:', emoji: ':point_left:'
-  mutateSelection: (selection) ->
+  indent: (selection) ->
     selection.outdentSelectedRows()
 
 class AutoIndent extends Indent
   @extend()
-  hover: icon: ':auto-indent:', emoji: ':open_hands:'
-  mutateSelection: (selection) ->
+  indent: (selection) ->
     selection.autoIndentSelectedRows()
 
 class ToggleLineComments extends TransformString
   @extend()
-  hover: icon: ':toggle-line-comments:', emoji: ':mute:'
-  useMarkerForStay: true
+  stayByMarker: true
   mutateSelection: (selection) ->
     selection.toggleLineComments()
 
+class AutoFlow extends TransformString
+  @extend()
+  mutateSelection: (selection) ->
+    atom.commands.dispatch(@editorElement, 'autoflow:reflow-selection')
+
 # Surround < TransformString
 # -------------------------
-class Surround extends TransformString
-  @extend()
-  @description: "Surround target by specified character like `(`, `[`, `\"`"
-  displayName: "Surround ()"
-  hover: icon: ':surround:', emoji: ':two_women_holding_hands:'
+class SurroundBase extends TransformString
+  @extend(false)
   pairs: [
     ['[', ']']
     ['(', ')']
     ['{', '}']
     ['<', '>']
   ]
+  pairCharsAllowForwarding: '[](){}'
   input: null
-  charsMax: 1
-  requireInput: true
   autoIndent: false
 
-  initialize: ->
-    super
+  requireInput: true
+  requireTarget: true
+  supportEarlySelect: true # Experimental
 
-    return unless @requireInput
-    if @requireTarget
-      @onDidSetTarget =>
-        @onDidConfirmInput (input) => @onConfirm(input)
-        @onDidChangeInput (input) => @addHover(input)
-        @onDidCancelInput => @cancelOperation()
-        @vimState.input.focus(@charsMax)
-    else
-      @onDidConfirmInput (input) => @onConfirm(input)
-      @onDidChangeInput (input) => @addHover(input)
-      @onDidCancelInput => @cancelOperation()
-      @vimState.input.focus(@charsMax)
+  focusInputForSurround: ->
+    inputUI = @newInputUI()
+    inputUI.onDidConfirm(@onConfirmSurround.bind(this))
+    inputUI.onDidCancel(@cancelOperation.bind(this))
+    inputUI.focus()
 
-  onConfirm: (@input) ->
-    @processOperation()
+  focusInputForDeleteSurround: ->
+    inputUI = @newInputUI()
+    inputUI.onDidConfirm(@onConfirmDeleteSurround.bind(this))
+    inputUI.onDidCancel(@cancelOperation.bind(this))
+    inputUI.focus()
 
   getPair: (char) ->
-    pair = _.detect(@pairs, (pair) -> char in pair)
-    pair ?= [char, char]
+    if pair = _.detect(@pairs, (pair) -> char in pair)
+      pair
+    else
+      [char, char]
 
   surround: (text, char, options={}) ->
     keepLayout = options.keepLayout ? false
@@ -426,10 +434,32 @@ class Surround extends TransformString
       open += "\n"
       close += "\n"
 
-    if char in settings.get('charactersToAddSpaceOnSurround') and isSingleLine(text)
-      open + ' ' + text + ' ' + close
+    if char in settings.get('charactersToAddSpaceOnSurround') and isSingleLineText(text)
+      text = ' ' + text + ' '
+
+    open + text + close
+
+  deleteSurround: (text) ->
+    [open, innerText..., close] = text
+    innerText = innerText.join('')
+    if isSingleLineText(text) and (open isnt close)
+      innerText.trim()
     else
-      open + text + close
+      innerText
+
+  onConfirmSurround: (@input) ->
+    @processOperation()
+
+  onConfirmDeleteSurround: (char) ->
+    @setTarget @new('APair', pair: @getPair(char))
+
+class Surround extends SurroundBase
+  @extend()
+  @description: "Surround target by specified character like `(`, `[`, `\"`"
+
+  initialize: ->
+    @onDidSelectTarget(@focusInputForSurround.bind(this))
+    super
 
   getNewText: (text) ->
     @surround(text, @input)
@@ -450,92 +480,75 @@ class MapSurround extends Surround
   occurrence: true
   patternForOccurrence: /\w+/g
 
-class DeleteSurround extends Surround
+# Delete Surround
+# -------------------------
+class DeleteSurround extends SurroundBase
   @extend()
   @description: "Delete specified surround character like `(`, `[`, `\"`"
-  pairChars: ['[]', '()', '{}'].join('')
   requireTarget: false
 
-  onConfirm: (@input) ->
-    # FIXME: dont manage allowNextLine independently. Each Pair text-object can handle by themselvs.
-    @setTarget @new 'Pair',
-      pair: @getPair(@input)
-      inner: false
-      allowNextLine: (@input in @pairChars)
+  initialize: ->
+    @focusInputForDeleteSurround() unless @hasTarget()
+    super
+
+  onConfirmDeleteSurround: (input) ->
+    super
+    @input = input
     @processOperation()
 
   getNewText: (text) ->
-    [openChar, closeChar] = [text[0], _.last(text)]
-    text = text[1...-1]
-    if isSingleLine(text)
-      text = text.trim() if openChar isnt closeChar
-    text
+    @deleteSurround(text)
 
 class DeleteSurroundAnyPair extends DeleteSurround
   @extend()
   @description: "Delete surround character by auto-detect paired char from cursor enclosed pair"
-  requireInput: false
   target: 'AAnyPair'
+  requireInput: false
 
 class DeleteSurroundAnyPairAllowForwarding extends DeleteSurroundAnyPair
   @extend()
   @description: "Delete surround character by auto-detect paired char from cursor enclosed pair and forwarding pair within same line"
   target: 'AAnyPairAllowForwarding'
 
-class ChangeSurround extends DeleteSurround
+# Change Surround
+# -------------------------
+class ChangeSurround extends SurroundBase
   @extend()
   @description: "Change surround character, specify both from and to pair char"
-  charsMax: 2
-  char: null
 
-  onConfirm: (input) ->
-    return unless input
-    [from, @char] = input.split('')
-    super(from)
+  showDeleteCharOnHover: ->
+    char = @editor.getSelectedText()[0]
+    @vimState.hover.set(char, @vimState.getOriginalCursorPosition())
+
+  initialize: ->
+    if @hasTarget()
+      @onDidFailSelectTarget(@abort.bind(this))
+    else
+      @onDidFailSelectTarget(@cancelOperation.bind(this))
+      @focusInputForDeleteSurround()
+    super
+
+    @onDidSelectTarget =>
+      @showDeleteCharOnHover()
+      @focusInputForSurround()
+
+  onConfirmSurround: (@input) ->
+    @processOperation()
 
   getNewText: (text) ->
-    innerText = super # Delete surround
-    @surround(innerText, @char, keepLayout: true)
+    innerText = @deleteSurround(text)
+    @surround(innerText, @input, keepLayout: true)
 
 class ChangeSurroundAnyPair extends ChangeSurround
   @extend()
   @description: "Change surround character, from char is auto-detected"
-  charsMax: 1
   target: "AAnyPair"
-
-  highlightTargetRange: (selection) ->
-    if range = @target.getRange(selection)
-      marker = @editor.markBufferRange(range)
-      @editor.decorateMarker(marker, type: 'highlight', class: 'vim-mode-plus-target-range')
-      marker
-    else
-      null
-
-  initialize: ->
-    marker = null
-    @onDidSetTarget =>
-      if marker = @highlightTargetRange(@editor.getLastSelection())
-        textRange = Range.fromPointWithDelta(marker.getBufferRange().start, 0, 1)
-        char = @editor.getTextInBufferRange(textRange)
-        @addHover(char, {}, @editor.getCursorBufferPosition())
-      else
-        @vimState.input.cancel()
-        @abort()
-
-    @onDidResetOperationStack ->
-      marker?.destroy()
-    super
-
-  onConfirm: (@char) ->
-    @input = @char
-    @processOperation()
 
 class ChangeSurroundAnyPairAllowForwarding extends ChangeSurroundAnyPair
   @extend()
   @description: "Change surround character, from char is auto-detected from enclosed and forwarding area"
   target: "AAnyPairAllowForwarding"
 
-# Join < TransformString
 # -------------------------
 # FIXME
 # Currently native editor.joinLines() is better for cursor position setting
@@ -554,52 +567,40 @@ class Join extends TransformString
     end = selection.getBufferRange().end
     selection.cursor.setBufferPosition(end.translate([0, -1]))
 
-class JoinWithKeepingSpace extends TransformString
+class JoinBase extends TransformString
+  @extend(false)
+  wise: 'linewise'
+  trim: false
+  target: "MoveToRelativeLineMinimumOne"
+
+  initialize: ->
+    @focusInput(10) if @isRequireInput()
+    super
+
+  getNewText: (text) ->
+    if @trim
+      pattern = /\r?\n[ \t]*/g
+    else
+      pattern = /\r?\n/g
+    text.trimRight().replace(pattern, @input) + "\n"
+
+class JoinWithKeepingSpace extends JoinBase
   @extend()
   @registerToSelectList()
   input: ''
-  requireTarget: false
-  trim: false
-  initialize: ->
-    @setTarget @new("MoveToRelativeLineWithMinimum", {min: 1})
 
-  mutateSelection: (selection) ->
-    [startRow, endRow] = selection.getBufferRowRange()
-    swrap(selection).expandOverLine()
-    rows = for row in [startRow..endRow]
-      text = @editor.lineTextForBufferRow(row)
-      if @trim and row isnt startRow
-        text.trimLeft()
-      else
-        text
-    selection.insertText @join(rows) + "\n"
-
-  join: (rows) ->
-    rows.join(@input)
-
-class JoinByInput extends JoinWithKeepingSpace
+class JoinByInput extends JoinBase
   @extend()
   @registerToSelectList()
   @description: "Transform multi-line to single-line by with specified separator character"
-  hover: icon: ':join:', emoji: ':couple:'
   requireInput: true
-  input: null
   trim: true
-  initialize: ->
-    super
-    charsMax = 10
-    @focusInput(charsMax)
-
-  join: (rows) ->
-    rows.join(" #{@input} ")
 
 class JoinByInputWithKeepingSpace extends JoinByInput
-  @description: "Join lines without padding space between each line"
   @extend()
   @registerToSelectList()
+  @description: "Join lines without padding space between each line"
   trim: false
-  join: (rows) ->
-    rows.join(@input)
 
 # -------------------------
 # String suffix in name is to avoid confusion with 'split' window.
@@ -607,31 +608,36 @@ class SplitString extends TransformString
   @extend()
   @registerToSelectList()
   @description: "Split single-line into multi-line by splitting specified separator chars"
-  hover: icon: ':split-string:', emoji: ':hocho:'
   requireInput: true
   input: null
+  target: "MoveToRelativeLine"
+  keepSplitter: false
 
   initialize: ->
+    @onDidSetTarget =>
+      @focusInput(10)
     super
-    unless @isMode('visual')
-      @setTarget @new("MoveToRelativeLine", {min: 1})
-    charsMax = 10
-    @focusInput(charsMax)
 
   getNewText: (text) ->
-    @input = "\\n" if @input is ''
-    regex = ///#{_.escapeRegExp(@input)}///g
-    text.split(regex).join("\n")
+    input = @input or "\\n"
+    regex = ///#{_.escapeRegExp(input)}///g
+    if @keepSplitter
+      lineSeparator = @input + "\n"
+    else
+      lineSeparator = "\n"
+    text.replace(regex, lineSeparator)
+
+class SplitStringWithKeepingSplitter extends SplitString
+  @extend()
+  @registerToSelectList()
+  keepSplitter: true
 
 class ChangeOrder extends TransformString
   @extend(false)
   wise: 'linewise'
 
-  mutateSelection: (selection) ->
-    textForRows = swrap(selection).lineTextForBufferRows()
-    rows = @getNewRows(textForRows)
-    newText = rows.join("\n") + "\n"
-    selection.insertText(newText)
+  getNewText: (text) ->
+    @getNewRows(splitTextByNewLine(text)).join("\n") + "\n"
 
 class Reverse extends ChangeOrder
   @extend()
@@ -646,3 +652,19 @@ class Sort extends ChangeOrder
   @description: "Sort lines alphabetically"
   getNewRows: (rows) ->
     rows.sort()
+
+class SortCaseInsensitively extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  @description: "Sort lines alphabetically (case insensitive)"
+  getNewRows: (rows) ->
+    rows.sort (rowA, rowB) ->
+      rowA.localeCompare(rowB, sensitivity: 'base')
+
+class SortByNumber extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  @description: "Sort lines numerically"
+  getNewRows: (rows) ->
+    _.sortBy rows, (row) ->
+      Number.parseInt(row) or Infinity

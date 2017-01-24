@@ -1,4 +1,5 @@
 {getVimState, dispatch, TextData} = require './spec-helper'
+settings = require '../lib/settings'
 
 describe "TextObject", ->
   [set, ensure, keystroke, editor, editorElement, vimState] = []
@@ -146,6 +147,35 @@ describe "TextObject", ->
         set text: "12(45\nab'de ABCDE", cursor: [0, 4]
         ensure 'v a W', selectedBufferRange: [[0, 0], [0, 5]]
 
+  describe "Subword", ->
+    escape = -> keystroke('escape')
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus.operator-pending-mode, atom-text-editor.vim-mode-plus.visual-mode':
+          'a q': 'vim-mode-plus:a-subword'
+          'i q': 'vim-mode-plus:inner-subword'
+
+    describe "inner-subword", ->
+      it "select subword", ->
+        set textC: "cam|elCase"; ensure "v i q", selectedText: "camel"; escape()
+        set textC: "came|lCase"; ensure "v i q", selectedText: "camel"; escape()
+        set textC: "camel|Case"; ensure "v i q", selectedText: "Case"; escape()
+        set textC: "camelCas|e"; ensure "v i q", selectedText: "Case"; escape()
+
+        set textC: "|_snake__case_"; ensure "v i q", selectedText: "_snake"; escape()
+        set textC: "_snak|e__case_"; ensure "v i q", selectedText: "_snake"; escape()
+        set textC: "_snake|__case_"; ensure "v i q", selectedText: "__case"; escape()
+        set textC: "_snake_|_case_"; ensure "v i q", selectedText: "__case"; escape()
+        set textC: "_snake__cas|e_"; ensure "v i q", selectedText: "__case"; escape()
+        set textC: "_snake__case|_"; ensure "v i q", selectedText: "_"; escape()
+
+    describe "a-subword", ->
+      it "select subword and spaces", ->
+        set textC: "camelCa|se  NextCamel"; ensure "v a q", selectedText: "Case  "; escape()
+        set textC: "camelCase  Ne|xtCamel"; ensure "v a q", selectedText: "  Next"; escape()
+        set textC: "snake_c|ase  next_snake"; ensure "v a q", selectedText: "_case  "; escape()
+        set textC: "snake_case  ne|xt_snake"; ensure "v a q", selectedText: "  next"; escape()
+
   describe "AnyPair", ->
     {simpleText, complexText} = {}
     beforeEach ->
@@ -249,7 +279,6 @@ describe "TextObject", ->
         ensure 'd a q', text: """-- `def`  'efg'--"""
         ensure '.'  , text: """--   'efg'--"""
         ensure '.'  , text: """--   --"""
-        ensure '.'
       it "can select next quote", ->
         keystroke 'v'
         ensure 'a q', selectedText: '"abc"'
@@ -257,6 +286,55 @@ describe "TextObject", ->
         ensure 'a q', selectedText: "'efg'"
 
   describe "DoubleQuote", ->
+    describe "issue-635 new behavior of inner-double-quote", ->
+      beforeEach ->
+        atom.keymaps.add "test",
+          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+            'g r': 'vim-mode-plus:replace'
+
+      describe "quote is un-balanced", ->
+        it "case1", ->
+          set                 textC_: '_|_"____"____"'
+          ensure 'g r i " +', textC_: '__"|++++"____"'
+        it "case2", ->
+          set                 textC_: '__"__|__"____"'
+          ensure 'g r i " +', textC_: '__"|++++"____"'
+        it "case3", ->
+          set                 textC_: '__"____"__|__"'
+          ensure 'g r i " +', textC_: '__"____"|++++"'
+        it "case4", ->
+          set                 textC_: '__|"____"____"'
+          ensure 'g r i " +', textC_: '__"|++++"____"'
+        it "case5", ->
+          set                 textC_: '__"____|"____"'
+          ensure 'g r i " +', textC_: '__"|++++"____"'
+        it "case6", ->
+          set                 textC_: '__"____"____|"'
+          ensure 'g r i " +', textC_: '__"____"|++++"'
+
+      describe "quote is balanced", ->
+        it "case1", ->
+          set                 textC_: '_|_"===="____"==="'
+          ensure 'g r i " +', textC_: '__"|++++"____"==="'
+        it "case2", ->
+          set                 textC_: '__"==|=="____"==="'
+          ensure 'g r i " +', textC_: '__"|++++"____"==="'
+        it "case3", ->
+          set                 textC_: '__"===="__|__"==="'
+          ensure 'g r i " +', textC_: '__"===="|++++"==="'
+        it "case4", ->
+          set                 textC_: '__"===="____"=|=="'
+          ensure 'g r i " +', textC_: '__"===="____"|+++"'
+        it "case5", ->
+          set                 textC_: '__|"===="____"==="'
+          ensure 'g r i " +', textC_: '__"|++++"____"==="'
+        it "case6", ->
+          set                 textC_: '__"====|"____"==="'
+          ensure 'g r i " +', textC_: '__"|++++"____"==="'
+        it "case7", ->
+          set                 textC_: '__"===="____|"==="'
+          ensure 'g r i " +', textC_: '__"===="____"|+++"'
+
     describe "inner-double-quote", ->
       beforeEach ->
         set
@@ -268,17 +346,18 @@ describe "TextObject", ->
           text: '""here" " and over here'
           cursor: [0, 1]
 
-      it "skip non-string area and operate forwarding string whithin line", ->
+      it "applies operators inside the current string in operator-pending mode", ->
         set cursor: [0, 29]
         ensure 'd i "',
-          text: '" something in here and in "here"" and over here'
-          cursor: [0, 33]
+          text: '" something in here and in "" " and over here'
+          cursor: [0, 28]
 
       it "makes no change if past the last string on a line", ->
         set cursor: [0, 39]
         ensure 'd i "',
           text: '" something in here and in "here" " and over here'
           cursor: [0, 39]
+
       describe "cursor is on the pair char", ->
         check = getCheckFunctionFor('i "')
         text = '-"+"-'
@@ -303,12 +382,11 @@ describe "TextObject", ->
           cursor: [0, 0]
           mode: 'normal'
 
-      # it "[Changed Behavior] wont applies if its not within string", ->
-      it "skip non-string area and operate forwarding string whithin line", ->
+      it "delete a-double-quote", ->
         set cursor: [0, 29]
         ensure 'd a "',
-          text: '" something in here and in "here'
-          cursor: [0, 31]
+          text: '" something in here and in  "'
+          cursor: [0, 27]
           mode: 'normal'
       describe "cursor is on the pair char", ->
         check = getCheckFunctionFor('a "')
@@ -359,8 +437,8 @@ describe "TextObject", ->
         it "case-2", ->
           set cursor: [0, 17]
           ensure "d i '",
-            text: "'some-key-here\\'': ''"
-            cursor: [0, 20]
+            text: "'some-key-here\\'''here-is-the-val'"
+            cursor: [0, 17]
 
       it "applies operators inside the current string in operator-pending mode", ->
         ensure "d i '",
@@ -412,8 +490,8 @@ describe "TextObject", ->
       it "applies operators inside the next string in operator-pending mode (if not in a string)", ->
         set cursor: [0, 29]
         ensure "d a '",
-          text: "' something in here and in 'here"
-          cursor: [0, 31]
+          text: "' something in here and in  '"
+          cursor: [0, 27]
           mode: 'normal'
       describe "cursor is on the pair char", ->
         check = getCheckFunctionFor("a '")
@@ -474,6 +552,41 @@ describe "TextObject", ->
         it "case-3 visual", -> check open, 'v', {selectedText}
         it "case-4 visual", -> check close, 'v', {selectedText}
   describe "CurlyBracket", ->
+    describe "scope awareness of bracket", ->
+      it "[search from outside of double-quote] skips bracket in within-line-balanced-double-quotes", ->
+        set
+          textC: """
+          { | "hello {" }
+          """
+        ensure "v a {",
+          selectedText: """
+          {  "hello {" }
+          """
+
+      it "Not ignore bracket in within-line-not-balanced-double-quotes", ->
+        set
+          textC: """
+          {  "hello {" | '"' }
+          """
+        ensure "v a {",
+          selectedText: """
+          {"  '"' }
+          """
+      it "[search from inside of double-quote] skips bracket in within-line-balanced-double-quotes", ->
+        set
+          textC: """
+          {  "h|ello {" }
+          """
+        ensure "v a {",
+          selectedText: """
+          {  "hello {" }
+          """
+
+      beforeEach ->
+        set
+          textC_: """
+
+          """
     describe "inner-curly-bracket", ->
       beforeEach ->
         set
@@ -505,6 +618,68 @@ describe "TextObject", ->
         it "case-2 normal", -> check close, 'd', text: textFinal, cursor: [0, 2]
         it "case-3 visual", -> check open, 'v', {selectedText}
         it "case-4 visual", -> check close, 'v', {selectedText}
+
+      describe "change mode to characterwise", ->
+        # FIXME last "\n" should not be selected
+        textSelected = """
+        __1,
+        __2,
+        __3
+        """.replace(/_/g, ' ')
+
+
+        beforeEach ->
+          set
+            textC: """
+            {
+              |1,
+              2,
+              3
+            }
+            """
+          ensure mode: 'normal'
+
+        it "from vC, final-mode is 'characterwise'", ->
+          ensure 'v',
+            selectedText: ['1']
+            mode: ['visual', 'characterwise']
+          ensure 'i B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        it "from vL, final-mode is 'characterwise'", ->
+          ensure 'V',
+            selectedText: ["  1,\n"]
+            mode: ['visual', 'linewise']
+          ensure 'i B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        it "from vB, final-mode is 'characterwise'", ->
+          ensure 'ctrl-v',
+            selectedText: ["1"]
+            mode: ['visual', 'blockwise']
+          ensure 'i B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        describe "as operator target", ->
+          it "change inner-pair", ->
+            ensure "c i B",
+              textC: """
+              {
+              |
+              }
+              """
+              mode: 'insert'
+          it "delete inner-pair", ->
+            ensure "d i B",
+              textC: """
+              {
+              |}
+              """
+              mode: 'normal'
+
     describe "a-curly-bracket", ->
       beforeEach ->
         set
@@ -536,6 +711,71 @@ describe "TextObject", ->
         it "case-2 normal", -> check close, 'd', text: textFinal, cursor: [0, 1]
         it "case-3 visual", -> check open, 'v', {selectedText}
         it "case-4 visual", -> check close, 'v', {selectedText}
+
+      describe "change mode to characterwise", ->
+        textSelected = """
+          {
+            1,
+            2,
+            3
+          }
+          """
+        beforeEach ->
+          set
+            textC: """
+            {
+              |1,
+              2,
+              3
+            }
+
+            hello
+            """
+          ensure mode: 'normal'
+
+        it "from vC, final-mode is 'characterwise'", ->
+          ensure 'v',
+            selectedText: ['1']
+            mode: ['visual', 'characterwise']
+          ensure 'a B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        it "from vL, final-mode is 'characterwise'", ->
+          ensure 'V',
+            selectedText: ["  1,\n"]
+            mode: ['visual', 'linewise']
+          ensure 'a B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        it "from vB, final-mode is 'characterwise'", ->
+          ensure 'ctrl-v',
+            selectedText: ["1"]
+            mode: ['visual', 'blockwise']
+          ensure 'a B',
+            selectedText: textSelected
+            mode: ['visual', 'characterwise']
+
+        describe "as operator target", ->
+          it "change inner-pair", ->
+            ensure "c a B",
+              textC: """
+              |
+
+              hello
+              """
+              mode: 'insert'
+          it "delete inner-pair", ->
+            ensure "d a B",
+              textC: """
+              |
+
+              hello
+              """
+              mode: 'normal'
+
+
   describe "AngleBracket", ->
     describe "inner-angle-bracket", ->
       beforeEach ->
@@ -702,7 +942,7 @@ describe "TextObject", ->
         keystroke 'v'
         ensure ';', selectedText: "222"
         ensure ';', selectedText: "333"
-        ensure ';', selectedText: "444()444\n"
+        ensure ';', selectedText: "444()444"
         ensure ';', selectedText: "", selectedBufferRange: [[3, 4], [3, 4]]
     describe "a", ->
       it "select forwarding range within enclosed range(if exists)", ->
@@ -726,31 +966,41 @@ describe "TextObject", ->
       ensure keystroke, {selectedText}
 
     describe "inner-tag", ->
-      describe "pricisely select inner", ->
+      describe "precisely select inner", ->
         check = getCheckFunctionFor('i t')
-        text = "<abc>  <title>TITLE</title> </abc>"
-        deletedText = "<abc>  <title></title> </abc>"
+        text = """
+          <abc>
+            <title>TITLE</title>
+          </abc>
+          """
         selectedText = "TITLE"
-        innerABC = "  <title>TITLE</title> "
+        innerABC = "\n  <title>TITLE</title>\n"
+        textAfterDeleted = """
+          <abc>
+            <title></title>
+          </abc>
+          """
+
         beforeEach ->
           set {text}
+
         # Select
-        it "[1] forwarding", -> check [0, 5], 'v', {selectedText}
-        it "[2] openTag leftmost", -> check [0, 7], 'v', {selectedText}
-        it "[3] openTag rightmost", -> check [0, 13], 'v', {selectedText}
-        it "[4] Inner text", -> check [0, 16], 'v', {selectedText}
-        it "[5] closeTag leftmost", -> check [0, 19], 'v', {selectedText}
-        it "[6] closeTag rightmost", -> check [0, 26], 'v', {selectedText}
-        it "[7] right of closeTag", -> check [0, 27], 'v', {selectedText: innerABC}
+        it "[1] forwarding", -> check [1, 0], 'v', {selectedText}
+        it "[2] openTag leftmost", -> check [1, 2], 'v', {selectedText}
+        it "[3] openTag rightmost", -> check [1, 8], 'v', {selectedText}
+        it "[4] Inner text", -> check [1, 10], 'v', {selectedText}
+        it "[5] closeTag leftmost", -> check [1, 14], 'v', {selectedText}
+        it "[6] closeTag rightmost", -> check [1, 21], 'v', {selectedText}
+        it "[7] right of closeTag", -> check [2, 0], 'v', {selectedText: innerABC}
 
         # Delete
-        it "[8] forwarding", -> check [0, 5], 'd', {text: deletedText}
-        it "[9] openTag leftmost", -> check [0, 7], 'd', {text: deletedText}
-        it "[10] openTag rightmost", -> check [0, 13], 'd', {text: deletedText}
-        it "[11] Inner text", -> check [0, 16], 'd', {text: deletedText}
-        it "[12] closeTag leftmost", -> check [0, 19], 'd', {text: deletedText}
-        it "[13] closeTag rightmost", -> check [0, 26], 'd', {text: deletedText}
-        it "[14] right of closeTag", -> check [0, 27], 'd', {text: "<abc></abc>"}
+        it "[8] forwarding", -> check [1, 0], 'd', {text: textAfterDeleted}
+        it "[9] openTag leftmost", -> check [1, 2], 'd', {text: textAfterDeleted}
+        it "[10] openTag rightmost", -> check [1, 8], 'd', {text: textAfterDeleted}
+        it "[11] Inner text", -> check [1, 10], 'd', {text: textAfterDeleted}
+        it "[12] closeTag leftmost", -> check [1, 14], 'd', {text: textAfterDeleted}
+        it "[13] closeTag rightmost", -> check [1, 21], 'd', {text: textAfterDeleted}
+        it "[14] right of closeTag", -> check [2, 0], 'd', {text: "<abc></abc>"}
 
       describe "expansion and deletion", ->
         beforeEach ->
@@ -772,20 +1022,21 @@ describe "TextObject", ->
           </body>
           </html>\n
           """
-          set text: htmlLikeText
+          set text_: htmlLikeText
+
         it "can expand selection when repeated", ->
           set cursor: [9, 0]
-          ensure 'v i t', selectedText: """
+          ensure 'v i t', selectedText_: """
             \n________<p><a>
             ______
             """
-          ensure 'i t', selectedText: """
+          ensure 'i t', selectedText_: """
             \n______<div>
             ________<p><a>
             ______</div>
             ____
             """
-          ensure 'i t', selectedText: """
+          ensure 'i t', selectedText_: """
             \n____<div>
             ______<div>
             ________<p><a>
@@ -793,7 +1044,7 @@ describe "TextObject", ->
             ____</div>
             __
             """
-          ensure 'i t', selectedText: """
+          ensure 'i t', selectedText_: """
             \n__<div>
             ____<div>
             ______<div>
@@ -802,7 +1053,7 @@ describe "TextObject", ->
             ____</div>
             __</div>\n
             """
-          ensure 'i t', selectedText: """
+          ensure 'i t', selectedText_: """
             \n<head>
             __<meta charset="UTF-8" />
             __<title>Document</title>
@@ -819,7 +1070,7 @@ describe "TextObject", ->
             """
         it 'delete inner-tag and repatable', ->
           set cursor: [9, 0]
-          ensure "d i t", text: """
+          ensure "d i t", text_: """
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -835,7 +1086,7 @@ describe "TextObject", ->
             </body>
             </html>\n
             """
-          ensure "3 .", text: """
+          ensure "3 .", text_: """
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -845,37 +1096,84 @@ describe "TextObject", ->
             <body></body>
             </html>\n
             """
-          ensure ".", text: """
+          ensure ".", text_: """
             <!DOCTYPE html>
             <html lang="en"></html>\n
             """
 
+      describe "tag's IN-tag/Off-tag recognition", ->
+        describe "When tagStart's row contains NO NON-whitespaece till tagStart", ->
+          it "[multi-line] select forwarding tag", ->
+            set textC: """
+              <span>
+                |  <span>inner</span>
+              </span>
+              """
+            ensure "d i t", text: """
+              <span>
+                  <span></span>
+              </span>
+              """
+
+        describe "When tagStart's row contains SOME NON-whitespaece till tagStart", ->
+          it "[multi-line] select enclosing tag", ->
+            set textC: """
+            <span>
+            hello | <span>inner</span>
+            </span>
+            """
+            ensure "d i t", text: "<span></span>"
+
+          it "[one-line-1] select enclosing tag", ->
+            set textC: """
+              <span> | <span>inner</span></span>
+              """
+
+            ensure "d i t", text: "<span></span>"
+
+          it "[one-line-2] select enclosing tag", ->
+            set textC: """
+              <span>h|ello<span>inner</span></span>
+              """
+
+            ensure "d i t", text: "<span></span>"
+
     describe "a-tag", ->
-      describe "pricisely select a", ->
+      describe "precisely select a", ->
         check = getCheckFunctionFor('a t')
-        text = "<abc>  <title>TITLE</title> </abc>"
-        deletedText = "<abc>   </abc>"
+        text = """
+          <abc>
+            <title>TITLE</title>
+          </abc>
+          """
         selectedText = "<title>TITLE</title>"
-        aABC = "<abc>  <title>TITLE</title> </abc>"
+        aABC = text
+        textAfterDeleted = """
+          <abc>
+          __
+          </abc>
+          """.replace(/_/g, ' ')
+
         beforeEach ->
           set {text}
+
         # Select
-        it "[1] forwarding", -> check [0, 5], 'v', {selectedText}
-        it "[2] openTag leftmost", -> check [0, 7], 'v', {selectedText}
-        it "[3] openTag rightmost", -> check [0, 13], 'v', {selectedText}
-        it "[4] Inner text", -> check [0, 16], 'v', {selectedText}
-        it "[5] closeTag leftmost", -> check [0, 19], 'v', {selectedText}
-        it "[6] closeTag rightmost", -> check [0, 26], 'v', {selectedText}
-        it "[7] right of closeTag", -> check [0, 27], 'v', {selectedText: aABC}
+        it "[1] forwarding", -> check [1, 0], 'v', {selectedText}
+        it "[2] openTag leftmost", -> check [1, 2], 'v', {selectedText}
+        it "[3] openTag rightmost", -> check [1, 8], 'v', {selectedText}
+        it "[4] Inner text", -> check [1, 10], 'v', {selectedText}
+        it "[5] closeTag leftmost", -> check [1, 14], 'v', {selectedText}
+        it "[6] closeTag rightmost", -> check [1, 21], 'v', {selectedText}
+        it "[7] right of closeTag", -> check [2, 0], 'v', {selectedText: aABC}
 
         # Delete
-        it "[8] forwarding", -> check [0, 5], 'd', {text: deletedText}
-        it "[9] openTag leftmost", -> check [0, 7], 'd', {text: deletedText}
-        it "[10] openTag rightmost", -> check [0, 13], 'd', {text: deletedText}
-        it "[11] Inner text", -> check [0, 16], 'd', {text: deletedText}
-        it "[12] closeTag leftmost", -> check [0, 19], 'd', {text: deletedText}
-        it "[13] closeTag rightmost", -> check [0, 26], 'd', {text: deletedText}
-        it "[14] right of closeTag", -> check [0, 27], 'd', {text: ""}
+        it "[8] forwarding", -> check [1, 0], 'd', {text: textAfterDeleted}
+        it "[9] openTag leftmost", -> check [1, 2], 'd', {text: textAfterDeleted}
+        it "[10] openTag rightmost", -> check [1, 8], 'd', {text: textAfterDeleted}
+        it "[11] Inner text", -> check [1, 10], 'd', {text: textAfterDeleted}
+        it "[12] closeTag leftmost", -> check [1, 14], 'd', {text: textAfterDeleted}
+        it "[13] closeTag rightmost", -> check [1, 21], 'd', {text: textAfterDeleted}
+        it "[14] right of closeTag", -> check [2, 0], 'd', {text: ""}
 
   describe "SquareBracket", ->
     describe "inner-square-bracket", ->
@@ -1176,15 +1474,15 @@ describe "TextObject", ->
         ensure 'i z', selectedBufferRange: rangeForRows(9, 28)
 
       describe "when startRow of selection is on fold startRow", ->
-        it 'select outer fold(skip)', ->
+        it 'select inner fold', ->
           set cursor: [20, 7]
-          ensure 'v i z', selectedBufferRange: rangeForRows(19, 23)
+          ensure 'v i z', selectedBufferRange: rangeForRows(21, 21)
 
       describe "when endRow of selection exceeds fold endRow", ->
         it "doesn't matter, select fold based on startRow of selection", ->
           set cursor: [20, 0]
           ensure 'V G', selectedBufferRange: rangeForRows(20, 30)
-          ensure 'i z', selectedBufferRange: rangeForRows(19, 23)
+          ensure 'i z', selectedBufferRange: rangeForRows(21, 21)
 
       describe "when indent level of fold startRow and endRow is same", ->
         beforeEach ->
@@ -1219,15 +1517,16 @@ describe "TextObject", ->
         ensure 'a z', selectedBufferRange: rangeForRows(8, 28)
 
       describe "when startRow of selection is on fold startRow", ->
-        it 'select outer fold(skip)', ->
+        it 'select fold starting from current row', ->
           set cursor: [20, 7]
-          ensure 'v a z', selectedBufferRange: rangeForRows(18, 23)
+          ensure 'v a z', selectedBufferRange: rangeForRows(20, 21)
 
       describe "when endRow of selection exceeds fold endRow", ->
         it "doesn't matter, select fold based on startRow of selection", ->
           set cursor: [20, 0]
+          cursor = editor.getLastCursor()
           ensure 'V G', selectedBufferRange: rangeForRows(20, 30)
-          ensure 'a z', selectedBufferRange: rangeForRows(18, 23)
+          ensure 'a z', selectedBufferRange: rangeForRows(20, 21)
 
   # Although following test picks specific language, other langauages are alsoe supported.
   describe 'Function', ->

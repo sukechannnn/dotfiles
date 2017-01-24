@@ -3,6 +3,10 @@ _ = require 'underscore-plus'
 {
   translatePointAndClip
   getRangeByTranslatePointAndClip
+  shrinkRangeEndToBeforeNewLine
+  getFirstCharacterPositionForBufferRow
+  getEndOfLineForBufferRow
+  limitNumber
 } = require './utils'
 
 propertyStore = new Map
@@ -15,35 +19,12 @@ class SelectionWrapper
   setProperties: (prop) -> propertyStore.set(@selection, prop)
   clearProperties: -> propertyStore.delete(@selection)
 
-  setBufferRangeSafely: (range) ->
+  setBufferRangeSafely: (range, options) ->
     if range
-      @setBufferRange(range)
-      if @selection.isLastSelection()
-        @selection.cursor.autoscroll()
+      @setBufferRange(range, options)
 
   getBufferRange: ->
     @selection.getBufferRange()
-
-  getNormalizedBufferPosition: ->
-    point = @selection.getHeadBufferPosition()
-    if @isForwarding()
-      {editor} = @selection
-      screenPoint = editor.screenPositionForBufferPosition(point).translate([0, -1])
-      editor.bufferPositionForScreenPosition(screenPoint, clipDirection: 'backward')
-    else
-      point
-
-  # Return function to dispose(=revert) normalization.
-  normalizeBufferPosition: ->
-    head = @selection.getHeadBufferPosition()
-    point = @getNormalizedBufferPosition()
-    @selection.modifySelection =>
-      @selection.cursor.setBufferPosition(point)
-
-    new Disposable =>
-      unless head.isEqual(point)
-        @selection.modifySelection =>
-          @selection.cursor.setBufferPosition(head)
 
   getBufferPositionFor: (which, {fromProperty, allowFallback}={}) ->
     fromProperty ?= false
@@ -77,14 +58,21 @@ class SelectionWrapper
   mergeBufferRange: (range, option) ->
     @setBufferRange(@getBufferRange().union(range), option)
 
+  extendToEOL: ->
+    [startRow, endRow] = @selection.getBufferRowRange()
+    endRowRange = @selection.editor.bufferRangeForBufferRow(endRow)
+    newRange = new Range(@getBufferRange().start, endRowRange.end)
+    @setBufferRange(newRange)
+
   reverse: ->
     @setReversedState(not @selection.isReversed())
 
+  setReversedState: (reversed) ->
+    return if @selection.isReversed() is reversed
     {head, tail} = @getProperties()
     if head? and tail?
       @setProperties(head: tail, tail: head)
 
-  setReversedState: (reversed) ->
     options = {autoscroll: true, reversed, preserveFolds: true}
     @setBufferRange(@getBufferRange(), options)
 
@@ -112,7 +100,7 @@ class SelectionWrapper
 
   getRowFor: (where) ->
     [startRow, endRow] = @selection.getBufferRowRange()
-    unless @selection.isReversed()
+    if @selection.isReversed()
       [headRow, tailRow] = [startRow, endRow]
     else
       [headRow, tailRow] = [endRow, startRow]
@@ -152,6 +140,58 @@ class SelectionWrapper
         properties.head = endPoint
     @setProperties(properties)
 
+  setWise: (value) ->
+    @saveProperties() unless @hasProperties()
+    properties = @getProperties()
+    properties.wise = value
+
+  getWise: ->
+    @getProperties()?.wise ? 'characterwise'
+
+  applyWise: (newWise) ->
+    # NOTE:
+    # Must call against normalized selection
+    # Don't call non-normalized selection
+
+    switch newWise
+      when 'characterwise'
+        @translateSelectionEndAndClip('forward')
+        @saveProperties()
+        @setWise('characterwise')
+      when 'linewise'
+        @complementGoalColumn()
+        @expandOverLine(preserveGoalColumn: true)
+        @setWise('linewise')
+
+  complementGoalColumn: ->
+    unless @selection.cursor.goalColumn?
+      column = @getBufferPositionFor('head', fromProperty: true, allowFallback: true).column
+      @selection.cursor.goalColumn = column
+
+  # [FIXME]
+  # When `keepColumnOnSelectTextObject` was true,
+  #  cursor marker in vL-mode exceed EOL if initial row is longer than endRow of
+  #  selected text-object.
+  # To avoid this wired cursor position representation, this fucntion clip
+  #  selection properties not exceeds EOL.
+  # But this should be temporal workaround, depending this kind of ad-hoc adjustment is
+  # basically bad in the long run.
+  clipPropertiesTillEndOfLine: ->
+    return unless @hasProperties()
+
+    editor = @selection.editor
+    headRowEOL = getEndOfLineForBufferRow(editor, @getHeadRow())
+    tailRowEOL = getEndOfLineForBufferRow(editor, @getTailRow())
+    headMaxColumn = limitNumber(headRowEOL.column - 1, min: 0)
+    tailMaxColumn = limitNumber(tailRowEOL.column - 1, min: 0)
+
+    properties = @getProperties()
+    if properties.head.column > headMaxColumn
+      properties.head.column = headMaxColumn
+
+    if properties.tail.column > tailMaxColumn
+      properties.tail.column = tailMaxColumn
+
   captureProperties: ->
     head: @selection.getHeadBufferPosition()
     tail: @selection.getTailBufferPosition()
@@ -168,10 +208,10 @@ class SelectionWrapper
     tail = @selection.getTailBufferPosition()
     head.isGreaterThan(tail)
 
-  restoreColumnFromProperties: ->
-    {head, tail} = @getProperties()
-    return unless head? and tail?
-    return if @selection.isEmpty()
+  applyColumnFromProperties: ->
+    selectionProperties = @getProperties()
+    return unless selectionProperties?
+    {head, tail} = selectionProperties
 
     if @selection.isReversed()
       [start, end] = [head, tail]
@@ -184,8 +224,16 @@ class SelectionWrapper
 
   # Only for setting autoscroll option to false by default
   setBufferRange: (range, options={}) ->
+    {keepGoalColumn} = options
+    delete options.keepGoalColumn
     options.autoscroll ?= false
-    @selection.setBufferRange(range, options)
+    setBufferRange = =>
+      @selection.setBufferRange(range, options)
+
+    if keepGoalColumn
+      @withKeepingGoalColumn(setBufferRange)
+    else
+      setBufferRange()
 
   # Return original text
   replace: (text) ->
@@ -197,6 +245,14 @@ class SelectionWrapper
     {editor} = @selection
     @getRows().map (row) ->
       editor.lineTextForBufferRow(row)
+
+  mapToLineText: (fn, {includeNewline}={}) ->
+    {editor} = @selection
+    textForRow = (row) ->
+      range = editor.bufferRangeForBufferRow(row, {includeNewline})
+      editor.getTextInBufferRange(range)
+
+    @getRows().map(textForRow).map(fn)
 
   translate: (startDelta, endDelta=startDelta, options) ->
     newRange = @getBufferRange().translate(startDelta, endDelta)
@@ -222,7 +278,7 @@ class SelectionWrapper
     {goalColumn} = @selection.cursor
     {start, end} = @getBufferRange()
     fn()
-    @selection.cursor.goalColumn = goalColumn if goalColumn
+    @selection.cursor.goalColumn = goalColumn if goalColumn?
 
   # direction must be one of ['forward', 'backward']
   # options: {translate: true or false} default true
@@ -241,6 +297,33 @@ class SelectionWrapper
     newRange = getRangeByTranslatePointAndClip(editor, range, which, direction, options)
     @withKeepingGoalColumn =>
       @setBufferRange(newRange, preserveFolds: true)
+
+  shrinkEndToBeforeNewLine: ->
+    newRange = shrinkRangeEndToBeforeNewLine(@getBufferRange())
+    @setBufferRange(newRange)
+
+  setStartToFirstCharacterOfLine: ->
+    {start, end} = @getBufferRange()
+    newStart = getFirstCharacterPositionForBufferRow(@selection.editor, start.row)
+    newRange = new Range(newStart, end)
+    @setBufferRange(newRange)
+
+  # Return selection extent to replay blockwise selection on `.` repeating.
+  getBlockwiseSelectionExtent: ->
+    head = @selection.getHeadBufferPosition()
+    tail = @selection.getTailBufferPosition()
+    new Point(head.row - tail.row, head.column - tail.column)
+
+  normalize: ->
+    unless @selection.isEmpty()
+      switch @getWise()
+        when 'characterwise'
+          @translateSelectionEndAndClip('backward')
+        when 'linewise'
+          @applyColumnFromProperties()
+        when 'blockwise'
+          @translateSelectionEndAndClip('backward')
+    @clearProperties()
 
 swrap = (selection) ->
   new SelectionWrapper(selection)
@@ -272,9 +355,28 @@ swrap.detectVisualModeSubmode = (editor) ->
   else
     null
 
-swrap.updateSelectionProperties = (editor, {unknownOnly}={}) ->
+swrap.saveProperties = (editor) ->
   for selection in editor.getSelections()
-    continue if unknownOnly and swrap(selection).hasProperties()
     swrap(selection).saveProperties()
+
+swrap.complementGoalColumn = (editor) ->
+  for selection in editor.getSelections()
+    swrap(selection).complementGoalColumn()
+
+swrap.normalize = (editor) ->
+  for selection in editor.getSelections()
+    swrap(selection).normalize()
+
+swrap.setWise = (editor, value) ->
+  for selection in editor.getSelections()
+    swrap(selection).setWise(value)
+
+swrap.applyWise = (editor, value) ->
+  for selection in editor.getSelections()
+    swrap(selection).applyWise(value)
+
+swrap.clearProperties = (editor) ->
+  for selection in editor.getSelections()
+    swrap(selection).clearProperties()
 
 module.exports = swrap

@@ -35,11 +35,13 @@ class Developer
   reloadPackages: ->
     packages = settings.get('devReloadPackages') ? []
     packages.push('vim-mode-plus')
+
+    # Deactivate
     for packName in packages
       pack = atom.packages.getLoadedPackage(packName)
 
       if pack?
-        console.log "deactivating #{packName}"
+        console.log "- deactivating #{packName}"
         atom.packages.deactivatePackage(packName)
         atom.packages.unloadPackage(packName)
 
@@ -50,8 +52,11 @@ class Developer
           .forEach (p) ->
             delete require.cache[p]
 
-        atom.packages.loadPackage(packName)
-        atom.packages.activatePackage(packName)
+    # Activate
+    for packName in packages
+      atom.packages.loadPackage(packName)
+      console.log "+ activating #{packName}"
+      atom.packages.activatePackage(packName)
 
   toggleReloadPackagesOnSave: ->
     return unless editor = atom.workspace.getActiveTextEditor()
@@ -207,10 +212,11 @@ class Developer
 
   openInVim: ->
     editor = atom.workspace.getActiveTextEditor()
-    {row} = editor.getCursorBufferPosition()
+    {row, column} = editor.getCursorBufferPosition()
+    # e.g. /Applications/MacVim.app/Contents/MacOS/Vim -g /etc/hosts "+call cursor(4, 3)"
     new BufferedProcess
-      command: "/Applications/MacVim.app/Contents/MacOS/mvim"
-      args: [editor.getPath(), "+#{row+1}"]
+      command: "/Applications/MacVim.app/Contents/MacOS/Vim"
+      args: ['-g', editor.getPath(), "+call cursor(#{row+1}, #{column+1})"]
 
   generateIntrospectionReport: ->
     generateIntrospectionReport _.values(Base.getRegistries()),

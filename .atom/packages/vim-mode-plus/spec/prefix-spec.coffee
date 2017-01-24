@@ -39,6 +39,9 @@ describe "Prefixes", ->
         ensure 'v 2 w', cursor: [0, 9]
 
   describe "Register", ->
+    beforeEach ->
+      vimState.globalState.reset('register')
+
     describe "the a register", ->
       it "saves a value for future reading", ->
         set    register: a: text: 'new content'
@@ -48,6 +51,21 @@ describe "Prefixes", ->
         set    register: a: text: 'content'
         set    register: a: text: 'new content'
         ensure register: a: text: 'new content'
+
+    describe "with yank command", ->
+      beforeEach ->
+        set
+          cursor: [0, 0]
+          text: """
+          aaa bbb ccc
+          """
+      it "save to pre specified register", ->
+        ensure '" a y i w', register: a: text: 'aaa'
+        ensure 'w " b y i w', register: b: text: 'bbb'
+        ensure 'w " c y i w', register: c: text: 'ccc'
+
+      it "work with motion which also require input such as 't'", ->
+        ensure ['" a y t', {input: 'c'}], register: a: text: 'aaa bbb '
 
     describe "the B register", ->
       it "saves a value for future reading", ->
@@ -73,7 +91,7 @@ describe "Prefixes", ->
     describe "the * register", ->
       describe "reading", ->
         it "is the same the system clipboard", ->
-          ensure register: '*': text: 'initial clipboard content', type: 'character'
+          ensure register: '*': text: 'initial clipboard content', type: 'characterwise'
 
       describe "writing", ->
         beforeEach ->
@@ -90,7 +108,7 @@ describe "Prefixes", ->
       describe "reading", ->
         it "is the same the system clipboard", ->
           ensure register:
-            '*': text: 'initial clipboard content', type: 'character'
+            '*': text: 'initial clipboard content', type: 'characterwise'
 
       describe "writing", ->
         beforeEach ->
@@ -142,9 +160,7 @@ describe "Prefixes", ->
         ensure ['ctrl-r', input: 'a'], text: '01abc2\n'
 
       it "is cancelled with the escape key", ->
-        keystroke 'ctrl-r'
-        atom.commands.dispatch(vimState.input.editorElement, 'core:cancel')
-        ensure
+        ensure 'ctrl-r escape',
           text: '012\n'
           mode: 'insert'
           cursor: [0, 2]

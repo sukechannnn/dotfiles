@@ -100,6 +100,55 @@ describe "Motion general", ->
           ensure 'j', selectedText: text.getLines([1])
           ensure 'j', selectedText: text.getLines([1, 2])
 
+    # [NOTE] See #560
+    # This spec is intended to be used in local test, not at CI service.
+    # Safe to execute if it passes, but freeze editor when it fail.
+    # So explicitly disabled because I don't want be banned by CI service.
+    # Enable this on demmand when freezing happens again!
+    xdescribe "with big count was given", ->
+      BIG_NUMBER = Number.MAX_SAFE_INTEGER
+      ensureBigCountMotion = (keystrokes, options) ->
+        count = String(BIG_NUMBER).split('').join(' ')
+        keystrokes = keystrokes.split('').join(' ')
+        ensure("#{count} #{keystrokes}", options)
+
+      beforeEach ->
+        atom.keymaps.add "test",
+          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+            'g {': 'vim-mode-plus:move-to-previous-fold-start'
+            'g }': 'vim-mode-plus:move-to-next-fold-start'
+            ', N': 'vim-mode-plus:move-to-previous-number'
+            ', n': 'vim-mode-plus:move-to-next-number'
+        set
+          text: """
+          0000
+          1111
+          2222\n
+          """
+          cursor: [1, 2]
+
+      it "by `j`", -> ensureBigCountMotion 'j', cursor: [2, 2]
+      it "by `k`", -> ensureBigCountMotion 'k', cursor: [0, 2]
+      it "by `h`", -> ensureBigCountMotion 'h', cursor: [1, 0]
+      it "by `l`", -> ensureBigCountMotion 'l', cursor: [1, 3]
+      it "by `[`", -> ensureBigCountMotion '[', cursor: [0, 2]
+      it "by `]`", -> ensureBigCountMotion ']', cursor: [2, 2]
+      it "by `w`", -> ensureBigCountMotion 'w', cursor: [2, 3]
+      it "by `W`", -> ensureBigCountMotion 'W', cursor: [2, 3]
+      it "by `b`", -> ensureBigCountMotion 'b', cursor: [0, 0]
+      it "by `B`", -> ensureBigCountMotion 'B', cursor: [0, 0]
+      it "by `e`", -> ensureBigCountMotion 'e', cursor: [2, 3]
+      it "by `(`", -> ensureBigCountMotion '(', cursor: [0, 0]
+      it "by `)`", -> ensureBigCountMotion ')', cursor: [2, 3]
+      it "by `{`", -> ensureBigCountMotion '{', cursor: [0, 0]
+      it "by `}`", -> ensureBigCountMotion '}', cursor: [2, 3]
+      it "by `-`", -> ensureBigCountMotion '-', cursor: [0, 0]
+      it "by `_`", -> ensureBigCountMotion '_', cursor: [2, 0]
+      it "by `g {`", -> ensureBigCountMotion 'g {', cursor: [1, 2] # No fold no move but won't freeze.
+      it "by `g }`", -> ensureBigCountMotion 'g }', cursor: [1, 2] # No fold no move but won't freeze.
+      it "by `, N`", -> ensureBigCountMotion ', N', cursor: [1, 2] # No grammar, no move but won't freeze.
+      it "by `, n`", -> ensureBigCountMotion ', n', cursor: [1, 2] # No grammar, no move but won't freeze.
+
     describe "the k keybinding", ->
       beforeEach ->
         set cursor: [2, 1]
@@ -145,10 +194,10 @@ describe "Motion general", ->
 
       describe "selection is not reversed", ->
         it "screen position and buffer position is different", ->
-          ensure 'g j', cursor: [1, 0], cursorBuffer: [0, 9]
-          ensure 'g j', cursor: [2, 0], cursorBuffer: [1, 0]
-          ensure 'g j', cursor: [3, 0], cursorBuffer: [1, 9]
-          ensure 'g j', cursor: [4, 0], cursorBuffer: [1, 12]
+          ensure 'g j', cursorScreen: [1, 0], cursor: [0, 9]
+          ensure 'g j', cursorScreen: [2, 0], cursor: [1, 0]
+          ensure 'g j', cursorScreen: [3, 0], cursor: [1, 9]
+          ensure 'g j', cursorScreen: [4, 0], cursor: [1, 12]
 
         it "jk move selection buffer-line wise", ->
           ensure 'V', selectedText: text.getLines([0..0])
@@ -164,13 +213,13 @@ describe "Motion general", ->
 
       describe "selection is reversed", ->
         it "screen position and buffer position is different", ->
-          ensure 'g j', cursor: [1, 0], cursorBuffer: [0, 9]
-          ensure 'g j', cursor: [2, 0], cursorBuffer: [1, 0]
-          ensure 'g j', cursor: [3, 0], cursorBuffer: [1, 9]
-          ensure 'g j', cursor: [4, 0], cursorBuffer: [1, 12]
+          ensure 'g j', cursorScreen: [1, 0], cursor: [0, 9]
+          ensure 'g j', cursorScreen: [2, 0], cursor: [1, 0]
+          ensure 'g j', cursorScreen: [3, 0], cursor: [1, 9]
+          ensure 'g j', cursorScreen: [4, 0], cursor: [1, 12]
 
         it "jk move selection buffer-line wise", ->
-          set cursorBuffer: [4, 0]
+          set cursor: [4, 0]
           ensure 'V', selectedText: text.getLines([4..4])
           ensure 'k', selectedText: text.getLines([3..4])
           ensure 'k', selectedText: text.getLines([2..4])
@@ -278,34 +327,34 @@ describe "Motion general", ->
             {set, ensure, keystroke} = vimEditor
 
           runs ->
-            set cursor: [8, 2]
+            set cursorScreen: [8, 2]
             # In hardTab indent bufferPosition is not same as screenPosition
-            ensure cursorBuffer: [8, 1]
+            ensure cursor: [8, 1]
 
         afterEach ->
           atom.packages.deactivatePackage(pack)
 
         it "move up/down to next edge of same *screen* column", ->
-          ensure '[', cursor: [5, 2]
-          ensure '[', cursor: [3, 2]
-          ensure '[', cursor: [2, 2]
-          ensure '[', cursor: [0, 2]
+          ensure '[', cursorScreen: [5, 2]
+          ensure '[', cursorScreen: [3, 2]
+          ensure '[', cursorScreen: [2, 2]
+          ensure '[', cursorScreen: [0, 2]
 
-          ensure ']', cursor: [2, 2]
-          ensure ']', cursor: [3, 2]
-          ensure ']', cursor: [5, 2]
-          ensure ']', cursor: [9, 2]
-          ensure ']', cursor: [11, 2]
-          ensure ']', cursor: [14, 2]
-          ensure ']', cursor: [17, 2]
+          ensure ']', cursorScreen: [2, 2]
+          ensure ']', cursorScreen: [3, 2]
+          ensure ']', cursorScreen: [5, 2]
+          ensure ']', cursorScreen: [9, 2]
+          ensure ']', cursorScreen: [11, 2]
+          ensure ']', cursorScreen: [14, 2]
+          ensure ']', cursorScreen: [17, 2]
 
-          ensure '[', cursor: [14, 2]
-          ensure '[', cursor: [11, 2]
-          ensure '[', cursor: [9, 2]
-          ensure '[', cursor: [5, 2]
-          ensure '[', cursor: [3, 2]
-          ensure '[', cursor: [2, 2]
-          ensure '[', cursor: [0, 2]
+          ensure '[', cursorScreen: [14, 2]
+          ensure '[', cursorScreen: [11, 2]
+          ensure '[', cursorScreen: [9, 2]
+          ensure '[', cursorScreen: [5, 2]
+          ensure '[', cursorScreen: [3, 2]
+          ensure '[', cursorScreen: [2, 2]
+          ensure '[', cursorScreen: [0, 2]
 
   describe "the w keybinding", ->
     baseText = """
@@ -335,18 +384,29 @@ describe "Motion general", ->
         set text: 'abc', cursor: [0, 0]
         ensure 'w', cursor: [0, 2]
 
-      it "moves the cursor to beginning of the next word of next line when all remaining text is white space.", ->
+      it "move to next word by skipping trailing white spaces", ->
         set
-          text_: """
-            012___
+          textC_: """
+            012|___
               234
             """
-          cursor: [0, 3]
-        ensure 'w', cursor: [1, 2]
+        ensure 'w',
+          textC_: """
+            012___
+              |234
+            """
 
-      it "moves the cursor to beginning of the next word of next line when cursor is at EOL.", ->
-        set text: "\n  234", cursor: [0, 0]
-        ensure 'w', cursor: [1, 2]
+      it "move to next word from EOL", ->
+        set
+          textC_: """
+            |
+            __234"
+            """
+        ensure 'w',
+          textC_: """
+
+            __|234"
+            """
 
       # [FIXME] improve spec to loop same section with different text
       describe "for CRLF buffer", ->
@@ -888,13 +948,13 @@ describe "Motion general", ->
       it "moves the cursor to the beginning of the previous word", ->
         ensure 'B', cursor: [3, 1]
         ensure 'B', cursor: [2, 0]
-        ensure 'B', cursor: [1, 3]
+        ensure 'B', cursor: [1, 2]
         ensure 'B', cursor: [0, 7]
         ensure 'B', cursor: [0, 0]
 
     describe "as a selection", ->
       it "selects to the beginning of the whole word", ->
-        set cursor: [1, 9]
+        set cursor: [1, 8]
         ensure 'y B', register: '"': text: 'xyz-12' # because cursor is on the `3`
 
       it "doesn't go past the beginning of the file", ->
@@ -903,19 +963,20 @@ describe "Motion general", ->
 
   describe "the ^ keybinding", ->
     beforeEach ->
-      set text: "  abcde"
+      set textC: "|  abcde"
 
     describe "from the beginning of the line", ->
-      beforeEach ->
-        set cursor: [0, 0]
-
       describe "as a motion", ->
         it "moves the cursor to the first character of the line", ->
           ensure '^', cursor: [0, 2]
 
       describe "as a selection", ->
         it 'selects to the first character of the line', ->
-          ensure 'd ^', text: 'abcde', cursor: [0, 0]
+          ensure 'd ^',
+            text: 'abcde'
+            cursor: [0, 0]
+        it 'selects to the first character of the line', ->
+          ensure 'd I', text: 'abcde', cursor: [0, 0]
 
     describe "from the first character of the line", ->
       beforeEach ->
@@ -927,7 +988,9 @@ describe "Motion general", ->
 
       describe "as a selection", ->
         it "does nothing", ->
-          ensure 'd ^', text: '  abcde', cursor: [0, 2]
+          ensure 'd ^',
+            text: '  abcde'
+            cursor: [0, 2]
 
     describe "from the middle of a word", ->
       beforeEach ->
@@ -939,7 +1002,11 @@ describe "Motion general", ->
 
       describe "as a selection", ->
         it 'selects to the first character of the line', ->
-          ensure 'd ^', text: '  cde', cursor: [0, 2],
+          ensure 'd ^',
+            text: '  cde'
+            cursor: [0, 2]
+        it 'selects to the first character of the line', ->
+          ensure 'd I', text: '  cde', cursor: [0, 2],
 
   describe "the 0 keybinding", ->
     beforeEach ->
@@ -1385,6 +1452,45 @@ describe "Motion general", ->
       it "moves the cursor to the non-blank-char of middle of screen", ->
         ensure 'M', cursor: [4, 2]
 
+  describe "moveToFirstCharacterOnVerticalMotion setting", ->
+    beforeEach ->
+      settings.set('moveToFirstCharacterOnVerticalMotion', false)
+      set
+        text: """
+          0 000000000000
+          1 111111111111
+        2 222222222222\n
+        """
+        cursor: [2, 10]
+
+    describe "gg, G, N%", ->
+      it "go to row with keep column and respect cursor.goalColum", ->
+        ensure 'g g', cursor: [0, 10]
+        ensure '$', cursor: [0, 15]
+        ensure 'G', cursor: [2, 13]
+        expect(editor.getLastCursor().goalColumn).toBe(Infinity)
+        ensure '1 %', cursor: [0, 15]
+        expect(editor.getLastCursor().goalColumn).toBe(Infinity)
+        ensure '1 0 h', cursor: [0, 5]
+        ensure '5 0 %', cursor: [1, 5]
+        ensure '1 0 0 %', cursor: [2, 5]
+
+    describe "H, M, L", ->
+      beforeEach ->
+        spyOn(editorElement, 'getFirstVisibleScreenRow').andReturn(0)
+        spyOn(editor, 'getLastVisibleScreenRow').andReturn(3)
+
+      it "go to row with keep column and respect cursor.goalColum", ->
+        ensure 'H', cursor: [0, 10]
+        ensure 'M', cursor: [1, 10]
+        ensure 'L', cursor: [2, 10]
+        ensure '$', cursor: [2, 13]
+        expect(editor.getLastCursor().goalColumn).toBe(Infinity)
+        ensure 'H', cursor: [0, 15]
+        ensure 'M', cursor: [1, 15]
+        ensure 'L', cursor: [2, 13]
+        expect(editor.getLastCursor().goalColumn).toBe(Infinity)
+
   describe 'the mark keybindings', ->
     beforeEach ->
       set
@@ -1402,34 +1508,34 @@ describe "Motion general", ->
       ensure "' a", cursor: [1, 4]
 
     it 'moves literally to a mark', ->
-      set cursorBuffer: [1, 1]
+      set cursor: [1, 2]
       keystroke 'm a'
-      set cursorBuffer: [0, 0]
-      ensure '` a', cursorBuffer: [1, 1]
+      set cursor: [0, 0]
+      ensure '` a', cursor: [1, 2]
 
     it 'deletes to a mark by line', ->
-      set cursorBuffer: [1, 5]
+      set cursor: [1, 5]
       keystroke 'm a'
-      set cursorBuffer: [0, 0]
+      set cursor: [0, 0]
       ensure "d ' a", text: '56\n'
 
     it 'deletes before to a mark literally', ->
-      set cursorBuffer: [1, 5]
+      set cursor: [1, 5]
       keystroke 'm a'
-      set cursorBuffer: [0, 1]
-      ensure 'd ` a', text: ' 4\n56\n'
+      set cursor: [0, 2]
+      ensure 'd ` a', text: '  4\n56\n'
 
     it 'deletes after to a mark literally', ->
-      set cursorBuffer: [1, 5]
+      set cursor: [1, 5]
       keystroke 'm a'
-      set cursorBuffer: [2, 1]
+      set cursor: [2, 1]
       ensure 'd ` a', text: '  12\n    36\n'
 
     it 'moves back to previous', ->
-      set cursorBuffer: [1, 5]
+      set cursor: [1, 5]
       keystroke '` `'
-      set cursorBuffer: [2, 1]
-      ensure '` `', cursorBuffer: [1, 5]
+      set cursor: [2, 1]
+      ensure '` `', cursor: [1, 5]
 
   describe "jump command update ` and ' mark", ->
     ensureMark = (_keystroke, option) ->
@@ -1666,27 +1772,27 @@ describe "Motion general", ->
         atom.packages.deactivatePackage(pack)
 
       it "move to next string", ->
-        set cursor: [0, 0]
-        ensure 'g s', cursor: [2, 7]
-        ensure 'g s', cursor: [3, 7]
-        ensure 'g s', cursor: [8, 8]
-        ensure 'g s', cursor: [9, 8]
-        ensure 'g s', cursor: [11, 20]
-        ensure 'g s', cursor: [12, 15]
-        ensure 'g s', cursor: [13, 15]
-        ensure 'g s', cursor: [15, 15]
-        ensure 'g s', cursor: [16, 15]
+        set cursorScreen: [0, 0]
+        ensure 'g s', cursorScreen: [2, 7]
+        ensure 'g s', cursorScreen: [3, 7]
+        ensure 'g s', cursorScreen: [8, 8]
+        ensure 'g s', cursorScreen: [9, 8]
+        ensure 'g s', cursorScreen: [11, 20]
+        ensure 'g s', cursorScreen: [12, 15]
+        ensure 'g s', cursorScreen: [13, 15]
+        ensure 'g s', cursorScreen: [15, 15]
+        ensure 'g s', cursorScreen: [16, 15]
       it "move to previous string", ->
-        set cursor: [18, 0]
-        ensure 'g S', cursor: [16, 15]
-        ensure 'g S', cursor: [15, 15]
-        ensure 'g S', cursor: [13, 15]
-        ensure 'g S', cursor: [12, 15]
-        ensure 'g S', cursor: [11, 20]
-        ensure 'g S', cursor: [9, 8]
-        ensure 'g S', cursor: [8, 8]
-        ensure 'g S', cursor: [3, 7]
-        ensure 'g S', cursor: [2, 7]
+        set cursorScreen: [18, 0]
+        ensure 'g S', cursorScreen: [16, 15]
+        ensure 'g S', cursorScreen: [15, 15]
+        ensure 'g S', cursorScreen: [13, 15]
+        ensure 'g S', cursorScreen: [12, 15]
+        ensure 'g S', cursorScreen: [11, 20]
+        ensure 'g S', cursorScreen: [9, 8]
+        ensure 'g S', cursorScreen: [8, 8]
+        ensure 'g S', cursorScreen: [3, 7]
+        ensure 'g S', cursorScreen: [2, 7]
 
   describe 'MoveTo(Previous|Next)Number', ->
     pack = 'language-coffee-script'
@@ -1737,3 +1843,66 @@ describe "Motion general", ->
       set cursor: [0, 0]
       ensure '5 g n', cursor: [3, 7]
       ensure '3 g N', cursor: [1, 8]
+
+  describe 'subword motion', ->
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'q': 'vim-mode-plus:move-to-next-subword'
+          'Q': 'vim-mode-plus:move-to-previous-subword'
+          'ctrl-e': 'vim-mode-plus:move-to-end-of-subword'
+
+    it "move to next/previous subword", ->
+      set textC: "|camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camel|Case => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase| => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase =>| (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (|with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with |special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special|) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) |ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) Cha|RActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaR|ActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActer|Rs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\n|dash-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash|-case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-|case\n\nsnake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\n|snake_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake|_case_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case|_word\n"
+      ensure 'q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_wor|d\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case|_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake|_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\n|snake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\ndash-|case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\ndash|-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActerRs\n\n|dash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaRActer|Rs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) ChaR|ActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) Cha|RActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special) |ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with special|) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (with |special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase => (|with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase =>| (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camelCase| => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'Q', textC: "camel|Case => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+    it "move-to-end-of-subword", ->
+      set textC: "|camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "came|lCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCas|e => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase =|> (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => |(with special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (wit|h special) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with specia|l) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special|) ChaRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) Ch|aRActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) Cha|RActerRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActe|rRs\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerR|s\n\ndash-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndas|h-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndash|-case\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndash-cas|e\n\nsnake_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnak|e_case_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_cas|e_word\n"
+      ensure 'ctrl-e', textC: "camelCase => (with special) ChaRActerRs\n\ndash-case\n\nsnake_case_wor|d\n"

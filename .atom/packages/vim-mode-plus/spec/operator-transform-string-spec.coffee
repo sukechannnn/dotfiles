@@ -16,71 +16,80 @@ describe "Operator TransformString", ->
   describe 'the ~ keybinding', ->
     beforeEach ->
       set
-        text: 'aBc\nXyZ'
-        cursorBuffer: [[0, 0], [1, 0]]
+        textC: """
+        |aBc
+        |XyZ
+        """
 
     it 'toggles the case and moves right', ->
       ensure '~',
-        text: 'ABc\nxyZ'
-        cursor: [[0, 1], [1, 1]]
-
+        textC: """
+        A|Bc
+        x|yZ
+        """
       ensure '~',
-        text: 'Abc\nxYZ'
-        cursor: [[0, 2], [1, 2]]
+        textC: """
+        Ab|c
+        xY|Z
+        """
 
       ensure  '~',
-        text: 'AbC\nxYz'
-        cursor: [[0, 2], [1, 2]]
+        textC: """
+        Ab|C
+        xY|z
+        """
 
     it 'takes a count', ->
       ensure '4 ~',
-        text: 'AbC\nxYz'
-        cursor: [[0, 2], [1, 2]]
+        textC: """
+        Ab|C
+        xY|z
+        """
 
     describe "in visual mode", ->
       it "toggles the case of the selected text", ->
-        set cursorBuffer: [0, 0]
+        set cursor: [0, 0]
         ensure 'V ~', text: 'AbC\nXyZ'
 
     describe "with g and motion", ->
       it "toggles the case of text, won't move cursor", ->
-        set cursorBuffer: [0, 0]
-        ensure 'g ~ 2 l', text: 'Abc\nXyZ', cursor: [0, 0]
+        set textC: "|aBc\nXyZ"
+        ensure 'g ~ 2 l', textC: '|Abc\nXyZ'
 
       it "g~~ toggles the line of text, won't move cursor", ->
-        set cursorBuffer: [0, 1]
-        ensure 'g ~ ~', text: 'AbC\nXyZ', cursor: [0, 1]
+        set textC: "a|Bc\nXyZ"
+        ensure 'g ~ ~', textC: 'A|bC\nXyZ'
 
       it "g~g~ toggles the line of text, won't move cursor", ->
-        set cursorBuffer: [0, 1]
-        ensure 'g ~ g ~', text: 'AbC\nXyZ', cursor: [0, 1]
+        set textC: "a|Bc\nXyZ"
+        ensure 'g ~ g ~', textC: 'A|bC\nXyZ'
 
   describe 'the U keybinding', ->
     beforeEach ->
       set
         text: 'aBc\nXyZ'
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
 
     it "makes text uppercase with g and motion, and won't move cursor", ->
       ensure 'g U l', text: 'ABc\nXyZ', cursor: [0, 0]
       ensure 'g U e', text: 'ABC\nXyZ', cursor: [0, 0]
-      set cursorBuffer: [1, 0]
+      set cursor: [1, 0]
       ensure 'g U $', text: 'ABC\nXYZ', cursor: [1, 0]
 
     it "makes the selected text uppercase in visual mode", ->
       ensure 'V U', text: 'ABC\nXyZ'
 
     it "gUU upcase the line of text, won't move cursor", ->
-      set cursorBuffer: [0, 1]
+      set cursor: [0, 1]
       ensure 'g U U', text: 'ABC\nXyZ', cursor: [0, 1]
 
     it "gUgU upcase the line of text, won't move cursor", ->
-      set cursorBuffer: [0, 1]
+      set cursor: [0, 1]
       ensure 'g U g U', text: 'ABC\nXyZ', cursor: [0, 1]
 
   describe 'the u keybinding', ->
     beforeEach ->
-      set text: 'aBc\nXyZ', cursorBuffer: [0, 0]
+      set text: 'aBc\nXyZ', cursor: [0, 0]
 
     it "makes text lowercase with g and motion, and won't move cursor", ->
       ensure 'g u $', text: 'abc\nXyZ', cursor: [0, 0]
@@ -89,11 +98,11 @@ describe "Operator TransformString", ->
       ensure 'V u', text: 'abc\nXyZ'
 
     it "guu downcase the line of text, won't move cursor", ->
-      set cursorBuffer: [0, 1]
+      set cursor: [0, 1]
       ensure 'g u u', text: 'abc\nXyZ', cursor: [0, 1]
 
     it "gugu downcase the line of text, won't move cursor", ->
-      set cursorBuffer: [0, 1]
+      set cursor: [0, 1]
       ensure 'g u g u', text: 'abc\nXyZ', cursor: [0, 1]
 
   describe "the > keybinding", ->
@@ -104,52 +113,89 @@ describe "Operator TransformString", ->
         ABCDE
         """
 
-    describe "on the last line", ->
-      beforeEach ->
-        set cursor: [2, 0]
-
-      describe "when followed by a >", ->
+    describe "> >", ->
+      describe "from first line", ->
         it "indents the current line", ->
+          set cursor: [0, 0]
           ensure '> >',
-            text: "12345\nabcde\n  ABCDE"
-            cursor: [2, 2]
+            textC: """
+              |12345
+            abcde
+            ABCDE
+            """
+        it "count means N line indents and undoable, repeatable", ->
+          set cursor: [0, 0]
+          ensure '3 > >',
+            textC_: """
+            __|12345
+            __abcde
+            __ABCDE
+            """
 
-    describe "on the first line", ->
-      beforeEach ->
-        set cursor: [0, 0]
+          ensure 'u',
+            textC: """
+            |12345
+            abcde
+            ABCDE
+            """
 
-      describe "when followed by a >", ->
+          ensure '. .',
+            textC_: """
+            ____|12345
+            ____abcde
+            ____ABCDE
+            """
+
+      describe "from last line", ->
         it "indents the current line", ->
+          set cursor: [2, 0]
           ensure '> >',
-            text: "  12345\nabcde\nABCDE"
-            cursor: [0, 2]
-
-      describe "when followed by a repeating >", ->
-        beforeEach ->
-          keystroke '3 > >'
-
-        it "indents multiple lines at once", ->
-          ensure
-            text: "  12345\n  abcde\n  ABCDE"
-            cursor: [0, 2]
-
-        describe "undo behavior", ->
-          it "outdents all three lines", ->
-            ensure 'u', text: "12345\nabcde\nABCDE"
+            textC: """
+            12345
+            abcde
+              |ABCDE
+            """
 
     describe "in visual mode", ->
       beforeEach ->
         set cursor: [0, 0]
-        keystroke 'V >'
 
-      it "indents the current line and exits visual mode", ->
-        ensure
+      it "[vC] indent selected lines", ->
+        ensure "v j >",
           mode: 'normal'
-          text: "  12345\nabcde\nABCDE"
-          selectedBufferRange: [[0, 2], [0, 2]]
-
-      it "allows repeating the operation", ->
-        ensure '.', text: "    12345\nabcde\nABCDE"
+          textC_: """
+          __|12345
+          __abcde
+          ABCDE
+          """
+      it "[vL] indent selected lines", ->
+        ensure "V >",
+          mode: 'normal'
+          textC_: """
+          __|12345
+          abcde
+          ABCDE
+          """
+        ensure '.',
+          textC_: """
+          ____|12345
+          abcde
+          ABCDE
+          """
+      it "[vL] count means N times indent", ->
+        ensure "V 3 >",
+          mode: 'normal'
+          textC_: """
+          ______|12345
+          abcde
+          ABCDE
+          """
+        ensure '.',
+          textC_: """
+          ____________|12345
+          abcde
+          ABCDE
+          """
 
     describe "in visual mode and stayOnTransformString enabled", ->
       beforeEach ->
@@ -159,76 +205,100 @@ describe "Operator TransformString", ->
       it "indents the currrent selection and exits visual mode", ->
         ensure 'v j >',
           mode: 'normal'
-          cursor: [1, 2]
-          text: """
+          textC: """
             12345
-            abcde
+            |abcde
           ABCDE
           """
       it "when repeated, operate on same range when cursor was not moved", ->
         ensure 'v j >',
           mode: 'normal'
-          cursor: [1, 2]
-          text: """
+          textC: """
             12345
-            abcde
+            |abcde
           ABCDE
           """
         ensure '.',
           mode: 'normal'
-          cursor: [1, 4]
-          text: """
+          textC: """
               12345
-              abcde
+              |abcde
           ABCDE
           """
       it "when repeated, operate on relative range from cursor position with same extent when cursor was moved", ->
         ensure 'v j >',
           mode: 'normal'
-          cursor: [1, 2]
-          text: """
+          textC: """
             12345
-            abcde
+            |abcde
           ABCDE
           """
         ensure 'l .',
           mode: 'normal'
-          cursor: [1, 5]
-          text_: """
+          textC_: """
           __12345
-          ____abcde
+          ____a|bcde
           __ABCDE
           """
 
   describe "the < keybinding", ->
     beforeEach ->
-      set text: "  12345\n  abcde\nABCDE", cursor: [0, 0]
+      set
+        textC_: """
+        |__12345
+        __abcde
+        ABCDE
+        """
 
     describe "when followed by a <", ->
       it "indents the current line", ->
         ensure '< <',
-          text: "12345\n  abcde\nABCDE"
-          cursor: [0, 0]
+          textC_: """
+          |12345
+          __abcde
+          ABCDE
+          """
 
     describe "when followed by a repeating <", ->
-      beforeEach ->
-        keystroke '2 < <'
-
-      it "indents multiple lines at once", ->
-        ensure
-          text: "12345\nabcde\nABCDE"
-          cursor: [0, 0]
-
-      describe "undo behavior", ->
-        it "indents both lines", ->
-          ensure 'u', text: "  12345\n  abcde\nABCDE"
+      it "indents multiple lines at once and undoable", ->
+        ensure '2 < <',
+          textC_: """
+          |12345
+          abcde
+          ABCDE
+          """
+        ensure 'u',
+          textC_: """
+          |__12345
+          __abcde
+          ABCDE
+          """
 
     describe "in visual mode", ->
-      it "indents the current line and exits visual mode", ->
-        ensure 'V <',
-          mode: 'normal'
-          text: "12345\n  abcde\nABCDE"
-          selectedBufferRange: [[0, 0], [0, 0]]
+      beforeEach ->
+        set
+          textC_: """
+          |______12345
+          ______abcde
+          ABCDE
+          """
+
+      it "count means N times outdent", ->
+        ensure 'V j 2 <',
+          textC_: """
+          __|12345
+          __abcde
+          ABCDE
+          """
+        # This is not ideal cursor position, but current limitation.
+        # Since indent depending on Atom's selection.indentSelectedRows()
+        # Implementing it vmp independently solve issue, but I have another idea and want to use Atom's one now.
+        ensure 'u',
+          textC_: """
+          ______12345
+          |______abcde
+          ABCDE
+          """
 
   describe "the = keybinding", ->
     oldGrammar = []
@@ -271,7 +341,7 @@ describe "Operator TransformString", ->
     beforeEach ->
       set
         text: 'vim-mode\natom-text-editor\n'
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
 
     it "transform text by motion and repeatable", ->
       ensure 'g c $', text: 'vimMode\natom-text-editor\n', cursor: [0, 0]
@@ -287,7 +357,7 @@ describe "Operator TransformString", ->
     beforeEach ->
       set
         text: 'vim-mode\natom-text-editor\n'
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
 
     it "transform text by motion and repeatable", ->
       ensure 'g C $', text: 'VimMode\natom-text-editor\n', cursor: [0, 0]
@@ -303,7 +373,7 @@ describe "Operator TransformString", ->
     beforeEach ->
       set
         text: 'vim-mode\natom-text-editor\n'
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
       atom.keymaps.add "g_",
         'atom-text-editor.vim-mode-plus:not(.insert-mode)':
           'g _': 'vim-mode-plus:snake-case'
@@ -322,7 +392,7 @@ describe "Operator TransformString", ->
     beforeEach ->
       set
         text: 'vimMode\natom_text_editor\n'
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
 
     it "transform text by motion and repeatable", ->
       ensure 'g - $', text: 'vim-mode\natom_text_editor\n', cursor: [0, 0]
@@ -367,7 +437,7 @@ describe "Operator TransformString", ->
   describe 'CompactSpaces', ->
     beforeEach ->
       set
-        cursorBuffer: [0, 0]
+        cursor: [0, 0]
 
     describe "basic behavior", ->
       it "compats multiple space into one", ->
@@ -454,42 +524,50 @@ describe "Operator TransformString", ->
 
   describe 'surround', ->
     beforeEach ->
+      keymapsForSurround = {
+        'atom-text-editor.vim-mode-plus.normal-mode':
+          'y s': 'vim-mode-plus:surround'
+          'd s': 'vim-mode-plus:delete-surround-any-pair'
+          'd S': 'vim-mode-plus:delete-surround'
+          'c s': 'vim-mode-plus:change-surround-any-pair'
+          'c S': 'vim-mode-plus:change-surround'
+
+        'atom-text-editor.vim-mode-plus.operator-pending-mode.surround-pending':
+          's': 'vim-mode-plus:inner-current-line'
+
+        'atom-text-editor.vim-mode-plus.visual-mode':
+          'S': 'vim-mode-plus:surround'
+      }
+
+      atom.keymaps.add("keymaps-for-surround", keymapsForSurround)
+
       set
-        text: """
-          apple
+        textC: """
+          |apple
           pairs: [brackets]
           pairs: [brackets]
           ( multi
             line )
           """
-        cursorBuffer: [0, 0]
 
     describe 'surround', ->
-      beforeEach ->
-        atom.keymaps.add "surround-test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-            'y s': 'vim-mode-plus:surround'
-          , 100
-
       it "surround text object with ( and repeatable", ->
         ensure ['y s i w', input: '('],
-          text: "(apple)\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
-          cursor: [0, 0]
+          textC: "|(apple)\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
         ensure 'j .',
           text: "(apple)\n(pairs): [brackets]\npairs: [brackets]\n( multi\n  line )"
       it "surround text object with { and repeatable", ->
         ensure ['y s i w', input: '{'],
-          text: "{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
-          cursor: [0, 0]
+          textC: "|{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
         ensure 'j .',
-          text: "{apple}\n{pairs}: [brackets]\npairs: [brackets]\n( multi\n  line )"
-      it "surround linewise", ->
-        ensure ['y s y s', input: '{'],
-          text: "{\napple\n}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
-          cursor: [0, 0]
-        ensure '3 j .',
-          text: "{\napple\n}\n{\npairs: [brackets]\n}\npairs: [brackets]\n( multi\n  line )"
-      describe 'with motion which aloso taking user-iinput', ->
+          textC: "{apple}\n|{pairs}: [brackets]\npairs: [brackets]\n( multi\n  line )"
+      it "surround current-line", ->
+        ensure ['y s s', input: '{'],
+          textC: "|{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
+        ensure 'j .',
+          textC: "{apple}\n|{pairs: [brackets]}\npairs: [brackets]\n( multi\n  line )"
+
+      describe 'with motion which takes user-input', ->
         beforeEach ->
           set text: "s _____ e", cursor: [0, 0]
         describe "with 'f' motion", ->
@@ -509,8 +587,7 @@ describe "Operator TransformString", ->
         beforeEach ->
           settings.set('charactersToAddSpaceOnSurround', ['(', '{', '['])
           set
-            text: "apple\norange\nlemmon"
-            cursorBuffer: [0, 0]
+            textC: "|apple\norange\nlemmon"
 
         describe "char is in charactersToAddSpaceOnSurround", ->
           it "add additional space inside pair char when surround", ->
@@ -533,50 +610,65 @@ describe "Operator TransformString", ->
         jasmine.attachToDOM(editorElement)
 
         set
-          text: """
+          textC: """
 
-            apple
+            |apple
             pairs tomato
             orange
             milk
 
             """
-          cursorBuffer: [1, 0]
 
         atom.keymaps.add "ms",
           'atom-text-editor.vim-mode-plus:not(.insert-mode)':
             'm s': 'vim-mode-plus:map-surround'
           'atom-text-editor.vim-mode-plus.visual-mode':
             'm s':  'vim-mode-plus:map-surround'
+
       it "surround text for each word in target case-1", ->
-        ensure ['m s i p', input: '('],
-          text: "\n(apple)\n(pairs) (tomato)\n(orange)\n(milk)\n"
-          cursor: [1, 0]
+        ensure 'm s i p (',
+          textC: """
+
+          |(apple)
+          (pairs) (tomato)
+          (orange)
+          (milk)
+
+          """
       it "surround text for each word in target case-2", ->
         set cursor: [2, 1]
-        ensure ['m s i l', input: '<'],
-          text: '\napple\n<pairs> <tomato>\norange\nmilk\n'
-          cursor: [2, 0]
+        ensure 'm s i l <',
+          textC: """
+
+          apple
+          <|pairs> <tomato>
+          orange
+          milk
+
+          """
       it "surround text for each word in visual selection", ->
-        ensure ['v i p m s', input: '"'],
-          text: '\n"apple"\n"pairs" "tomato"\n"orange"\n"milk"\n'
-          cursor: [1, 0]
+        ensure 'v i p m s "',
+          textC: """
+
+          "apple"
+          "pairs" "tomato"
+          "orange"
+          |"milk"
+
+          """
 
     describe 'delete surround', ->
       beforeEach ->
-        atom.keymaps.add "surround-test",
-          'atom-text-editor.vim-mode-plus.normal-mode':
-            'd s': 'vim-mode-plus:delete-surround'
         set cursor: [1, 8]
 
       it "delete surrounded chars and repeatable", ->
-        ensure ['d s', input: '['],
+        ensure ['d S', input: '['],
           text: "apple\npairs: brackets\npairs: [brackets]\n( multi\n  line )"
         ensure 'j l .',
           text: "apple\npairs: brackets\npairs: brackets\n( multi\n  line )"
       it "delete surrounded chars expanded to multi-line", ->
         set cursor: [3, 1]
-        ensure ['d s', input: '('],
+        ensure ['d S', input: '('],
           text: "apple\npairs: [brackets]\npairs: [brackets]\n multi\n  line "
       it "delete surrounded chars and trim padding spaces for non-identical pair-char", ->
         set
@@ -585,8 +677,8 @@ describe "Operator TransformString", ->
             {  orange   }\n
             """
           cursor: [0, 0]
-        ensure ['d s', input: '('], text: "apple\n{  orange   }\n"
-        ensure ['j d s', input: '{'], text: "apple\norange\n"
+        ensure ['d S', input: '('], text: "apple\n{  orange   }\n"
+        ensure ['j d S', input: '{'], text: "apple\norange\n"
       it "delete surrounded chars and NOT trim padding spaces for identical pair-char", ->
         set
           text: """
@@ -594,8 +686,8 @@ describe "Operator TransformString", ->
             "  orange   "\n
             """
           cursor: [0, 0]
-        ensure ['d s', input: '`'], text_: '_apple_\n"__orange___"\n'
-        ensure ['j d s', input: '"'], text_: "_apple_\n__orange___\n"
+        ensure ['d S', input: '`'], text_: '_apple_\n"__orange___"\n'
+        ensure ['j d S', input: '"'], text_: "_apple_\n__orange___\n"
       it "delete surrounded for multi-line but dont affect code layout", ->
         set
           cursor: [0, 34]
@@ -605,7 +697,7 @@ describe "Operator TransformString", ->
               hello: world
             }
             """
-        ensure ['d s', input: '{'],
+        ensure ['d S', input: '{'],
           text: [
               "highlightRanges @editor, range, "
               "  timeout: timeout"
@@ -615,10 +707,6 @@ describe "Operator TransformString", ->
 
     describe 'change surround', ->
       beforeEach ->
-        atom.keymaps.add "surround-test",
-          'atom-text-editor.vim-mode-plus.normal-mode':
-            'c s': 'vim-mode-plus:change-surround'
-
         set
           text: """
             (apple)
@@ -626,9 +714,9 @@ describe "Operator TransformString", ->
             <lemmon>
             {orange}
             """
-          cursorBuffer: [0, 1]
+          cursor: [0, 1]
       it "change surrounded chars and repeatable", ->
-        ensure ['c s', input: '(['],
+        ensure ['c S', input: '(['],
           text: """
             [apple]
             (grape)
@@ -643,14 +731,14 @@ describe "Operator TransformString", ->
             {orange}
             """
       it "change surrounded chars", ->
-        ensure ['j j c s', input: '<"'],
+        ensure ['j j c S', input: '<"'],
           text: """
             (apple)
             (grape)
             "lemmon"
             {orange}
             """
-        ensure ['j l c s', input: '{!'],
+        ensure ['j l c S', input: '{!'],
           text: """
             (apple)
             (grape)
@@ -667,7 +755,7 @@ describe "Operator TransformString", ->
               hello: world
             }
             """
-        ensure ['c s', input: '{('],
+        ensure ['c S', input: '{('],
           text: """
             highlightRanges @editor, range, (
               timeout: timeout
@@ -677,9 +765,9 @@ describe "Operator TransformString", ->
 
       describe 'charactersToAddSpaceOnSurround setting', ->
         ensureChangeSurround = (inputKeystrokes, options) ->
-          set(text: options.initialText, cursorBuffer: [0, 0])
+          set(text: options.initialText, cursor: [0, 0])
           delete options.initialText
-          keystrokes = ['c s'].concat({input: inputKeystrokes})
+          keystrokes = ['c S'].concat({input: inputKeystrokes})
           ensure(keystrokes, options)
 
         beforeEach ->
@@ -714,32 +802,25 @@ describe "Operator TransformString", ->
 
       it "surround a word with ( and repeatable", ->
         ensure ['y s w', input: '('],
-          text: "(apple)\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
-          cursor: [0, 0]
+          textC: "|(apple)\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
         ensure 'j .',
-          text: "(apple)\n(pairs): [brackets]\npairs: [brackets]\n( multi\n  line )"
+          textC: "(apple)\n|(pairs): [brackets]\npairs: [brackets]\n( multi\n  line )"
       it "surround a word with { and repeatable", ->
         ensure ['y s w', input: '{'],
-          text: "{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
-          cursor: [0, 0]
+          textC: "|{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
         ensure 'j .',
-          text: "{apple}\n{pairs}: [brackets]\npairs: [brackets]\n( multi\n  line )"
+          textC: "{apple}\n|{pairs}: [brackets]\npairs: [brackets]\n( multi\n  line )"
 
     describe 'delete-surround-any-pair', ->
       beforeEach ->
         set
-          text: """
+          textC: """
             apple
-            (pairs: [brackets])
+            (pairs: [|brackets])
             {pairs "s" [brackets]}
             ( multi
               line )
             """
-          cursor: [1, 9]
-
-        atom.keymaps.add "test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-            'd s': 'vim-mode-plus:delete-surround-any-pair'
 
       it "delete surrounded any pair found and repeatable", ->
         ensure 'd s',
@@ -763,75 +844,66 @@ describe "Operator TransformString", ->
 
     describe 'delete-surround-any-pair-allow-forwarding', ->
       beforeEach ->
-        settings.set('stayOnTransformString', true)
-        atom.keymaps.add "test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+        atom.keymaps.add "keymaps-for-surround",
+          'atom-text-editor.vim-mode-plus.normal-mode':
             'd s': 'vim-mode-plus:delete-surround-any-pair-allow-forwarding'
+
+        settings.set('stayOnTransformString', true)
+
       it "[1] single line", ->
         set
-          cursor: [0, 0]
-          text: """
-          ___(inner)
+          textC: """
+          |___(inner)
           ___(inner)
           """
         ensure 'd s',
-          text: """
-          ___inner
+          textC: """
+          |___inner
           ___(inner)
           """
-          cursor: [0, 0]
         ensure 'j .',
-          text: """
+          textC: """
           ___inner
-          ___inner
+          |___inner
           """
-          cursor: [1, 0]
 
     describe 'change-surround-any-pair', ->
       beforeEach ->
         set
-          text: """
-            (apple)
+          textC: """
+            (|apple)
             (grape)
             <lemmon>
             {orange}
             """
-          cursor: [0, 1]
-
-        atom.keymaps.add "test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-            'c s': 'vim-mode-plus:change-surround-any-pair'
 
       it "change any surrounded pair found and repeatable", ->
-        ensure ['c s', input: '<'], text: "<apple>\n(grape)\n<lemmon>\n{orange}"
-        ensure 'j .', text: "<apple>\n<grape>\n<lemmon>\n{orange}"
-        ensure 'j j .', text: "<apple>\n<grape>\n<lemmon>\n<orange>"
+        ensure ['c s', input: '<'], textC: "|<apple>\n(grape)\n<lemmon>\n{orange}"
+        ensure 'j .', textC: "<apple>\n|<grape>\n<lemmon>\n{orange}"
+        ensure 'j j .', textC: "<apple>\n<grape>\n<lemmon>\n|<orange>"
 
     describe 'change-surround-any-pair-allow-forwarding', ->
       beforeEach ->
-        settings.set('stayOnTransformString', true)
-        atom.keymaps.add "test",
-          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+        atom.keymaps.add "keymaps-for-surround",
+          'atom-text-editor.vim-mode-plus.normal-mode':
             'c s': 'vim-mode-plus:change-surround-any-pair-allow-forwarding'
+        settings.set('stayOnTransformString', true)
       it "[1] single line", ->
         set
-          cursor: [0, 0]
-          text: """
-          ___(inner)
+          textC: """
+          |___(inner)
           ___(inner)
           """
         ensure ['c s', input: '<'],
-          text: """
-          ___<inner>
+          textC: """
+          |___<inner>
           ___(inner)
           """
-          cursor: [0, 0]
         ensure 'j .',
-          text: """
+          textC: """
           ___<inner>
-          ___<inner>
+          |___<inner>
           """
-          cursor: [1, 0]
 
   describe 'ReplaceWithRegister', ->
     originalText = null
@@ -849,8 +921,8 @@ describe "Operator TransformString", ->
         text: originalText
         cursor: [0, 9]
 
-      set register: '"': text: 'default register', type: 'character'
-      set register: 'a': text: 'A register', type: 'character'
+      set register: '"': text: 'default register', type: 'characterwise'
+      set register: 'a': text: 'A register', type: 'characterwise'
 
     it "replace selection with regisgter's content", ->
       ensure 'v i w',
@@ -893,8 +965,8 @@ describe "Operator TransformString", ->
         text: originalText
         cursor: [0, 9]
 
-      set register: '"': text: 'default register', type: 'character'
-      set register: 'a': text: 'A register', type: 'character'
+      set register: '"': text: 'default register', type: 'characterwise'
+      set register: 'a': text: 'A register', type: 'characterwise'
 
     it "swap selection with regisgter's content", ->
       ensure 'v i w', selectedText: 'aaa'
@@ -929,45 +1001,142 @@ describe "Operator TransformString", ->
         text: originalText.replace('111', 'A register')
         register: 'a': text: '111'
 
-  describe 'Reverse and Sort', ->
+  describe "Join and it's family", ->
     beforeEach ->
-      atom.keymaps.add "test",
-        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-          'g r':   'vim-mode-plus:reverse'
-          'g s':   'vim-mode-plus:sort'
       set
-        text: """
-        a
-        2
-        c
-        3
-        1
-        b
-
+        textC_: """
+        __0|12
+        __345
+        __678
+        __9ab\n
         """
-        cursor: [2, 0]
 
-    it 'sort rows, reverse rows', ->
-      ensure "g s i p", ->
-        text: """
-        1
-        2
-        3
-        a
-        b
-        c
+    describe "Join", ->
+      it "joins lines with triming leading whitespace", ->
+        ensure 'J',
+          textC_: """
+          __012| 345
+          __678
+          __9ab\n
+          """
+        ensure '.',
+          textC_: """
+          __012 345| 678
+          __9ab\n
+          """
+        ensure '.',
+          textC_: """
+          __012 345 678| 9ab\n
+          """
 
-        """
-      ensure "g r i p", ->
-        text: """
-        c
-        b
-        a
-        3
-        2
-        1
+        ensure 'u',
+          textC_: """
+          __012 345| 678
+          __9ab\n
+          """
+        ensure 'u',
+          textC_: """
+          __012| 345
+          __678
+          __9ab\n
+          """
+        ensure 'u',
+          textC_: """
+          __0|12
+          __345
+          __678
+          __9ab\n
+          """
 
-        """
+    describe "JoinWithKeepingSpace", ->
+      beforeEach ->
+        atom.keymaps.add "test",
+          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+            'g J': 'vim-mode-plus:join-with-keeping-space'
+
+      it "joins lines without triming leading whitespace", ->
+        ensure 'g J',
+          textC_: """
+          __0|12__345
+          __678
+          __9ab\n
+          """
+        ensure '.',
+          textC_: """
+          __0|12__345__678
+          __9ab\n
+          """
+        ensure 'u u',
+          textC_: """
+          __0|12
+          __345
+          __678
+          __9ab\n
+          """
+        ensure '4 g J',
+          textC_: """
+          __0|12__345__678__9ab\n
+          """
+
+    describe "JoinByInput", ->
+      beforeEach ->
+        atom.keymaps.add "test",
+          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+            'g J': 'vim-mode-plus:join-by-input'
+
+      it "joins lines by char from user with triming leading whitespace", ->
+        ensure 'g J : : enter',
+          textC_: """
+          __0|12::345
+          __678
+          __9ab\n
+          """
+        ensure '.',
+          textC_: """
+          __0|12::345::678
+          __9ab\n
+          """
+        ensure 'u u',
+          textC_: """
+          __0|12
+          __345
+          __678
+          __9ab\n
+          """
+        ensure '4 g J : : enter',
+          textC_: """
+          __0|12::345::678::9ab\n
+          """
+
+    describe "JoinByInputWithKeepingSpace", ->
+      beforeEach ->
+        atom.keymaps.add "test",
+          'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+            'g J': 'vim-mode-plus:join-by-input-with-keeping-space'
+
+      it "joins lines by char from user without triming leading whitespace", ->
+        ensure 'g J : : enter',
+          textC_: """
+          __0|12::__345
+          __678
+          __9ab\n
+          """
+        ensure '.',
+          textC_: """
+          __0|12::__345::__678
+          __9ab\n
+          """
+        ensure 'u u',
+          textC_: """
+          __0|12
+          __345
+          __678
+          __9ab\n
+          """
+        ensure '4 g J : : enter',
+          textC_: """
+          __0|12::__345::__678::__9ab\n
+          """
 
   describe 'ToggleLineComments', ->
     [oldGrammar, originalText] = []
@@ -1021,3 +1190,141 @@ describe "Operator TransformString", ->
         """
 
       ensure '.', text: originalText
+
+  describe "SplitString, SplitStringWithKeepingSplitter", ->
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'g /': 'vim-mode-plus:split-string'
+          'g ?': 'vim-mode-plus:split-string-with-keeping-splitter'
+      set
+        textC: """
+        |a:b:c
+        d:e:f\n
+        """
+    describe "SplitString", ->
+      it "split string into lines", ->
+        ensure "g / : enter",
+          textC: """
+          |a
+          b
+          c
+          d:e:f\n
+          """
+        ensure "G .",
+          textC: """
+          a
+          b
+          c
+          |d
+          e
+          f\n
+          """
+    describe "SplitStringWithKeepingSplitter", ->
+      it "split string into lines without removing spliter char", ->
+        ensure "g ? : enter",
+          textC: """
+          |a:
+          b:
+          c
+          d:e:f\n
+          """
+        ensure "G .",
+          textC: """
+          a:
+          b:
+          c
+          |d:
+          e:
+          f\n
+          """
+
+  describe "Reverse, Sort, SortByNumber", ->
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'g r': 'vim-mode-plus:reverse'
+          'g s': 'vim-mode-plus:sort'
+          'g S': 'vim-mode-plus:sort-by-number'
+      set
+        textC: """
+        |z
+
+        10a
+        b
+        a
+
+        5
+        1\n
+        """
+    describe "Reverse", ->
+      it "reverse rows", ->
+        ensure 'g r G',
+          textC: """
+          |1
+          5
+
+          a
+          b
+          10a
+
+          z\n
+          """
+    describe "Sort", ->
+      it "sort rows", ->
+        ensure 'g s G',
+          textC: """
+          |
+
+          1
+          10a
+          5
+          a
+          b
+          z\n
+          """
+    describe "SortByNumber", ->
+      it "sort rows numerically", ->
+        ensure "g S G",
+          textC: """
+          |1
+          5
+          10a
+          z
+
+          b
+          a
+          \n
+          """
+
+  describe "SortCaseInsensitively", ->
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'g s': 'vim-mode-plus:sort-case-insensitively'
+    it "Sort rows case-insensitively", ->
+      set
+        textC: """
+        |apple
+        Beef
+        APPLE
+        DOG
+        beef
+        Apple
+        BEEF
+        Dog
+        dog
+        """
+
+      ensure "g s G", ->
+        text: """
+        apple
+        Apple
+        APPLE
+        beef
+        Beef
+        BEEF
+        dog
+        Dog
+        DOG
+        """

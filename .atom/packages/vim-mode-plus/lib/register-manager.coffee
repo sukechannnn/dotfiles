@@ -1,4 +1,6 @@
 settings = require './settings'
+{CompositeDisposable} = require 'atom'
+Input = require './input'
 
 REGISTERS = /// (
   ?: [a-zA-Z*+%_".]
@@ -129,12 +131,15 @@ class RegisterManager
     if name?
       @name = name if @isValidName(name)
     else
-      @vimState.hover.add '"'
-      @vimState.onDidConfirmInput (@name) =>
-        @vimState.toggleClassList('with-register', @hasName())
-        @vimState.hover.add(@name)
-      @vimState.onDidCancelInput => @vimState.hover.reset()
-      @vimState.input.focus(1)
+      @vimState.hover.set('"')
+
+      inputUI = new Input(@vimState)
+      inputUI.onDidConfirm (@name) =>
+        @vimState.toggleClassList('with-register', true)
+        @vimState.hover.set('"' + @name)
+      inputUI.onDidCancel =>
+        @vimState.hover.reset()
+      inputUI.focus(1)
 
   getCopyType: (text) ->
     if text.lastIndexOf("\n") is text.length - 1
@@ -142,7 +147,6 @@ class RegisterManager
     else if text.lastIndexOf("\r") is text.length - 1
       'linewise'
     else
-      # [FIXME] should characterwise or line and character
-      'character'
+      'characterwise'
 
 module.exports = RegisterManager

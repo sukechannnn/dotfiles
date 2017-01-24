@@ -45,29 +45,34 @@ class SearchInput extends HTMLElement
     atom.commands.add @editorElement,
       'core:confirm': => @confirm()
       'core:cancel': => @cancel()
-      'blur': => @cancel() unless @finished
+      'core:backspace': => @backspace()
       'vim-mode-plus:input-cancel': => @cancel()
 
   focus: (@options={}) ->
     @finished = false
 
-    @editorElement.classList.add('backwards') if @options.backwards
+    @editorElement.classList.add(@options.classList...) if @options.classList?
     @panel.show()
     @editorElement.focus()
-    @commandSubscriptions = @handleEvents()
+
+    @focusSubscriptions = new CompositeDisposable
+    @focusSubscriptions.add @handleEvents()
+    cancel = @cancel.bind(this)
+    @vimState.editorElement.addEventListener('click', cancel)
+    # Cancel on mouse click
+    @focusSubscriptions.add new Disposable =>
+      @vimState.editorElement.removeEventListener('click', cancel)
 
     # Cancel on tab switch
-    disposable = atom.workspace.onDidChangeActivePaneItem =>
-      disposable.dispose()
-      @cancel() unless @finished
+    @focusSubscriptions.add(atom.workspace.onDidChangeActivePaneItem(cancel))
 
   unfocus: ->
-    @editorElement.classList.remove('backwards')
+    @finished = true
+    @editorElement.classList.remove(@options.classList...) if @options?.classList?
     @regexSearchStatus.classList.add 'btn-primary'
     @literalModeDeactivator?.dispose()
 
-    @commandSubscriptions?.dispose()
-    @finished = true
+    @focusSubscriptions?.dispose()
     atom.workspace.getActivePane().activate()
     @editor.setText ''
     @panel?.hide()
@@ -93,8 +98,12 @@ class SearchInput extends HTMLElement
     @panel?.isVisible()
 
   cancel: ->
+    return if @finished
     @emitter.emit('did-cancel')
     @unfocus()
+
+  backspace: ->
+    @cancel() if @editor.getText().length is 0
 
   confirm: (landingPoint=null) ->
     @emitter.emit('did-confirm', {input: @editor.getText(), landingPoint})
@@ -114,7 +123,7 @@ class SearchInput extends HTMLElement
     newCommands
 
   initialize: (@vimState) ->
-    @vimState.onDidFailToSetTarget =>
+    @vimState.onDidFailToPushToOperationStack =>
       @cancel()
 
     @disposables = new CompositeDisposable
@@ -123,6 +132,11 @@ class SearchInput extends HTMLElement
     @registerCommands()
     this
 
+  emitDidCommand: (name, options={}) ->
+    options.name = name
+    options.input = @editor.getText()
+    @emitter.emit('did-command', options)
+
   registerCommands: ->
     atom.commands.add @editorElement, @stopPropagation(
       "search-confirm": => @confirm()
@@ -130,12 +144,13 @@ class SearchInput extends HTMLElement
       "search-land-to-end": => @confirm('end')
       "search-cancel": => @cancel()
 
-      "search-visit-next": => @emitter.emit('did-command', name: 'visit', direction: 'next')
-      "search-visit-prev": => @emitter.emit('did-command', name: 'visit', direction: 'prev')
+      "search-visit-next": => @emitDidCommand('visit', direction: 'next')
+      "search-visit-prev": => @emitDidCommand('visit', direction: 'prev')
 
-      "select-occurrence-from-search": => @emitter.emit('did-command', name: 'occurrence', operation: 'SelectOccurrence')
-      "change-occurrence-from-search": => @emitter.emit('did-command', name: 'occurrence', operation: 'ChangeOccurrence')
-      "add-occurrence-pattern-from-search": => @emitter.emit('did-command', name: 'occurrence')
+      "select-occurrence-from-search": => @emitDidCommand('occurrence', operation: 'SelectOccurrence')
+      "change-occurrence-from-search": => @emitDidCommand('occurrence', operation: 'ChangeOccurrence')
+      "add-occurrence-pattern-from-search": => @emitDidCommand('occurrence')
+      "project-find-from-search": => @emitDidCommand('project-find')
 
       "search-insert-wild-pattern": => @editor.insertText('.*?')
       "search-activate-literal-mode": => @activateLiteralMode()

@@ -7,6 +7,7 @@ StatusBarManager = require './status-bar-manager'
 globalState = require './global-state'
 settings = require './settings'
 VimState = require './vim-state'
+{forEachPaneAxis, addClassList, removeClassList} = require './utils'
 
 module.exports =
   config: settings.config
@@ -14,7 +15,6 @@ module.exports =
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @statusBarManager = new StatusBarManager
-    @vimStatesByEditor = new Map
     @emitter = new Emitter
 
     service = @provideVimModePlus()
@@ -23,29 +23,27 @@ module.exports =
     @registerVimStateCommands()
 
     if atom.inDevMode()
-      developer = (new (require './developer'))
+      developer = new (require './developer')
       @subscribe(developer.init(service))
 
     @subscribe @observeVimMode ->
       message = """
-      ## Message by vim-mode-plus: vim-mode detected!
-      To use vim-mode-plus, you must **disable vim-mode** manually.
-      """.replace(/_/g, ' ')
+        ## Message by vim-mode-plus: vim-mode detected!
+        To use vim-mode-plus, you must **disable vim-mode** manually.
+        """
       atom.notifications.addWarning(message, dismissable: true)
 
     @subscribe atom.workspace.observeTextEditors (editor) =>
       return if editor.isMini()
       vimState = new VimState(editor, @statusBarManager, globalState)
-      @vimStatesByEditor.set(editor, vimState)
-      @subscribe editor.onDidDestroy =>
-        vimState.destroy()
-        @vimStatesByEditor.delete(editor)
-
       @emitter.emit('did-add-vim-state', vimState)
 
-    workspaceClassList = atom.views.getView(atom.workspace).classList
-    @subscribe atom.workspace.onDidChangeActivePane ->
-      workspaceClassList.remove('vim-mode-plus-pane-maximized', 'hide-tab-bar')
+    @subscribe atom.workspace.onDidChangeActivePane(@demaximizePane.bind(this))
+
+    @subscribe atom.workspace.onDidChangeActivePaneItem ->
+      if settings.get('automaticallyEscapeInsertModeOnActivePaneItemChange')
+        VimState.forEach (vimState) ->
+          vimState.activate('normal') if vimState.mode is 'insert'
 
     @subscribe atom.workspace.onDidStopChangingActivePaneItem (item) =>
       if atom.workspace.isTextEditor(item)
@@ -56,8 +54,7 @@ module.exports =
     @subscribe settings.observe 'highlightSearch', (newValue) ->
       if newValue
         # Re-setting value trigger highlightSearch refresh
-        value = globalState.get('highlightSearchPattern')
-        globalState.set('highlightSearchPattern', value)
+        globalState.set('highlightSearchPattern', globalState.get('lastSearchPattern'))
       else
         globalState.set('highlightSearchPattern', null)
 
@@ -77,7 +74,7 @@ module.exports =
   #   observeVimStates (vimState) -> do something..
   # Returns a {Disposable} on which `.dispose()` can be called to unsubscribe.
   observeVimStates: (fn) ->
-    @vimStatesByEditor.forEach(fn)
+    VimState.forEach(fn)
     @onDidAddVimState(fn)
 
   clearPersistentSelectionForEditors: ->
@@ -86,8 +83,9 @@ module.exports =
 
   deactivate: ->
     @subscriptions.dispose()
-    @vimStatesByEditor.forEach (vimState) ->
+    VimState.forEach (vimState) ->
       vimState.destroy()
+    VimState.clear()
 
   subscribe: (arg) ->
     @subscriptions.add(arg)
@@ -105,15 +103,54 @@ module.exports =
 
     @subscribe atom.commands.add 'atom-workspace',
       'vim-mode-plus:maximize-pane': => @maximizePane()
+      'vim-mode-plus:equalize-panes': => @equalizePanes()
+
+  demaximizePane: ->
+    if @maximizePaneDisposable?
+      @maximizePaneDisposable.dispose()
+      @unsubscribe(@maximizePaneDisposable)
+      @maximizePaneDisposable = null
 
   maximizePane: ->
-    selector = 'vim-mode-plus-pane-maximized'
-    classList = atom.views.getView(atom.workspace).classList
-    classList.toggle(selector)
-    if classList.contains(selector)
-      classList.add('hide-tab-bar') if settings.get('hideTabBarOnMaximizePane')
-    else
-      classList.remove('hide-tab-bar')
+    if @maximizePaneDisposable?
+      @demaximizePane()
+      return
+
+    getView = (model) -> atom.views.getView(model)
+    classPaneMaximized = 'vim-mode-plus--pane-maximized'
+    classHideTabBar = 'vim-mode-plus--hide-tab-bar'
+    classHideStatusBar = 'vim-mode-plus--hide-status-bar'
+    classActivePaneAxis = 'vim-mode-plus--active-pane-axis'
+
+    workspaceElement = getView(atom.workspace)
+    paneElement = getView(atom.workspace.getActivePane())
+
+    workspaceClassNames = [classPaneMaximized]
+    workspaceClassNames.push(classHideTabBar) if settings.get('hideTabBarOnMaximizePane')
+    workspaceClassNames.push(classHideStatusBar) if settings.get('hideStatusBarOnMaximizePane')
+
+    addClassList(workspaceElement, workspaceClassNames...)
+
+    forEachPaneAxis (axis) ->
+      paneAxisElement = getView(axis)
+      if paneAxisElement.contains(paneElement)
+        addClassList(paneAxisElement, classActivePaneAxis)
+
+    @maximizePaneDisposable = new Disposable ->
+      forEachPaneAxis (axis) ->
+        removeClassList(getView(axis), classActivePaneAxis)
+      removeClassList(workspaceElement, workspaceClassNames...)
+
+    @subscribe(@maximizePaneDisposable)
+
+  equalizePanes: ->
+    setFlexScale = (newValue, base) ->
+      base ?= atom.workspace.getActivePane().getContainer().getRoot()
+      base.setFlexScale(newValue)
+      for child in base.children ? []
+        setFlexScale(newValue, child)
+
+    setFlexScale(1)
 
   registerVimStateCommands: ->
     # all commands here is executed with context where 'this' binded to 'vimState'
@@ -128,7 +165,8 @@ module.exports =
       'set-register-name-to-*': -> @register.setName('*')
       'operator-modifier-characterwise': -> @emitDidSetOperatorModifier(wise: 'characterwise')
       'operator-modifier-linewise': -> @emitDidSetOperatorModifier(wise: 'linewise')
-      'operator-modifier-occurrence': -> @emitDidSetOperatorModifier(occurrence: true)
+      'operator-modifier-occurrence': -> @emitDidSetOperatorModifier(occurrence: true, occurrenceType: 'base')
+      'operator-modifier-subword-occurrence': -> @emitDidSetOperatorModifier(occurrence: true, occurrenceType: 'subword')
       'repeat': -> @operationStack.runRecorded()
       'repeat-find': -> @operationStack.runCurrentFind()
       'repeat-find-reverse': -> @operationStack.runCurrentFind(reverse: true)
@@ -178,7 +216,7 @@ module.exports =
     globalState
 
   getEditorState: (editor) ->
-    @vimStatesByEditor.get(editor)
+    VimState.getByEditor(editor)
 
   provideVimModePlus: ->
     Base: Base
