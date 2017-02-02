@@ -13,7 +13,8 @@ fi
 export PATH="$HOME/.anyenv/bin:$PATH"
 eval "$(anyenv init -)"
 
-export GOPATH="$HOME/Develop/Golang/gopath"
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin" 
 
 export PGDATA="/usr/local/var/postgres"
 
