@@ -17,15 +17,6 @@
     audioBeep: false
     disabledPackages: [
       "vim-mode"
-      "autocomplete-go"
-      "builder-go"
-      "go-config"
-      "go-get"
-      "go-plus"
-      "gofmt"
-      "gometalinter-linter"
-      "gorename"
-      "tester-go"
       "language-gfm"
       "atom-ctags"
       "spell-check"
@@ -35,7 +26,7 @@
       "environment"
       "language-elixir"
       "language-slim"
-      "navigator-go"
+      "go-plus"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false

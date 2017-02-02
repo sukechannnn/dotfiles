@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117011-35075-z8qmn6"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11711-20465-3mkdut"
     ]
   ],
-  "_from": "../d-117011-35075-1k1jes7/package.tgz",
-  "_id": "go-plus@5.1.0",
+  "_from": "../d-11711-20465-18tfbid/package.tgz",
+  "_id": "go-plus@5.1.1",
   "_inCache": true,
   "_installable": true,
   "_location": "/go-plus",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-117011-35075-1k1jes7/package.tgz",
-  "_shasum": "532d0c411831436f8104f75aafece7ea2d5668a0",
+  "_resolved": "file:../d-11711-20465-18tfbid/package.tgz",
+  "_shasum": "0b9832238ca75bb1d7cbb892e6ce997d8361abdb",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35075-1k1jes7/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117011-35075-z8qmn6",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11711-20465-3mkdut",
   "activationCommands": {
     "atom-workspace": [
       "golang:get-package",
@@ -480,7 +480,7 @@
       "waitsForPromise"
     ]
   },
-  "version": "5.1.0",
+  "version": "5.1.1",
   "warnings": [
     {
       "code": "ENOTSUP",
@@ -488,7 +488,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.1.0"
+      "pkgid": "go-plus@5.1.1"
     },
     {
       "code": "ENOTSUP",
@@ -496,7 +496,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.1.0"
+      "pkgid": "go-plus@5.1.1"
     }
   ]
 }
