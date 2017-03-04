@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11711-20465-3mkdut"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13651-raxasq"
     ]
   ],
-  "_from": "../d-11711-20465-18tfbid/package.tgz",
-  "_id": "go-plus@5.1.1",
+  "_from": "../d-11724-13651-g0qa02/package.tgz",
+  "_id": "go-plus@5.2.0",
   "_inCache": true,
   "_installable": true,
   "_location": "/go-plus",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11711-20465-18tfbid/package.tgz",
-  "_shasum": "0b9832238ca75bb1d7cbb892e6ce997d8361abdb",
+  "_resolved": "file:../d-11724-13651-g0qa02/package.tgz",
+  "_shasum": "b3aa9db6a5d5c585955be1ccc701f608fca87d7d",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11711-20465-18tfbid/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11711-20465-3mkdut",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13651-raxasq",
   "activationCommands": {
     "atom-workspace": [
       "golang:get-package",
@@ -396,18 +396,16 @@
     }
   },
   "dependencies": {
-    "ansi-to-html": "^0.5.0",
+    "ansi-to-html": "^0.6.0",
     "etch": "^0.8.0",
     "etch-octicon": "^0.1.0",
-    "fs-plus": "^2.9.3",
+    "fs-extra": "^2.0.0",
     "lodash": "^4.17.4",
-    "rimraf": "^2.5.4",
     "semver": "^5.3.0",
     "temp": "^0.8.3"
   },
   "description": "Makes working with Go in Atom awesome.",
   "devDependencies": {
-    "fs-extra": "^1.0.0",
     "standard": "^8.6.0"
   },
   "engines": {
@@ -480,7 +478,7 @@
       "waitsForPromise"
     ]
   },
-  "version": "5.1.1",
+  "version": "5.2.0",
   "warnings": [
     {
       "code": "ENOTSUP",
@@ -488,7 +486,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.1.1"
+      "pkgid": "go-plus@5.2.0"
     },
     {
       "code": "ENOTSUP",
@@ -496,7 +494,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.1.1"
+      "pkgid": "go-plus@5.2.0"
     }
   ]
 }

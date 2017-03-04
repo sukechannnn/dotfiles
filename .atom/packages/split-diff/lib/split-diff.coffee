@@ -18,8 +18,9 @@ module.exports = SplitDiff =
   process: null
 
   activate: (state) ->
-    @subscriptions = new CompositeDisposable()
+    window.splitDiffResolves = []
 
+    @subscriptions = new CompositeDisposable()
     @subscriptions.add atom.commands.add 'atom-workspace, .tree-view .selected, .tab.texteditor',
       'split-diff:enable': (e) =>
         @diffPanes(e)
@@ -90,6 +91,10 @@ module.exports = SplitDiff =
     @wasEditor1Created = false
     @wasEditor2Created = false
     @hasGitRepo = false
+
+    # auto hide tree view while diffing #82
+    if @_getConfig('hideTreeView')
+      atom.commands.dispatch(atom.views.getView(atom.workspace), 'tree-view:show')
 
   # called by "toggle ignore whitespace" command
   # toggles ignoring whitespace and refreshes the diff
@@ -202,6 +207,10 @@ module.exports = SplitDiff =
   updateDiff: (editors) ->
     @isEnabled = true
 
+    # auto hide tree view while diffing #82
+    if @_getConfig('hideTreeView') && document.querySelector('.tree-view')
+      atom.commands.dispatch(atom.views.getView(atom.workspace), 'tree-view:toggle')
+
     # if there is a diff being computed in the background, cancel it
     if @process?
       @process.kill()
@@ -253,6 +262,9 @@ module.exports = SplitDiff =
     if @_getConfig('rightEditorColor') == 'green'
       rightHighlightType = 'added'
     @diffView.displayDiff(computedDiff, leftHighlightType, rightHighlightType, @_getConfig('diffWords'), @_getConfig('ignoreWhitespace'))
+
+    while window.splitDiffResolves?.length
+      window.splitDiffResolves.pop()(@diffView.getMarkerLayers())
 
     @footerView?.setNumDifferences(@diffView.getNumDifferences())
 
@@ -403,3 +415,12 @@ module.exports = SplitDiff =
 
   _setConfig: (config, value) ->
     atom.config.set("split-diff.#{config}", value)
+
+
+  # --- SERVICE API ---
+  getMarkerLayers: () ->
+    new Promise (resolve, reject) ->
+      window.splitDiffResolves.push(resolve)
+
+  provideSplitDiff: ->
+    getMarkerLayers: @getMarkerLayers

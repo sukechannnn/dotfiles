@@ -14,7 +14,7 @@ class AtomTernjs {
 
   activate() {
 
-    manager.init();
+    manager.activate();
   }
 
   deactivate() {
@@ -28,6 +28,7 @@ class AtomTernjs {
   }
 
   provideHyperclick() {
+    
     return hyperclick;
   }
 }

@@ -1,6 +1,19 @@
-## 1.1.1 - 2017-11-06
-* Fixed styling deprecation warnings due to removal of shadow DOM #86
+## 1.2.0 - 2017-02-20
+* Added option to automatically hide Tree View while diffing #82
+* Added information about style customization to README
+
+## 1.1.4 - 2017-02-12
+* Rerelease changes made for v1.1.2 but scoped to Atom v1.14 and greater
+
+## 1.1.3 - 2017-02-12
+* Fixed error in Atom v1.13 due to MarkerLayer bug (rollback changes) #92
+
+## 1.1.2 - 2017-02-09
 * Fixed marker deprecation warnings due to an optional property removal in 1.8 #87
+* Added service API for getting marker layers and related metadata
+
+## 1.1.1 - 2017-01-09
+* Fixed styling deprecation warnings due to removal of shadow DOM #86
 
 ## 1.1.0 - 2016-11-29
 * Added ability to diff active file with right click in tree view or tab header #9
@@ -152,7 +165,7 @@
 * Added keywords for finding this package easier in atom's package collection
 
 ## 0.3.2 - 2015-09-23
-* Updated README with demonstration gif
+* Updated README with demo gif
 
 ## 0.3.1 - 2015-09-23
 * Fixed package compile errors

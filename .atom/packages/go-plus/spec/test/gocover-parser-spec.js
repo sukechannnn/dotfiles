@@ -1,7 +1,8 @@
 'use babel'
 /* eslint-env jasmine */
+
 import {ranges} from './../../lib/test/gocover-parser'
-import fs from 'fs-plus'
+import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import _ from 'lodash'
@@ -13,21 +14,19 @@ describe('gocover-parser', () => {
   let directory
   let filePath
   let testFilePath
-  let mainModule
 
   beforeEach(() => {
     runs(() => {
       lifecycle.setup()
-      atom.packages.triggerDeferredActivationHooks()
-      let pack = atom.packages.loadPackage('go-plus')
-      pack.activateNow()
-      atom.packages.triggerActivationHook('core:loaded-shell-environment')
-      atom.packages.triggerActivationHook('language-go:grammar-used')
-      mainModule = pack.mainModule
-      goconfig = pack.mainModule.provideGoConfig()
     })
 
-    waitsFor(() => { return mainModule && mainModule.loaded })
+    waitsForPromise(() => {
+      return lifecycle.activatePackage()
+    })
+
+    runs(() => {
+      goconfig = lifecycle.mainModule.provideGoConfig()
+    })
 
     runs(() => {
       directory = lifecycle.temp.mkdirSync()
@@ -35,6 +34,8 @@ describe('gocover-parser', () => {
       env['GOPATH'] = directory
       filePath = path.join(directory, 'src', 'github.com', 'testuser', 'example', 'go-plus.go')
       testFilePath = path.join(directory, 'src', 'github.com', 'testuser', 'example', 'go-plus_test.go')
+      fs.ensureDirSync(path.dirname(filePath))
+      fs.ensureDirSync(path.dirname(testFilePath))
       fs.writeFileSync(filePath, 'package main\n\nimport "fmt"\n\nfunc main()  {\n\tfmt.Println(Hello())\n}\n\nfunc Hello() string {\n\treturn "Hello, 世界"\n}\n')
       fs.writeFileSync(testFilePath, 'package main\n\nimport "testing"\n\nfunc TestHello(t *testing.T) {\n\tresult := Hello()\n\tif result != "Hello, 世界" {\n\t\tt.Errorf("Expected %s - got %s", "Hello, 世界", result)\n\t}\n}')
     })

@@ -9,10 +9,12 @@ import {uniq} from 'underscore-plus';
 import path from 'path';
 import {TextBuffer} from 'atom';
 import {
+  disposeAll,
   openFileAndGoTo,
   focusEditor
 } from './atom-ternjs-helper';
 import navigation from './services/navigation';
+import debug from './services/debug';
 
 class Reference {
 
@@ -21,20 +23,27 @@ class Reference {
     this.disposables = [];
     this.references = [];
 
+    this.referenceView = null;
+    this.referencePanel = null;
+
+    this.hideHandler = this.hide.bind(this);
+    this.findReferenceListener = this.findReference.bind(this);
+  }
+
+  init() {
+
     this.referenceView = new ReferenceView();
     this.referenceView.initialize(this);
 
     this.referencePanel = atom.workspace.addBottomPanel({
 
       item: this.referenceView,
-      priority: 0
+      priority: 0,
+      visible: false
     });
-
-    this.referencePanel.hide();
 
     atom.views.getView(this.referencePanel).classList.add('atom-ternjs-reference-panel', 'panel-bottom');
 
-    this.hideHandler = this.hide.bind(this);
     emitter.on('reference-hide', this.hideHandler);
 
     this.registerCommands();
@@ -42,7 +51,7 @@ class Reference {
 
   registerCommands() {
 
-    this.disposables.push(atom.commands.add('atom-text-editor', 'atom-ternjs:references', this.findReference.bind(this)));
+    this.disposables.push(atom.commands.add('atom-text-editor', 'atom-ternjs:references', this.findReferenceListener));
   }
 
   goToReference(idx) {
@@ -97,8 +106,10 @@ class Reference {
         data = this.gatherMeta(data);
         this.referenceView.buildItems(data);
         this.referencePanel.show();
-      });
-    });
+      })
+      .catch(debug.handleCatchWithNotification);
+    })
+    .catch(debug.handleCatch);
   }
 
   gatherMeta(data) {
@@ -119,15 +130,7 @@ class Reference {
 
   hide() {
 
-    if (
-      !this.referencePanel ||
-      !this.referencePanel.visible
-    ) {
-
-      return;
-    }
-
-    this.referencePanel.hide();
+    this.referencePanel && this.referencePanel.hide();
 
     focusEditor();
   }
@@ -138,6 +141,12 @@ class Reference {
   }
 
   destroy() {
+
+    emitter.off('reference-hide', this.hideHandler);
+
+    disposeAll(this.disposables);
+    this.disposables = [];
+    this.references = [];
 
     this.referenceView && this.referenceView.destroy();
     this.referenceView = null;

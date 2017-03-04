@@ -2,38 +2,31 @@
 /* eslint-env jasmine */
 
 import path from 'path'
-import fs from 'fs-plus'
+import fs from 'fs-extra'
 import {lifecycle} from './../spec-helpers'
 
 describe('go to definition', () => {
   let godef = null
   let gopath = null
-  let mainModule = null
 
   beforeEach(() => {
     runs(() => {
       lifecycle.setup()
-      atom.packages.triggerDeferredActivationHooks()
+
       gopath = fs.realpathSync(lifecycle.temp.mkdirSync('gopath-'))
       process.env.GOPATH = gopath
     })
 
     waitsForPromise(() => {
-      return atom.packages.activatePackage('language-go')
+      return lifecycle.activatePackage()
     })
 
     runs(() => {
-      let pack = atom.packages.loadPackage('go-plus')
-      pack.activateNow()
-      atom.packages.triggerActivationHook('core:loaded-shell-environment')
-      atom.packages.triggerActivationHook('language-go:grammar-used')
-      mainModule = pack.mainModule
+      const { mainModule } = lifecycle
       mainModule.provideGoConfig()
       mainModule.provideGoGet()
       godef = mainModule.getGodef()
     })
-
-    waitsFor(() => { return mainModule && mainModule.loaded })
   })
 
   afterEach(() => {
@@ -88,12 +81,33 @@ describe('go to definition', () => {
 
     describe('when using the guru navigator mode', () => {
       beforeEach(() => {
-        atom.config.set('go-plus.navigator.mode', 'godef')
+        atom.config.set('go-plus.navigator.mode', 'guru')
       })
 
       it('navigates to the correct location', () => {
         runs(() => {
-          editor.setCursorBufferPosition([3, 17])
+          editor.setCursorBufferPosition([3, 17]) // at the beginning of -> `Bar()`
+        })
+
+        waitsForPromise(() => {
+          return godef.gotoDefinitionForWordAtCursor()
+        })
+
+        runs(() => {
+          const activeEditor = atom.workspace.getActiveTextEditor()
+          expect(activeEditor.getTitle()).toBe('bar.go')
+
+          const pos = activeEditor.getCursorBufferPosition()
+          expect(pos.row).toBe(2)
+          expect(pos.column).toBe(5)
+
+          expect(godef.navigationStack.isEmpty()).toBe(false)
+        })
+      })
+
+      it('navigates to the correct location if at the end of a word', () => {
+        runs(() => {
+          editor.setCursorBufferPosition([3, 20]) // at the end of `Bar()` <-
         })
 
         waitsForPromise(() => {

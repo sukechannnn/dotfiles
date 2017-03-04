@@ -1,17 +1,21 @@
 'use babel';
 
+import path from 'path';
 import manager from './atom-ternjs-manager';
 import packageConfig from './atom-ternjs-package-config';
 import {
   openFileAndGoTo
 } from './atom-ternjs-helper';
 import navigation from './services/navigation';
+import {messages} from './services/debug';
 
 export default class Client {
 
   constructor(projectDir) {
 
     this.projectDir = projectDir;
+    // collection files the server currently holds in its set of analyzed files
+    this.analyzedFiles = [];
   }
 
   completions(file, end) {
@@ -21,7 +25,7 @@ export default class Client {
       query: {
 
         type: 'completions',
-        file: file,
+        file: path.normalize(file),
         end: end,
         types: true,
         includeKeywords: true,
@@ -43,7 +47,7 @@ export default class Client {
       query: {
 
         type: 'documentation',
-        file: file,
+        file: path.normalize(file),
         end: end
       }
     });
@@ -56,7 +60,7 @@ export default class Client {
       query: {
 
         type: 'refs',
-        file: file,
+        file: path.normalize(file),
         end: end
       }
     });
@@ -66,13 +70,13 @@ export default class Client {
 
     if (editorMeta) {
 
-      editorMeta.diffs = [];
+      editorMeta.isDirty = false;
     }
 
     return this.post('query', { files: [{
 
       type: 'full',
-      name: atom.project.relativizePath(editor.getURI())[1],
+      name: path.normalize(atom.project.relativizePath(editor.getURI())[1]),
       text: editor.getText()
     }]});
   }
@@ -81,13 +85,13 @@ export default class Client {
 
     if (editorMeta) {
 
-      editorMeta.diffs = [];
+      editorMeta.isDirty = false;
     }
 
     return this.post('query', [{
 
       type: 'full',
-      name: atom.project.relativizePath(editor.getURI())[1],
+      name: path.normalize(atom.project.relativizePath(editor.getURI())[1]),
       offset: {
 
         line: start,
@@ -99,8 +103,26 @@ export default class Client {
 
   update(editor) {
 
-    const editorMeta = manager.getEditor(editor);
-    const file = atom.project.relativizePath(editor.getURI())[1].replace(/\\/g, '/');
+    const editorMeta = manager.getEditor(editor.id);
+
+    if (!editorMeta) {
+
+      return Promise.reject();
+    }
+
+    if (!editorMeta.isDirty) {
+
+      return Promise.resolve({});
+    }
+
+    const uRI = editor.getURI();
+
+    if (!uRI) {
+
+      return Promise.reject({type: 'info', message: messages.noURI});
+    }
+
+    const file = path.normalize(atom.project.relativizePath(uRI)[1]);
 
     // check if this file is excluded via dontLoad
     if (
@@ -111,27 +133,24 @@ export default class Client {
       return Promise.resolve({});
     }
 
+    // do not request files if we already know it is registered
+    if (this.analyzedFiles.includes(file)) {
+
+      return this.updateFull(editor, editorMeta);
+    }
+
     // check if the file is registered, else return
     return this.files().then((data) => {
 
-      if (data.files) {
+      const files = data.files;
 
-        for (let i = 0; i < data.files.length; i++) {
+      if (files) {
 
-          data.files[i] = data.files[i].replace(/\\/g, '/');
-        }
+        files.forEach(file => file = path.normalize(file));
+        this.analyzedFiles = files;
       }
 
-      const registered = data.files && data.files.indexOf(file) > -1;
-
-      if (
-        editorMeta &&
-        editorMeta.diffs.length === 0 &&
-        registered
-      ) {
-
-        return Promise.resolve({});
-      }
+      const registered = files && files.includes(file);
 
       if (registered) {
 
@@ -165,7 +184,7 @@ export default class Client {
       query: {
 
         type: 'rename',
-        file: file,
+        file: path.normalize(file),
         end: end,
         newName: newName
       }
@@ -174,7 +193,7 @@ export default class Client {
 
   type(editor, position) {
 
-    const file = atom.project.relativizePath(editor.getURI())[1];
+    const file = path.normalize(atom.project.relativizePath(editor.getURI())[1]);
     const end = {
 
       line: position.row,
@@ -210,7 +229,7 @@ export default class Client {
       query: {
 
         type: 'definition',
-        file: file,
+        file: path.normalize(file),
         end: end
       }
 
@@ -220,7 +239,8 @@ export default class Client {
 
         if (navigation.set(data)) {
 
-          openFileAndGoTo(data.start, `${project}/${data.file}`);
+          const path_to_go = path.isAbsolute(data.file) ? data.file : `${project}/${data.file}`;
+          openFileAndGoTo(data.start, path_to_go);
         }
       }
     }).catch((err) => {
@@ -233,7 +253,7 @@ export default class Client {
     return this.post('query', {
       query: {
         type: 'definition',
-        file: file,
+        file: path.normalize(file),
         start: {
           line: range.start.row,
           ch: range.start.column

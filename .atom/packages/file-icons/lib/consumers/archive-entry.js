@@ -2,7 +2,7 @@
 
 const {join} = require("path");
 const {statify} = require("../utils/fs.js");
-
+const {normalisePath} = require("../utils/general.js");
 const IconDelegate = require("../service/icon-delegate.js");
 const EntityType = require("../filesystem/entity-type.js");
 const IconNode = require("../service/icon-node.js");
@@ -12,7 +12,7 @@ const Resource = require("../filesystem/resource.js");
 class ArchiveEntry extends Resource{
 	
 	constructor(view, entry, archivePath, isDirectory = false){
-		const path = join(archivePath, entry.path);
+		const path = normalisePath(join(archivePath, entry.path));
 		const type = (isDirectory = !!isDirectory)
 			? EntityType.DIRECTORY
 			: EntityType.FILE;
@@ -20,7 +20,7 @@ class ArchiveEntry extends Resource{
 		
 		this.view        = view;
 		this.entry       = entry;
-		this.archivePath = archivePath;
+		this.archivePath = normalisePath(archivePath);
 		this.unreadable  = true;
 		this.isVirtual   = true;
 		this.isDirectory = isDirectory;
@@ -28,8 +28,10 @@ class ArchiveEntry extends Resource{
 		this.icon        = new IconDelegate(this);
 		
 		const iconElement = isDirectory
-			? view[0].querySelector(".directory.icon")
-			: view[0].spacePenView.name[0];
+			? (view[0] || view).querySelector(".directory.icon")
+			: view[0]
+				? view[0].spacePenView.name[0]
+				: view.firstElementChild;
 		
 		this.iconNode = new IconNode(this, iconElement);
 	}
