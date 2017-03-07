@@ -17,8 +17,9 @@ export default class GoPlusPanel extends EtchComponent {
   render () {
     const panelBodyStyle = {
       'font-family': atom.config.get('editor.fontFamily'),
-      'font-size': atom.config.get('editor.fontSize') + 'px',
-      'line-height': atom.config.get('editor.lineHeight')
+      'font-size': atom.config.get('go-plus.panelFontSize'),
+      'line-height': atom.config.get('editor.lineHeight'),
+      'padding': '10px'
     }
     let panelStyle
     let orientationButtonName
@@ -93,6 +94,10 @@ export default class GoPlusPanel extends EtchComponent {
       ActiveView = EmptyTabView
     }
 
+    if (activeModel && activeModel.tab && activeModel.tab.suppressPadding) {
+      panelBodyStyle.padding = '0px'
+    }
+
     tabs = tabs.map((item) => {
       item.className = 'panel-nav-item'
       if (this.props.model.activeItem === item.key) {
@@ -119,7 +124,7 @@ export default class GoPlusPanel extends EtchComponent {
             <button className='panel-icon-button' onclick={this.handleClose.bind(this)}><Octicon name='x' /></button>
           </div>
         </div>
-        <div ref='panelbody' className='panel-body native-key-bindings' tabIndex='0' style={panelBodyStyle}>
+        <div ref='panelbody' className='go-plus-panel-body panel-body native-key-bindings' tabIndex='0' style={panelBodyStyle}>
           <ActiveView ref={activeRef} model={activeModel} packageName={packageName} />
         </div>
       </atom-panel>
@@ -174,7 +179,7 @@ export default class GoPlusPanel extends EtchComponent {
     this.props.resizeToFit = false
     let height = 0
     height = this.refs.panelbody.scrollHeight
-    const vh = ((height + tabHeight) / window.innerHeight) * 100 + 'vh'
+    const vh = (((height + tabHeight) / window.innerHeight) * 100) + 'vh'
     atom.config.set('go-plus.currentPanelHeight', vh)
     this.update()
   }
@@ -199,12 +204,12 @@ export default class GoPlusPanel extends EtchComponent {
     if (this.props.model.panelOrientation === 'vertical') {
       const width = this.refs.thepanel.getBoundingClientRect().right - e.pageX
       const vwidth = window.innerWidth
-      const vw = (width / vwidth) * 100 + 'vw'
+      const vw = ((width / vwidth) * 100) + 'vw'
       atom.config.set('go-plus.currentPanelWidth', vw)
     } else {
       const height = this.refs.thepanel.getBoundingClientRect().bottom - e.pageY
       const vheight = window.innerHeight
-      const vh = (height / vheight) * 100 + 'vh'
+      const vh = ((height / vheight) * 100) + 'vh'
       atom.config.set('go-plus.currentPanelHeight', vh)
     }
   }

@@ -1,7 +1,6 @@
 {Disposable, CompositeDisposable} = require 'atom'
 Base = require './base'
 {moveCursorLeft} = require './utils'
-settings = require './settings'
 {Select, MoveToRelativeLine} = {}
 {OperationAbortedError} = require './errors'
 swrap = require './selection-wrapper'
@@ -78,7 +77,7 @@ class OperationStack
       if operation.isTextObject() and @mode isnt 'operator-pending' or operation.isMotion() and @mode is 'visual'
         operation = new Select(@vimState).setTarget(operation)
 
-      if @isEmpty() or (@peekTop().isOperator() and operation.isTarget())
+      if @isEmpty() or (@peekTop().isOperator() and operation.canBecomeTarget())
         @stack.push(operation)
         @process()
       else
@@ -126,7 +125,7 @@ class OperationStack
     @processing = true
     if @stack.length is 2
       # [FIXME ideally]
-      # If target is not complete, we postpone compsing target with operator to keep situation simple.
+      # If target is not complete, we postpone composing target with operator to keep situation simple.
       # So that we can assume when target is set to operator it's complete.
       # e.g. `y s t a'(surround for range from here to till a)
       return unless @peekTop().isComplete()
@@ -186,7 +185,7 @@ class OperationStack
     @vimState.clearBlockwiseSelections()
 
     unless @editor.getLastSelection().isEmpty()
-      if settings.get('throwErrorOnNonEmptySelectionInNormalMode')
+      if @vimState.getConfig('devThrowErrorOnNonEmptySelectionInNormalMode')
         throw new Error("Selection is not empty in normal-mode: #{operation.toString()}")
       else
         @vimState.clearSelections()

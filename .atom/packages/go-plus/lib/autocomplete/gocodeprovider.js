@@ -74,7 +74,7 @@ class GocodeProvider {
   toggleGocodeConfig () {
     if (this.goconfig) {
       this.goconfig.locator.findTool('gocode').then((cmd) => {
-        if (!this.goconfig) {
+        if (!cmd) {
           return
         }
         this.goconfig.executor.exec(cmd, ['set', 'unimported-packages', this.unimportedPackages]).then((r) => {
@@ -152,7 +152,6 @@ class GocodeProvider {
 
       const index = buffer.characterIndexForPosition(options.bufferPosition)
       const priorBufferPosition = options.bufferPosition.copy()
-      priorBufferPosition.column
       if (priorBufferPosition.column > 0) {
         priorBufferPosition.column = priorBufferPosition.column - 1
       }

@@ -21,9 +21,6 @@ class BlockwiseSelection
   getSelections: ->
     @selections
 
-  isBlockwise: ->
-    true
-
   isEmpty: ->
     @getSelections().every(isEmpty)
 
@@ -134,10 +131,6 @@ class BlockwiseSelection
     head = @getHeadSelection()
     @clearSelections(except: head)
     head.cursor.setBufferPosition(point)
-
-  removeEmptySelections: ->
-    for selection in @selections.slice() when selection.isEmpty()
-      @removeSelection(selection)
 
   removeSelection: (selection) ->
     _.remove(@selections, selection)

@@ -3,7 +3,6 @@ _ = require 'underscore-plus'
 Base = require './base'
 swrap = require './selection-wrapper'
 {moveCursorLeft} = require './utils'
-settings = require './settings'
 
 class ModeManager
   mode: 'insert' # Native atom is not modal editor and its default is 'insert'
@@ -85,7 +84,7 @@ class ModeManager
   # -------------------------
   activateNormalMode: ->
     @vimState.reset()
-    # [FIXME] Component is not necessary avaiable see #98.
+    # Component is not necessary avaiable see #98.
     @editorElement.component?.setInputEnabled(false)
     new Disposable
 

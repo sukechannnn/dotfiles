@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13651-raxasq"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11727-25901-1eodjft"
     ]
   ],
-  "_from": "../d-11724-13651-g0qa02/package.tgz",
-  "_id": "go-plus@5.2.0",
+  "_from": "../d-11727-25901-11sggpf/package.tgz",
+  "_id": "go-plus@5.3.1",
   "_inCache": true,
   "_installable": true,
   "_location": "/go-plus",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11724-13651-g0qa02/package.tgz",
-  "_shasum": "b3aa9db6a5d5c585955be1ccc701f608fca87d7d",
+  "_resolved": "file:../d-11727-25901-11sggpf/package.tgz",
+  "_shasum": "3625603a31ecfc9ecd5c2744729c43e57871290b",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13651-g0qa02/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13651-raxasq",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11727-25901-11sggpf/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11727-25901-1eodjft",
   "activationCommands": {
     "atom-workspace": [
       "golang:get-package",
@@ -85,6 +85,13 @@
         "vertical"
       ],
       "order": 2
+    },
+    "panelFontSize": {
+      "title": "Panel Font Size",
+      "description": "Control the font size for content displayed in the panel",
+      "type": "string",
+      "default": "1.2em",
+      "order": 3
     },
     "maxPanelHeight": {
       "title": "Maximum Panel Height",
@@ -273,6 +280,19 @@
         }
       }
     },
+    "guru": {
+      "title": "Guru",
+      "type": "object",
+      "properties": {
+        "highlightIdentifiers": {
+          "title": "Highlight Identifiers When Cursor Moves",
+          "description": "When a cursor is moved, highlight all occurrences of the identifier in the document",
+          "type": "boolean",
+          "default": true,
+          "order": 1
+        }
+      }
+    },
     "lint": {
       "title": "Lint",
       "type": "object",
@@ -308,7 +328,7 @@
           "title": "Mode",
           "description": "Use guru or godef for go to definition",
           "type": "string",
-          "default": "guru",
+          "default": "godef",
           "enum": [
             "guru",
             "godef"
@@ -335,19 +355,26 @@
           "default": 60000,
           "order": 2
         },
+        "runTestsWithCoverage": {
+          "title": "Run Tests With Coverage",
+          "description": "Runs `go test` with `-coverprofile` flag set, enabling coverage to be shown in the editor",
+          "type": "boolean",
+          "default": true,
+          "order": 3
+        },
         "runTestsWithShortFlag": {
           "title": "Run Tests With Short Flag Set",
           "description": "Runs `go test` with `-short` flag set",
           "type": "boolean",
           "default": true,
-          "order": 3
+          "order": 4
         },
         "runTestsWithVerboseFlag": {
           "title": "Run Tests With Verbose Flag Set",
           "description": "Runs `go test` with `-v` flag set",
           "type": "boolean",
           "default": false,
-          "order": 4
+          "order": 5
         },
         "coverageHighlightMode": {
           "title": "Coverage Highlight Mode",
@@ -360,7 +387,7 @@
             "uncovered",
             "disabled"
           ],
-          "order": 5
+          "order": 6
         },
         "coverageDisplayMode": {
           "title": "Coverage Display Mode",
@@ -371,14 +398,14 @@
             "highlight",
             "gutter"
           ],
-          "order": 6
+          "order": 7
         },
         "focusPanelIfTestsFail": {
           "title": "Focus The go-plus Panel If Tests Fail",
           "description": "If the panel is hidden, or the panel is showing a different tab, the panel will be expanded and the test tab focused when tests fail.",
           "type": "boolean",
           "default": true,
-          "order": 7
+          "order": 8
         }
       }
     }
@@ -397,7 +424,7 @@
   },
   "dependencies": {
     "ansi-to-html": "^0.6.0",
-    "etch": "^0.8.0",
+    "etch": "0.8.0",
     "etch-octicon": "^0.1.0",
     "fs-extra": "^2.0.0",
     "lodash": "^4.17.4",
@@ -406,7 +433,7 @@
   },
   "description": "Makes working with Go in Atom awesome.",
   "devDependencies": {
-    "standard": "^8.6.0"
+    "standard": "^9.0.0"
   },
   "engines": {
     "atom": ">=1.12.7 <2.0.0",
@@ -465,7 +492,7 @@
       }
     }
   },
-  "readme": "# [go-plus](https://atom.io/packages/go-plus) [![Build Status](https://travis-ci.org/joefitzgerald/go-plus.svg?branch=master)](https://travis-ci.org/joefitzgerald/go-plus) [![Build status](https://ci.appveyor.com/api/projects/status/d0cekvaprt9wo1et/branch/master?svg=true)](https://ci.appveyor.com/project/joefitzgerald/go-plus/branch/master) [![Slack](https://img.shields.io/badge/atom_slack-%23go--plus-blue.svg?style=flat)](https://atom-slack.herokuapp.com) [![Slack](https://img.shields.io/badge/gophers_slack-%23go--plus-blue.svg?style=flat)](https://gophersinvite.herokuapp.com)\n\n> An Improved [Go](https://www.golang.org) Experience For The [Atom Editor](https://atom.io)\n\n* Github: https://github.com/joefitzgerald/go-plus\n* Atom: https://atom.io/packages/go-plus\n\n## Overview\n\nThis package includes the following functionality:\n\n* Display information about your current go installation, by running `go version` and `go env`\n* Autocomplete using `gocode`\n* Format your code with `gofmt`, `goimports`, or `goreturns`; optionally run one of these tools on save of any `.go` file\n* Run `go install .` and `go test -c -o {tempdir} .` to verify your code can compile and to keep `gocode` suggestions up to date\n* Run a variety of linters (e.g. `golint`, `vet`, etc.) against your code using `gometalinter`\n* Run tests, display test output, and display test coverage using `go test -coverprofile`\n* Display documentation for identifiers in source code using\n  [`gogetdoc`](https://github.com/zmb3/gogetdoc)\n* Rename the symbol under your cursor using `gorename`\n* Go to definition using `guru` or `godef`\n\nYou can add debug functionality to Atom by installing the following package:\n\n* [go-debug](https://atom.io/packages/go-debug): Debug your package / tests using [`delve`](https://github.com/derekparker/delve)\n\n## Builds\n\n### How Are The Builds Performed?\n\nThe following commands are run for the directory of the current file:\n* `go install .` (for normal `.go` files)\n* `go test -o {tmpdir} -c .` (for `_test.go` files)\n\n### Why Are You Running `go install` Instead Of `go build`?\n\n`gocode` (and a few other tools, like `gotype`) work on `.a` files (i.e. the package object archive), and the way to keep these up to date is to run `go install` periodically. This ensures your autocomplete suggestions are kept up to date without having to resort to `gocode set autobuild true` :tada:.\n\n### But What About `gb`?\n\nWe are open to suggestions for detecting a package which is built with gb; please feel free to submit a pull request that detects a gb package without any explicit configuration and runs it.\n\n## Platforms\n\nThe package has CI for OS X, Windows and Ubuntu.\n\n## Installing Missing Tools\n\nIf you are missing any required tools, you may be prompted to install them. You can also manually install the required tools in your terminal:\n\n```\ngo get -u golang.org/x/tools/cmd/goimports\ngo get -u golang.org/x/tools/cmd/gorename\ngo get -u github.com/sqs/goreturns\ngo get -u github.com/nsf/gocode\ngo get -u github.com/alecthomas/gometalinter\ngo get -u github.com/zmb3/gogetdoc\ngo get -u github.com/rogpeppe/godef\ngo get -u golang.org/x/tools/cmd/guru\n```\n\n## Having Issues?\n\nPlease consult the [FAQ](https://github.com/joefitzgerald/go-plus/wiki/FAQ) prior to [opening an issue](https://github.com/joefitzgerald/go-plus/issues/new): https://github.com/joefitzgerald/go-plus/wiki/FAQ\n\nIf you have an issue with debugging, file an issue with  [`go-debug`](https://github.com/lloiser/go-debug) [here](https://github.com/lloiser/go-debug/issues/new).\n\n## Maintainers\n* Joe Fitzgerald ([@joefitzgerald](https://github.com/joefitzgerald))\n* Zac Bergquist ([@zmb3](https://github.com/zmb3))\n* Lukas Beranek ([@lloiser](https://github.com/lloiser))\n\n## Contributors\nA list of contributors can be found at https://github.com/joefitzgerald/go-plus/graphs/contributors. Thank you so much to everyone has contributed to the package :heart:. You are awesome!\n\n## Contributing\n\nContributions are greatly appreciated. Please fork this repository, make your\nchanges, and open a pull request. See [Contributing](https://github.com/joefitzgerald/go-plus/wiki/Contributing) for detailed instructions.\n",
+  "readme": "# [go-plus](https://atom.io/packages/go-plus) [![Build Status](https://travis-ci.org/joefitzgerald/go-plus.svg?branch=master)](https://travis-ci.org/joefitzgerald/go-plus) [![Build status](https://ci.appveyor.com/api/projects/status/d0cekvaprt9wo1et/branch/master?svg=true)](https://ci.appveyor.com/project/joefitzgerald/go-plus/branch/master) [![Slack](https://img.shields.io/badge/atom_slack-%23go--plus-blue.svg?style=flat)](https://atom-slack.herokuapp.com) [![Slack](https://img.shields.io/badge/gophers_slack-%23go--plus-blue.svg?style=flat)](https://gophersinvite.herokuapp.com)\n\n> An Improved [Go](https://www.golang.org) Experience For The [Atom Editor](https://atom.io)\n\n* Github: https://github.com/joefitzgerald/go-plus\n* Atom: https://atom.io/packages/go-plus\n\n## Overview\n\nThis package includes the following functionality:\n\n* Display information about your current go installation, by running `go version` and `go env`\n* Autocomplete using `gocode`\n* Format your code with `gofmt`, `goimports`, or `goreturns`; optionally run one of these tools on save of any `.go` file\n* Run `go install .` and `go test -c -o {tempdir} .` to verify your code can compile and to keep `gocode` suggestions up to date\n* Run a variety of linters (e.g. `golint`, `vet`, etc.) against your code using `gometalinter`\n* Run tests, display test output, and display test coverage using `go test -coverprofile`\n* Display documentation for identifiers in source code using\n  [`gogetdoc`](https://github.com/zmb3/gogetdoc)\n* Rename the symbol under your cursor using `gorename`\n* Go to definition using `guru` or `godef`\n* Highlight occurrences of an identifier using `guru`\n* Find usages of an identifier using `guru`\n\nYou can add debug functionality to Atom by installing the following package:\n\n* [go-debug](https://atom.io/packages/go-debug): Debug your package / tests using [`delve`](https://github.com/derekparker/delve)\n\n## Builds\n\n### How Are The Builds Performed?\n\nThe following commands are run for the directory of the current file:\n* `go install .` (for normal `.go` files)\n* `go test -o {tmpdir} -c .` (for `_test.go` files)\n\n### Why Are You Running `go install` Instead Of `go build`?\n\n`gocode` (and a few other tools, like `gotype`) work on `.a` files (i.e. the package object archive), and the way to keep these up to date is to run `go install` periodically. This ensures your autocomplete suggestions are kept up to date without having to resort to `gocode set autobuild true` :tada:.\n\n### But What About `gb`?\n\nWe are open to suggestions for detecting a package which is built with gb; please feel free to submit a pull request that detects a gb package without any explicit configuration and runs it.\n\n## Platforms\n\nThe package has CI for OS X, Windows and Ubuntu.\n\n## Installing Missing Tools\n\nIf you are missing any required tools, you may be prompted to install them. You can also manually install the required tools in your terminal:\n\n```\ngo get -u golang.org/x/tools/cmd/goimports\ngo get -u golang.org/x/tools/cmd/gorename\ngo get -u github.com/sqs/goreturns\ngo get -u github.com/nsf/gocode\ngo get -u github.com/alecthomas/gometalinter\ngo get -u github.com/zmb3/gogetdoc\ngo get -u github.com/rogpeppe/godef\ngo get -u golang.org/x/tools/cmd/guru\n```\n\n## Having Issues?\n\nPlease consult the [FAQ](https://github.com/joefitzgerald/go-plus/wiki/FAQ) prior to [opening an issue](https://github.com/joefitzgerald/go-plus/issues/new): https://github.com/joefitzgerald/go-plus/wiki/FAQ\n\nIf you have an issue with debugging, file an issue with  [`go-debug`](https://github.com/lloiser/go-debug) [here](https://github.com/lloiser/go-debug/issues/new).\n\n## Maintainers\n* Joe Fitzgerald ([@joefitzgerald](https://github.com/joefitzgerald))\n* Zac Bergquist ([@zmb3](https://github.com/zmb3))\n* Lukas Beranek ([@lloiser](https://github.com/lloiser))\n\n## Contributors\nA list of contributors can be found at https://github.com/joefitzgerald/go-plus/graphs/contributors. Thank you so much to everyone has contributed to the package :heart:. You are awesome!\n\n## Contributing\n\nContributions are greatly appreciated. Please fork this repository, make your\nchanges, and open a pull request. See [Contributing](https://github.com/joefitzgerald/go-plus/wiki/Contributing) for detailed instructions.\n",
   "readmeFilename": "README.md",
   "repository": {
     "type": "git",
@@ -478,7 +505,7 @@
       "waitsForPromise"
     ]
   },
-  "version": "5.2.0",
+  "version": "5.3.1",
   "warnings": [
     {
       "code": "ENOTSUP",
@@ -486,7 +513,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.2.0"
+      "pkgid": "go-plus@5.3.1"
     },
     {
       "code": "ENOTSUP",
@@ -494,7 +521,7 @@
         "atom": ">=1.12.7 <2.0.0",
         "node": ">= 6"
       },
-      "pkgid": "go-plus@5.2.0"
+      "pkgid": "go-plus@5.3.1"
     }
   ]
 }
