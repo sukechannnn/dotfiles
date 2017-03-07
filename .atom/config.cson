@@ -17,7 +17,6 @@
     audioBeep: false
     disabledPackages: [
       "vim-mode"
-      "language-gfm"
       "atom-ctags"
       "spell-check"
       "react"
@@ -55,13 +54,14 @@
     "coffee.erb": "source.coffee"
     erb: "text.html.ruby"
     "js.erb": "source.js"
-    md: "text.html.basic"
     rb: "source.ruby.rails"
   "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
   "japanese-wrap":
     characterWidth: {}
+  "language-markdown":
+    disableLanguageGfm: false
   linter: {}
   "linter-erb": {}
   "linter-matlab": {}
@@ -98,6 +98,8 @@
     personalAccessToken: "8d753acb30208432d95a41b95f1a723897d42d99"
   tabs: {}
   term2: {}
+  "tidy-markdown":
+    ensureFirstHeaderIsH1: false
   "tree-view": {}
   welcome:
     showOnStartup: false
