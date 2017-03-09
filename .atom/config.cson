@@ -100,6 +100,9 @@
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
   "tree-view": {}
+  "vim-mode-plus":
+    setCursorToStartOfChangeOnUndoRedo: false
+    setCursorToStartOfChangeOnUndoRedoStrategy: "simple"
   welcome:
     showOnStartup: false
   whitespace:
