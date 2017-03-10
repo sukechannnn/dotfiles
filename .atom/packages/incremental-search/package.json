@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-1161017-18555-61eho8"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117210-22594-nuq8nc"
     ]
   ],
-  "_from": "../d-1161017-18555-v0brlk/package.tgz",
-  "_id": "incremental-search@5.2.1",
+  "_from": "../d-117210-22594-1kc61in/package.tgz",
+  "_id": "incremental-search@5.2.2",
   "_inCache": true,
   "_installable": true,
   "_location": "/incremental-search",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-1161017-18555-v0brlk/package.tgz",
-  "_shasum": "dd85b329694c55ddfd5c3a57bf7d5d286643f8c7",
+  "_resolved": "file:../d-117210-22594-1kc61in/package.tgz",
+  "_shasum": "1cb4efe55e734261c5c307e7dbabc0e359d7a727",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-1161017-18555-v0brlk/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-1161017-18555-61eho8",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117210-22594-1kc61in/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117210-22594-nuq8nc",
   "activationCommands": {
     "atom-workspace": [
       "incremental-search:forward",
@@ -88,5 +88,5 @@
     "type": "git",
     "url": "git+https://github.com/gangstead/atom-incremental-search.git"
   },
-  "version": "5.2.1"
+  "version": "5.2.2"
 }
