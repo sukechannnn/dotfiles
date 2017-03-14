@@ -66,6 +66,8 @@
   "linter-erb": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
+  "linter-ui-default":
+    showPanel: true
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true

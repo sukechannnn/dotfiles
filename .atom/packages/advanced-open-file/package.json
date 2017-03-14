@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117011-35039-1nq3ozf"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117214-2875-1wszlc0"
     ]
   ],
-  "_from": "../d-117011-35039-fxses0/package.tgz",
-  "_id": "advanced-open-file@0.16.5",
+  "_from": "../d-117214-2875-48pvbz/package.tgz",
+  "_id": "advanced-open-file@0.16.6",
   "_inCache": true,
   "_installable": true,
   "_location": "/advanced-open-file",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-117011-35039-fxses0/package.tgz",
-  "_shasum": "11e2ba9c499500ef6486acd127848ca55f090724",
+  "_resolved": "file:../d-117214-2875-48pvbz/package.tgz",
+  "_shasum": "bc51ac0f160a1e78b18af400de686784b619c652",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117011-35039-fxses0/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117011-35039-1nq3ozf",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117214-2875-48pvbz/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117214-2875-1wszlc0",
   "activationCommands": {
     "atom-workspace": [
       "advanced-open-file:toggle"
@@ -98,5 +98,5 @@
   "scripts": {
     "shell": "babel-node -r 0"
   },
-  "version": "0.16.5"
+  "version": "0.16.6"
 }
