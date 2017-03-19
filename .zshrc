@@ -21,3 +21,5 @@ export PATH="$PATH:$GOPATH/bin"
 export PGDATA="/usr/local/var/postgres"
 
 alias be='bundle exec'
+alias gis='git status'
+alias gcam='git commit --allow-empty'
