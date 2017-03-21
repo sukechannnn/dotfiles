@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13705-5xpgjc"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4530-zkrduc"
     ]
   ],
-  "_from": "../d-11724-13705-yi8qym/package.tgz",
-  "_id": "split-diff@1.2.0",
+  "_from": "../d-117221-4530-15f234v/package.tgz",
+  "_id": "split-diff@1.2.1",
   "_inCache": true,
   "_installable": true,
   "_location": "/split-diff",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11724-13705-yi8qym/package.tgz",
-  "_shasum": "424a050554b86b66a7a0d0eadc1447563bba757d",
+  "_resolved": "file:../d-117221-4530-15f234v/package.tgz",
+  "_shasum": "d22174ea3aedb806a581e638fc4950d3201b5dd5",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13705-yi8qym/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13705-5xpgjc",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4530-15f234v/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4530-zkrduc",
   "activationCommands": {
     "atom-workspace": [
       "split-diff:toggle",
@@ -85,5 +85,5 @@
     "type": "git",
     "url": "git+https://github.com/mupchrch/split-diff.git"
   },
-  "version": "1.2.0"
+  "version": "1.2.1"
 }

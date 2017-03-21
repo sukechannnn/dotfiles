@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13659-1si5m2z"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4493-vbfgor"
     ]
   ],
-  "_from": "../d-11724-13659-1qpjbs3/package.tgz",
-  "_id": "goto-definition@1.2.0",
+  "_from": "../d-117221-4493-1541bbr/package.tgz",
+  "_id": "goto-definition@1.2.1",
   "_inCache": true,
   "_installable": true,
   "_location": "/goto-definition",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11724-13659-1qpjbs3/package.tgz",
-  "_shasum": "743f0fbbcd91103d958a480a01345f6661e8bc99",
+  "_resolved": "file:../d-117221-4493-1541bbr/package.tgz",
+  "_shasum": "04b6fc7ec8a7beb4a46c87a0714e76a153b119c7",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13659-1qpjbs3/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13659-1si5m2z",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4493-1541bbr/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4493-vbfgor",
   "author": {
     "name": "faceair"
   },
@@ -55,7 +55,14 @@
   "main": "./lib/goto-definition",
   "name": "goto-definition",
   "optionalDependencies": {},
-  "readme": "# Goto Definition\n\n[![Build Status](https://travis-ci.org/r-chris/atom-goto-definition.svg?branch=master)](https://travis-ci.org/r-chris/atom-goto-definition)\n\n![demo](http://ww1.sinaimg.cn/large/71ef46c1jw1f0f2vkw1aeg218f0p77rg.gif)\n\n* Support `JavaScript(ES6 && JSX)`, `TypeScript`, `CoffeeScript`, `Python`, `Ruby`, `PHP`, `Hack`, `Perl`, `KRL` languages\n* Works with Mac OSX, Linux and Windows\n* Goto-Definition functionality, by default on `Alt+Cmd+Enter`/`Ctrl+Alt+Enter`\n\n## Installing\nInstall the package ```goto-definition``` in Atom (Preferences->Install) or use Atom's package manager from a shell:  \n```\n$ apm install goto-definition\n```\n\n### Notice\n\n* If you want include VCS ignored paths, please turn `Settings -> Exclude VCS Ignored Paths` option off.\n",
+  "providedServices": {
+    "hyperclick.provider": {
+      "versions": {
+        "0.0.0": "getProvider"
+      }
+    }
+  },
+  "readme": "# Goto Definition\n\n[![Build Status](https://travis-ci.org/r-chris/atom-goto-definition.svg?branch=master)](https://travis-ci.org/r-chris/atom-goto-definition)\n\n![demo](http://ww1.sinaimg.cn/large/71ef46c1jw1f0f2vkw1aeg218f0p77rg.gif)\n\n* Support for `JavaScript(ES6 && JSX)`, `TypeScript`, `CoffeeScript`, `Python`, `Ruby`, `PHP`, `Hack`, `Perl`, `KRL`, `Erb`, `Haml`, `C/C++`, `Puppet`, `ASP`\n* Works with Mac OSX, Linux and Windows\n* Goto-Definition functionality, by default on `Alt+Cmd+Enter`/`Ctrl+Alt+Enter`\n* Support [hyperclick](https://atom.io/packages/hyperclick), `<cmd-click>` on a word to jump it's declaration\n\n## Installing\nInstall the package ```goto-definition``` in Atom (Preferences->Install) or use Atom's package manager from a shell:  \n```\n$ apm install goto-definition\n```\n\n### Notice\n\n* If you want include VCS ignored paths, please turn `Settings -> Exclude VCS Ignored Paths` option off.\n",
   "readmeFilename": "README.md",
   "repository": {
     "type": "git",
@@ -64,5 +71,5 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "version": "1.2.0"
+  "version": "1.2.1"
 }

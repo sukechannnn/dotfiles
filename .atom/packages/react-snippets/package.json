@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
+        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
+        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
+        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13697-1gw7e2o"
+      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4525-1l16vmw"
     ]
   ],
-  "_from": "../d-11724-13697-hcjohe/package.tgz",
-  "_id": "react-snippets@0.7.1",
+  "_from": "../d-117221-4525-1mec88/package.tgz",
+  "_id": "react-snippets@0.7.2",
   "_inCache": true,
   "_installable": true,
   "_location": "/react-snippets",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
+    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
+    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
+    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11724-13697-hcjohe/package.tgz",
-  "_shasum": "3625d299b1ae4b8c3e023284446ca5d93fcd7cde",
+  "_resolved": "file:../d-117221-4525-1mec88/package.tgz",
+  "_shasum": "4d8484b3e56579d77489c7884fa0ea79170ae1f8",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11724-13697-hcjohe/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11724-13697-1gw7e2o",
+  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-117221-4525-1mec88/package.tgz",
+  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-117221-4525-1l16vmw",
   "bugs": {
     "url": "https://github.com/webbushka/atom-react-snippets/issues"
   },
@@ -69,5 +69,5 @@
   "scripts": {
     "test": "gulp"
   },
-  "version": "0.7.1"
+  "version": "0.7.2"
 }

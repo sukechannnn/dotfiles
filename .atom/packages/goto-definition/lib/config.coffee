@@ -39,9 +39,17 @@ module.exports =
     regex: [
       "(^|\\s)class\\s+{word}(\\s|{|$)"
       "(^|\\s)interface\\s+{word}(\\s|{|$)"
+      "(^|\\s)trait\\s+{word}(\\s|{|$)"
       "(^|\\s)(static\\s+)?((public|private|protected)\\s+)?(static\\s+)?function\\s+{word}\\s*\\("
+      "(^|\\s)const\\s+{word}(\\s|=|;|$)"
     ]
-    type: ["*.php"]
+    type: ["*.php", "*.php3", "*.phtml"]
+
+  ASP:
+    regex: [
+      "(^|\\s)(function|sub)\\s+{word}\\s*\\("
+    ]
+    type: ["*.asp"]
 
   Hack:
     regex: [
@@ -62,7 +70,7 @@ module.exports =
       "(^|\\s)attr_writer\\s+:{word}(\\s|$)"
       "(^|\\s)define_method\\s+:?{word}\\s*\\(?"
     ]
-    type: ["*.rb"]
+    type: ["*.rb", "*.ru", "*.haml", "*.erb"]
 
   Puppet:
     regex: [
