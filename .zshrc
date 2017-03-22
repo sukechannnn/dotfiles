@@ -23,3 +23,4 @@ export PGDATA="/usr/local/var/postgres"
 alias be='bundle exec'
 alias gis='git status'
 alias gca='git commit --allow-empty'
+alias gif='git diff'
