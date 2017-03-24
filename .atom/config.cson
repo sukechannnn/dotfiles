@@ -22,10 +22,10 @@
       "react"
       "react-snippets"
       "autocomplete-elixir"
-      "environment"
       "language-elixir"
       "language-slim"
       "go-plus"
+      "vim-mode-plus"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
