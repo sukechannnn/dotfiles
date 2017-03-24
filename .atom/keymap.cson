@@ -23,6 +23,9 @@
 # This file uses CoffeeScript Object Notation (CSON).
 # If you are unfamiliar with CSON, you can read more about it here:
 # https://github.com/bevry/cson#what-is-cson
+'atom-text-editor:not([mini])':
+  'cmd-l': 'abort!'
+
 '.platform-darwin atom-text-editor':
   'cmd-d': 'pane:split-right-and-copy-active-item'
 
@@ -30,12 +33,10 @@
   'shift-cmd-D': 'pane:split-down-and-copy-active-item'
   'alt-cmd-up': 'editor:move-line-up'
   'alt-cmd-down': 'editor:move-line-down'
+  'cmd-l': 'git-log:show'
 
 'body':
   'ctrl-cmd-e': 'window:focus-next-pane'
-
-'atom-text-editor[data-grammar~="ruby"]':
-  'cmd-r': 'rubocop-auto-correct:current-file'
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
