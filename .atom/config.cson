@@ -55,6 +55,8 @@
     erb: "text.html.ruby"
     "js.erb": "source.js"
     rb: "source.ruby.rails"
+  "git-log":
+    fontScale: 0.9
   "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
@@ -92,11 +94,6 @@
   "status-bar": {}
   "symbols-tree-view":
     scrollAnimation: false
-  "sync-settings":
-    _analyticsUserId: "7400874a-5cbd-4d2a-bd6a-77b6969cc9fc"
-    _lastBackupHash: "8af268b055de4250f95b8dd62c18cb85051fa5c2"
-    gistId: "e65d7744d3af74155f82"
-    personalAccessToken: "8d753acb30208432d95a41b95f1a723897d42d99"
   tabs: {}
   term2: {}
   "tidy-markdown":
