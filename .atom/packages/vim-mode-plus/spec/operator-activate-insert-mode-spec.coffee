@@ -475,7 +475,7 @@ describe "Operator ActivateInsertMode family", ->
           mode: ['visual', 'blockwise']
 
       describe "I", ->
-        it "insert at colum of start of selection for *each selection*", ->
+        it "insert at column of start of selection for *each selection*", ->
           ensure "I", cursor: [[1, 4], [2, 4], [3, 4]], mode: "insert"
 
         it "can repeat after insert AFTER clearing multiple cursor", ->
@@ -545,6 +545,52 @@ describe "Operator ActivateInsertMode family", ->
       describe "A is short hand of `ctrl-v A`", ->
         it "insert at column of end of selection for *each selected lines*", ->
           ensure "A", cursor: [[1, 5], [2, 5], [3, 5]], mode: "insert"
+
+    describe "when occurrence marker interselcts I and A no longer behave blockwise in vC/vL", ->
+      beforeEach ->
+        jasmine.attachToDOM(editorElement)
+        set cursor: [1, 3]
+        ensure 'g o', occurrenceText: ['3456', '3456', '3456', '3456'], cursor: [1, 3]
+      describe "vC", ->
+        describe "I and A NOT behave as `ctrl-v I`", ->
+          it "I insert at start of each vsually selected occurrence", ->
+            ensure "v j j I",
+              mode: 'insert'
+              textC_: """
+                __0: 3456 890
+                1: !3456 890
+                __2: |3456 890
+                ____3: 3456 890
+                """
+          it "A insert at end of each vsually selected occurrence", ->
+            ensure "v j j A",
+              mode: 'insert'
+              textC_: """
+                __0: 3456 890
+                1: 3456! 890
+                __2: 3456| 890
+                ____3: 3456 890
+                """
+      describe "vL", ->
+        describe "I and A NOT behave as `ctrl-v I`", ->
+          it "I insert at start of each vsually selected occurrence", ->
+            ensure "V j j I",
+              mode: 'insert'
+              textC_: """
+                __0: 3456 890
+                1: |3456 890
+                 _2: |3456 890
+                ____3: !3456 890
+                """
+          it "A insert at end of each vsually selected occurrence", ->
+            ensure "V j j A",
+              mode: 'insert'
+              textC_: """
+                __0: 3456 890
+                1: 3456| 890
+                __2: 3456| 890
+                ____3: 3456! 890
+                """
 
   describe "the gI keybinding", ->
     beforeEach ->

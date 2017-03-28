@@ -5,7 +5,6 @@ _ = require 'underscore-plus'
   moveCursorLeft
   moveCursorRight
   limitNumber
-  shrinkRangeEndToBeforeNewLine
 } = require './utils'
 swrap = require './selection-wrapper'
 Operator = require('./base').getClass('Operator')
@@ -20,7 +19,6 @@ class ActivateInsertMode extends Operator
   flashTarget: false
   finalSubmode: null
   supportInsertionCount: true
-  flashCheckpoint: 'custom'
 
   observeWillDeactivateMode: ->
     disposable = @vimState.modeManager.preemptWillDeactivateMode ({mode}) =>
@@ -96,11 +94,10 @@ class ActivateInsertMode extends Operator
       @startMutation =>
         @selectTarget() if @isRequireTarget()
         @mutateText?()
-        mutatedRanges = []
         for selection in @editor.getSelections()
-          mutatedRanges.push(@repeatInsert(selection, @lastChange?.newText ? ''))
+          @repeatInsert(selection, @lastChange?.newText ? '')
           moveCursorLeft(selection.cursor)
-        @mutationManager.setBufferRangesForCustomCheckpoint(mutatedRanges)
+        @mutationManager.setCheckpoint('did-finish')
 
       if @getConfig('clearMultipleCursorsOnEscapeInsertMode')
         @vimState.clearSelections()
@@ -119,7 +116,12 @@ class ActivateInsertMode extends Operator
       @createBufferCheckpoint('insert')
       topCursor = @editor.getCursorsOrderedByBufferPosition()[0]
       @topCursorPositionAtInsertionStart = topCursor.getBufferPosition()
-      @vimState.activate('insert', @finalSubmode)
+
+      # Skip normalization of blockwiseSelection.
+      # Since want to keep multi-cursor and it's position in when shift to insert-mode.
+      for blockwiseSelection in @getBlockwiseSelections()
+        blockwiseSelection.skipNormalization()
+      @activateMode('insert', @finalSubmode)
 
 class ActivateReplaceMode extends ActivateInsertMode
   @extend()
@@ -141,7 +143,7 @@ class InsertAfter extends ActivateInsertMode
 class InsertAtBeginningOfLine extends ActivateInsertMode
   @extend()
   execute: ->
-    if @isMode('visual', ['characterwise', 'linewise'])
+    if @mode is 'visual' and @submode in ['characterwise', 'linewise']
       @editor.splitSelectionsIntoLines()
     @editor.moveToBeginningOfLine()
     super
@@ -212,28 +214,22 @@ class InsertByTarget extends ActivateInsertMode
 
   execute: ->
     @onDidSelectTarget =>
-      @modifySelection() if @vimState.isMode('visual')
+      # In vC/vL, when occurrence marker was NOT selected,
+      # it behave's very specially
+      # vC: `I` and `A` behaves as shoft hand of `ctrl-v I` and `ctrl-v A`.
+      # vL: `I` and `A` place cursors at each selected lines of start( or end ) of non-white-space char.
+      if not @occurrenceSelected and @mode is 'visual' and @submode in ['characterwise', 'linewise']
+        for $selection in swrap.getSelections(@editor)
+          $selection.normalize()
+          $selection.applyWise('blockwise')
+
+        if @submode is 'linewise'
+          for blockwiseSelection in @getBlockwiseSelections()
+            blockwiseSelection.expandMemberSelectionsOverLineWithTrimRange()
+
       for selection in @editor.getSelections()
         swrap(selection).setBufferPositionTo(@which)
     super
-
-  modifySelection: ->
-    switch @vimState.submode
-      when 'characterwise'
-        # `I(or A)` is short-hand of `ctrl-v I(or A)`
-        @vimState.selectBlockwise()
-        @vimState.clearBlockwiseSelections() # just reset vimState's storage.
-
-      when 'linewise'
-        @editor.splitSelectionsIntoLines()
-        for selection in @editor.getSelections()
-          {start, end} = range = selection.getBufferRange()
-          if @which is 'start'
-            newRange = [@getFirstCharacterPositionForBufferRow(start.row), end]
-          else
-            newRange = shrinkRangeEndToBeforeNewLine(range)
-
-          selection.setBufferRange(newRange)
 
 # key: 'I', Used in 'visual-mode.characterwise', visual-mode.blockwise
 class InsertAtStartOfTarget extends InsertByTarget
@@ -321,10 +317,9 @@ class ChangeToLastCharacterOfLine extends Change
   @extend()
   target: 'MoveToLastCharacterOfLine'
 
-  initialize: ->
-    if @isMode('visual', 'blockwise')
-      # FIXME Maybe because of bug of CurrentSelection,
-      # we use MoveToLastCharacterOfLine as target
-      @acceptCurrentSelection = false
-      swrap.setReversedState(@editor, false) # Ensure all selections to un-reversed
+  execute: ->
+    if @target.wise is 'blockwise'
+      @onDidSelectTarget =>
+        for blockwiseSelection in @getBlockwiseSelections()
+          blockwiseSelection.extendMemberSelectionsToEndOfLine()
     super

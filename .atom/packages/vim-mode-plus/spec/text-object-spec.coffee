@@ -943,7 +943,6 @@ describe "TextObject", ->
         ensure ';', selectedText: "222"
         ensure ';', selectedText: "333"
         ensure ';', selectedText: "444()444"
-        ensure ';', selectedText: "", selectedBufferRange: [[3, 4], [3, 4]]
     describe "a", ->
       it "select forwarding range within enclosed range(if exists)", ->
         set cursor: [2, 0]
@@ -1004,8 +1003,9 @@ describe "TextObject", ->
 
       describe "expansion and deletion", ->
         beforeEach ->
+          # [NOTE] Intentionally omit `!` prefix of DOCTYPE since it represent last cursor in textC.
           htmlLikeText = """
-          <!DOCTYPE html>
+          <DOCTYPE html>
           <html lang="en">
           <head>
           __<meta charset="UTF-8" />
@@ -1014,7 +1014,7 @@ describe "TextObject", ->
           <body>
           __<div>
           ____<div>
-          ______<div>
+          |______<div>
           ________<p><a>
           ______</div>
           ____</div>
@@ -1022,10 +1022,9 @@ describe "TextObject", ->
           </body>
           </html>\n
           """
-          set text_: htmlLikeText
+          set textC_: htmlLikeText
 
         it "can expand selection when repeated", ->
-          set cursor: [9, 0]
           ensure 'v i t', selectedText_: """
             \n________<p><a>
             ______
@@ -1071,7 +1070,7 @@ describe "TextObject", ->
         it 'delete inner-tag and repatable', ->
           set cursor: [9, 0]
           ensure "d i t", text_: """
-            <!DOCTYPE html>
+            <DOCTYPE html>
             <html lang="en">
             <head>
             __<meta charset="UTF-8" />
@@ -1087,7 +1086,7 @@ describe "TextObject", ->
             </html>\n
             """
           ensure "3 .", text_: """
-            <!DOCTYPE html>
+            <DOCTYPE html>
             <html lang="en">
             <head>
             __<meta charset="UTF-8" />
@@ -1097,7 +1096,7 @@ describe "TextObject", ->
             </html>\n
             """
           ensure ".", text_: """
-            <!DOCTYPE html>
+            <DOCTYPE html>
             <html lang="en"></html>\n
             """
 
@@ -1333,6 +1332,14 @@ describe "TextObject", ->
 
   describe "Paragraph", ->
     text = null
+    ensureParagraph = (keystroke, options) ->
+      unless options.setCursor
+        throw new Errow("no setCursor provided")
+      set cursor: options.setCursor
+      delete options.setCursor
+      ensure(keystroke, options)
+      ensure('escape', mode: 'normal')
+
     beforeEach ->
       text = new TextData """
 
@@ -1354,33 +1361,27 @@ describe "TextObject", ->
 
     describe "inner-paragraph", ->
       it "select consequtive blank rows", ->
-        set cursor: [0, 0]; ensure 'v i p', selectedText: text.getLines([0])
-        set cursor: [2, 0]; ensure 'v i p', selectedText: text.getLines([2])
-        set cursor: [5, 0]; ensure 'v i p', selectedText: text.getLines([5..6])
+        ensureParagraph 'v i p', setCursor: [0, 0], selectedText: text.getLines([0])
+        ensureParagraph 'v i p', setCursor: [2, 0], selectedText: text.getLines([2])
+        ensureParagraph 'v i p', setCursor: [5, 0], selectedText: text.getLines([5..6])
       it "select consequtive non-blank rows", ->
-        set cursor: [1, 0]; ensure 'v i p', selectedText: text.getLines([1])
-        set cursor: [3, 0]; ensure 'v i p', selectedText: text.getLines([3..4])
-        set cursor: [7, 0]; ensure 'v i p', selectedText: text.getLines([7..9])
+        ensureParagraph 'v i p', setCursor: [1, 0], selectedText: text.getLines([1])
+        ensureParagraph 'v i p', setCursor: [3, 0], selectedText: text.getLines([3..4])
+        ensureParagraph 'v i p', setCursor: [7, 0], selectedText: text.getLines([7..9])
       it "operate on inner paragraph", ->
-        set cursor: [7, 0]
-        ensure 'y i p',
-          cursor: [7, 0]
-          register: '"': text: text.getLines([7, 8, 9])
+        ensureParagraph 'y i p', setCursor: [7, 0], register: '"': text: text.getLines([7, 8, 9])
 
     describe "a-paragraph", ->
       it "select two paragraph as one operation", ->
-        set cursor: [0, 0]; ensure 'v a p', selectedText: text.getLines([0, 1])
-        set cursor: [2, 0]; ensure 'v a p', selectedText: text.getLines([2..4])
-        set cursor: [5, 0]; ensure 'v a p', selectedText: text.getLines([5..9])
+        ensureParagraph 'v a p', setCursor: [0, 0], selectedText: text.getLines([0, 1])
+        ensureParagraph 'v a p', setCursor: [2, 0], selectedText: text.getLines([2..4])
+        ensureParagraph 'v a p', setCursor: [5, 0], selectedText: text.getLines([5..9])
       it "select two paragraph as one operation", ->
-        set cursor: [1, 0]; ensure 'v a p', selectedText: text.getLines([1..2])
-        set cursor: [3, 0]; ensure 'v a p', selectedText: text.getLines([3..6])
-        set cursor: [7, 0]; ensure 'v a p', selectedText: text.getLines([7..10])
+        ensureParagraph 'v a p', setCursor: [1, 0], selectedText: text.getLines([1..2])
+        ensureParagraph 'v a p', setCursor: [3, 0], selectedText: text.getLines([3..6])
+        ensureParagraph 'v a p', setCursor: [7, 0], selectedText: text.getLines([7..10])
       it "operate on a paragraph", ->
-        set cursor: [3, 0]
-        ensure 'y a p',
-          cursor: [3, 0]
-          register: '"': text: text.getLines([3..6])
+        ensureParagraph 'y a p', setCursor: [3, 0], register: '"': text: text.getLines([3..6])
 
   describe 'Comment', ->
     beforeEach ->
@@ -1478,11 +1479,11 @@ describe "TextObject", ->
           set cursor: [20, 7]
           ensure 'v i z', selectedBufferRange: rangeForRows(21, 21)
 
-      describe "when endRow of selection exceeds fold endRow", ->
-        it "doesn't matter, select fold based on startRow of selection", ->
+      describe "when containing fold are not found", ->
+        it "do nothing", ->
           set cursor: [20, 0]
           ensure 'V G', selectedBufferRange: rangeForRows(20, 30)
-          ensure 'i z', selectedBufferRange: rangeForRows(21, 21)
+          ensure 'i z', selectedBufferRange: rangeForRows(20, 30)
 
       describe "when indent level of fold startRow and endRow is same", ->
         beforeEach ->
@@ -1521,12 +1522,11 @@ describe "TextObject", ->
           set cursor: [20, 7]
           ensure 'v a z', selectedBufferRange: rangeForRows(20, 21)
 
-      describe "when endRow of selection exceeds fold endRow", ->
-        it "doesn't matter, select fold based on startRow of selection", ->
+      describe "when containing fold are not found", ->
+        it "do nothing", ->
           set cursor: [20, 0]
-          cursor = editor.getLastCursor()
           ensure 'V G', selectedBufferRange: rangeForRows(20, 30)
-          ensure 'a z', selectedBufferRange: rangeForRows(20, 21)
+          ensure 'a z', selectedBufferRange: rangeForRows(20, 30)
 
   # Although following test picks specific language, other langauages are alsoe supported.
   describe 'Function', ->

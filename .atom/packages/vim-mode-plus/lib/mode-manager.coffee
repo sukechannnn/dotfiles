@@ -19,11 +19,8 @@ class ModeManager
   destroy: ->
     @subscriptions.dispose()
 
-  isMode: (mode, submodes) ->
-    if submodes?
-      (@mode is mode) and (@submode in [].concat(submodes))
-    else
-      @mode is mode
+  isMode: (mode, submode=null) ->
+    (mode is @mode) and (submode is @submode)
 
   # Event
   # -------------------------
@@ -52,6 +49,9 @@ class ModeManager
       when 'operator-pending' then @activateOperatorPendingMode()
       when 'insert' then @activateInsertMode(newSubmode)
       when 'visual' then @activateVisualMode(newSubmode)
+
+    unless newMode is 'visual'
+      swrap.clearProperties(@editor)
 
     @editorElement.classList.remove("#{@mode}-mode")
     @editorElement.classList.remove(@submode)
@@ -86,6 +86,12 @@ class ModeManager
     @vimState.reset()
     # Component is not necessary avaiable see #98.
     @editorElement.component?.setInputEnabled(false)
+
+    # In visual-mode, cursor can place at EOL. move left if cursor is at EOL
+    # We should not do this in visual-mode deactivation phase.
+    # e.g. `A` directly shift from visua-mode to `insert-mode`, and cursor should remain at EOL.
+    for cursor in @editor.getCursors() when cursor.isAtEndOfLine()
+      moveCursorLeft(cursor, preserveGoalColumn: true)
     new Disposable
 
   # Operator Pending
@@ -104,7 +110,7 @@ class ModeManager
       replaceModeDeactivator = null
 
       # When escape from insert-mode, cursor move Left.
-      needSpecialCareToPreventWrapLine = atom.config.get('editor.atomicSoftTabs') ? true
+      needSpecialCareToPreventWrapLine = @editor.hasAtomicSoftTabs()
       for cursor in @editor.getCursors()
         moveCursorLeft(cursor, {needSpecialCareToPreventWrapLine})
 
@@ -146,30 +152,25 @@ class ModeManager
   # - normalized selection: One column left selcted at selection end position
   # - When selectRight at end position of normalized-selection, it become un-normalized selection
   #   which is the range in visual-mode.
-  #
   activateVisualMode: (newSubmode) ->
     @vimState.assertWithException(newSubmode?, "activate visual-mode without submode")
-    @normalizeSelections()
-    swrap.applyWise(@editor, 'characterwise')
 
-    switch newSubmode
-      when 'linewise'
-        swrap.applyWise(@editor, 'linewise')
-      when 'blockwise'
-        @vimState.selectBlockwise()
-
-    new Disposable =>
-      @normalizeSelections()
-      selection.clear(autoscroll: false) for selection in @editor.getSelections()
-      @updateNarrowedState(false)
-
-  normalizeSelections: ->
-    if @submode is 'blockwise'
-      for bs in @vimState.getBlockwiseSelections()
-        bs.restoreCharacterwise()
-      @vimState.clearBlockwiseSelections()
+    for $selection in swrap.getSelections(@editor) when not $selection.hasProperties()
+      $selection.saveProperties()
 
     swrap.normalize(@editor)
+
+    $selection.applyWise(newSubmode) for $selection in swrap.getSelections(@editor)
+
+    @vimState.getLastBlockwiseSelection().autoscroll() if newSubmode is 'blockwise'
+
+    new Disposable =>
+      swrap.normalize(@editor)
+
+      if @submode is 'blockwise'
+        swrap.setReversedState(@editor, true)
+      selection.clear(autoscroll: false) for selection in @editor.getSelections()
+      @updateNarrowedState(false)
 
   # Narrow to selection
   # -------------------------

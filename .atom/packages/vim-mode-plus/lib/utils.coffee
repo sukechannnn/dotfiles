@@ -310,6 +310,7 @@ getCodeFoldRowRanges = (editor) ->
     .filter (rowRange) ->
       rowRange? and rowRange[0]? and rowRange[1]?
 
+# Used in vmp-jasmine-increase-focus
 getCodeFoldRowRangesContainesForRow = (editor, bufferRow, {includeStartRow}={}) ->
   includeStartRow ?= true
   getCodeFoldRowRanges(editor).filter ([startRow, endRow]) ->
@@ -585,29 +586,29 @@ getLargestFoldRangeContainsBufferRow = (editor, row) ->
   if startPoint? and endPoint?
     new Range(startPoint, endPoint)
 
-translatePointAndClip = (editor, point, direction, {translate}={}) ->
-  translate ?= true
+# take bufferPosition
+translatePointAndClip = (editor, point, direction) ->
   point = Point.fromObject(point)
 
   dontClip = false
   switch direction
     when 'forward'
-      point = point.translate([0, +1]) if translate
+      point = point.translate([0, +1])
       eol = editor.bufferRangeForBufferRow(point.row).end
 
       if point.isEqual(eol)
         dontClip = true
-
-      if point.isGreaterThan(eol)
-        point = new Point(point.row + 1, 0)
+      else if point.isGreaterThan(eol)
         dontClip = true
+        point = new Point(point.row + 1, 0) # move point to new-line selected point
 
       point = Point.min(point, editor.getEofBufferPosition())
 
     when 'backward'
-      point = point.translate([0, -1]) if translate
+      point = point.translate([0, -1])
 
       if point.column < 0
+        dontClip = true
         newRow = point.row - 1
         eol = editor.bufferRangeForBufferRow(newRow).end
         point = new Point(newRow, eol.column)
@@ -620,8 +621,8 @@ translatePointAndClip = (editor, point, direction, {translate}={}) ->
     screenPoint = editor.screenPositionForBufferPosition(point, clipDirection: direction)
     editor.bufferPositionForScreenPosition(screenPoint)
 
-getRangeByTranslatePointAndClip = (editor, range, which, direction, options) ->
-  newPoint = translatePointAndClip(editor, range[which], direction, options)
+getRangeByTranslatePointAndClip = (editor, range, which, direction) ->
+  newPoint = translatePointAndClip(editor, range[which], direction)
   switch which
     when 'start'
       new Range(newPoint, range.end)

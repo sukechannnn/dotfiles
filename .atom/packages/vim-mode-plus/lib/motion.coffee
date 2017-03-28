@@ -11,7 +11,6 @@ _ = require 'underscore-plus'
   getValidVimScreenRow, getValidVimBufferRow
   moveCursorToFirstCharacterAtRow
   sortRanges
-  getIndentLevelForBufferRow
   pointIsOnWhiteSpace
   moveCursorToNextNonWhitespace
   isEmptyRow
@@ -41,33 +40,18 @@ class Motion extends Base
   wise: 'characterwise'
   jump: false
   verticalMotion: false
+  moveSucceeded: null
+  moveSuccessOnLinewise: false
 
   constructor: ->
     super
 
-    # visual mode can overwrite default wise and inclusiveness
-    if @vimState.mode is 'visual'
-      @inclusive = true
-      @wise = @vimState.submode
+    if @mode is 'visual'
+      @wise = @submode
     @initialize()
 
-  isInclusive: ->
-    @inclusive
-
-  isJump: ->
-    @jump
-
-  isVerticalMotion: ->
-    @verticalMotion
-
-  isCharacterwise: ->
-    @wise is 'characterwise'
-
-  isLinewise: ->
-    @wise is 'linewise'
-
-  isBlockwise: ->
-    @wise is 'blockwise'
+  isLinewise: -> @wise is 'linewise'
+  isBlockwise: -> @wise is 'blockwise'
 
   forceWise: (wise) ->
     if wise is 'characterwise'
@@ -84,7 +68,7 @@ class Motion extends Base
     cursor.setScreenPosition(point) if point?
 
   moveWithSaveJump: (cursor) ->
-    if cursor.isLastCursor() and @isJump()
+    if cursor.isLastCursor() and @jump
       cursorPosition = cursor.getBufferPosition()
 
     @moveCursor(cursor)
@@ -97,53 +81,27 @@ class Motion extends Base
     if @operator?
       @select()
     else
-      @editor.moveCursors (cursor) =>
-        @moveWithSaveJump(cursor)
-
-  select: ->
-    for selection in @editor.getSelections()
-      @selectByMotion(selection)
-
+      @moveWithSaveJump(cursor) for cursor in @editor.getCursors()
     @editor.mergeCursors()
     @editor.mergeIntersectingSelections()
 
-    if @isMode('visual')
-      # We have to update selection prop
-      # AFTER cursor move and BEFORE return to submode-wise state
-      swrap.saveProperties(@editor)
+  # NOTE: Modify selection by modtion, selection is already "normalized" before this function is called.
+  select: ->
+    isOrWasVisual = @mode is 'visual' or @is('CurrentSelection') # need to care was visual for `.` repeated.
+    for selection in @editor.getSelections()
+      selection.modifySelection =>
+        @moveWithSaveJump(selection.cursor)
 
-    if @operator?
-      if @isMode('visual')
-        if @isMode('visual', 'linewise') and @editor.getLastSelection().isReversed()
-          @vimState.mutationManager.setCheckpoint('did-move')
-      else
-        @vimState.mutationManager.setCheckpoint('did-move')
+      succeeded = @moveSucceeded ? not selection.isEmpty() or (@moveSuccessOnLinewise and @isLinewise())
+      if isOrWasVisual or (succeeded and (@inclusive or @isLinewise()))
+        $selection = swrap(selection)
+        $selection.saveProperties(true) # save property of "already-normalized-selection"
+        $selection.applyWise(@wise)
 
-    # Modify selection to submode-wisely
-    switch @wise
-      when 'linewise'
-        @vimState.selectLinewise()
-      when 'blockwise'
-        @vimState.selectBlockwise()
+    @vimState.getLastBlockwiseSelection().autoscroll() if @wise is 'blockwise'
 
-  selectByMotion: (selection) ->
-    {cursor} = selection
-
-    selection.modifySelection =>
-      @moveWithSaveJump(cursor)
-
-    if not @isMode('visual') and not @is('CurrentSelection') and selection.isEmpty() # Failed to move.
-      return
-    return unless @isInclusive() or @isLinewise()
-
-    if @isMode('visual') and cursorIsAtEndOfLineAtNonEmptyRow(cursor)
-      # Avoid puting cursor on EOL in visual-mode as long as cursor's row was non-empty.
-      swrap(selection).translateSelectionHeadAndClip('backward')
-    # to select @inclusive-ly
-    swrap(selection).translateSelectionEndAndClip('forward')
-
-  setCursorBuffeRow: (cursor, row, options) ->
-    if @isVerticalMotion() and @getConfig('moveToFirstCharacterOnVerticalMotion')
+  setCursorBufferRow: (cursor, row, options) ->
+    if @verticalMotion and @getConfig('moveToFirstCharacterOnVerticalMotion')
       cursor.setBufferPosition(@getFirstCharacterPositionForBufferRow(row), options)
     else
       setBufferRow(cursor, row, options)
@@ -173,7 +131,7 @@ class CurrentSelection extends Motion
     @pointInfoByCursor = new Map
 
   moveCursor: (cursor) ->
-    if @isMode('visual')
+    if @mode is 'visual'
       if @isBlockwise()
         @blockwiseSelectionExtent = swrap(cursor.selection).getBlockwiseSelectionExtent()
       else
@@ -188,12 +146,12 @@ class CurrentSelection extends Motion
         cursor.setBufferPosition(point.traverse(@selectionExtent))
 
   select: ->
-    if @isMode('visual')
+    if @mode is 'visual'
       super
     else
       for cursor in @editor.getCursors() when pointInfo = @pointInfoByCursor.get(cursor)
-        {cursorPosition, startOfSelection, atEOL} = pointInfo
-        if atEOL or cursorPosition.isEqual(cursor.getBufferPosition())
+        {cursorPosition, startOfSelection} = pointInfo
+        if cursorPosition.isEqual(cursor.getBufferPosition())
           cursor.setBufferPosition(startOfSelection)
       super
 
@@ -207,8 +165,7 @@ class CurrentSelection extends Motion
       startOfSelection = cursor.selection.getBufferRange().start
       @onDidFinishOperation =>
         cursorPosition = cursor.getBufferPosition()
-        atEOL = cursor.isAtEndOfLine()
-        @pointInfoByCursor.set(cursor, {startOfSelection, cursorPosition, atEOL})
+        @pointInfoByCursor.set(cursor, {startOfSelection, cursorPosition})
 
 class MoveLeft extends Motion
   @extend()
@@ -713,9 +670,10 @@ class MoveToFirstLine extends Motion
   wise: 'linewise'
   jump: true
   verticalMotion: true
+  moveSuccessOnLinewise: true
 
   moveCursor: (cursor) ->
-    @setCursorBuffeRow(cursor, getValidVimBufferRow(@editor, @getRow()))
+    @setCursorBufferRow(cursor, getValidVimBufferRow(@editor, @getRow()))
     cursor.autoscroll(center: true)
 
   getRow: ->
@@ -737,6 +695,7 @@ class MoveToLineByPercent extends MoveToFirstLine
 class MoveToRelativeLine extends Motion
   @extend(false)
   wise: 'linewise'
+  moveSuccessOnLinewise: true
 
   moveCursor: (cursor) ->
     setBufferRow(cursor, cursor.getBufferRow() + @getCount(-1))
@@ -760,7 +719,7 @@ class MoveToTopOfScreen extends Motion
 
   moveCursor: (cursor) ->
     bufferRow = @editor.bufferRowForScreenRow(@getScreenRow())
-    @setCursorBuffeRow(cursor, bufferRow)
+    @setCursorBufferRow(cursor, bufferRow)
 
   getScrolloff: ->
     if @isAsTargetExceptSelect()
@@ -840,7 +799,7 @@ class Scroll extends Motion
 
   moveCursor: (cursor) ->
     bufferRow = @getBufferRow(cursor)
-    @setCursorBuffeRow(cursor, @getBufferRow(cursor), autoscroll: false)
+    @setCursorBufferRow(cursor, @getBufferRow(cursor), autoscroll: false)
 
     if cursor.isLastCursor()
       if @isSmoothScrollEnabled()
@@ -933,11 +892,8 @@ class Till extends Find
 
   getPoint: ->
     @point = super
-
-  selectByMotion: (selection) ->
-    super
-    if selection.isEmpty() and (@point? and not @backwards)
-      swrap(selection).translateSelectionEndAndClip('forward')
+    @moveSucceeded = @point?
+    return @point
 
 # keymap: T
 class TillBackwards extends Till
@@ -1019,9 +975,9 @@ class MoveToPreviousFoldStartWithSameIndent extends MoveToPreviousFoldStart
   @extend()
   @description: "Move to previous same-indented fold start"
   detectRow: (cursor) ->
-    baseIndentLevel = getIndentLevelForBufferRow(@editor, cursor.getBufferRow())
+    baseIndentLevel = @getIndentLevelForBufferRow(cursor.getBufferRow())
     for row in @getScanRows(cursor)
-      if getIndentLevelForBufferRow(@editor, row) is baseIndentLevel
+      if @getIndentLevelForBufferRow(row) is baseIndentLevel
         return row
     null
 
@@ -1148,39 +1104,28 @@ class MoveToPair extends Motion
   moveCursor: (cursor) ->
     @setBufferPositionSafely(cursor, @getPoint(cursor))
 
+  getPointForTag: (point) ->
+    pairInfo = @new("ATag").getPairInfo(point)
+    return null unless pairInfo?
+    {openRange, closeRange} = pairInfo
+    openRange = openRange.translate([0, +1], [0, -1])
+    closeRange = closeRange.translate([0, +1], [0, -1])
+    return closeRange.start if openRange.containsPoint(point) and (not point.isEqual(openRange.end))
+    return openRange.start if closeRange.containsPoint(point) and (not point.isEqual(closeRange.end))
+
   getPoint: (cursor) ->
     cursorPosition = cursor.getBufferPosition()
     cursorRow = cursorPosition.row
+    return point if point = @getPointForTag(cursorPosition)
 
-    getPointForTag = =>
-      p = cursorPosition
-      pairInfo = @new("ATag").getPairInfo(p)
-      return null unless pairInfo?
-      {openRange, closeRange} = pairInfo
-      openRange = openRange.translate([0, +1], [0, -1])
-      closeRange = closeRange.translate([0, +1], [0, -1])
-      return closeRange.start if openRange.containsPoint(p) and (not p.isEqual(openRange.end))
-      return openRange.start if closeRange.containsPoint(p) and (not p.isEqual(closeRange.end))
-
-    point = getPointForTag()
-    return point if point?
-
-    ranges = @new("AAnyPair", {allowForwarding: true, @member}).getRanges(cursor.selection)
-    ranges = ranges.filter ({start, end}) ->
-      p = cursorPosition
-      (p.row is start.row) and start.isGreaterThanOrEqual(p) or
-        (p.row is end.row) and end.isGreaterThanOrEqual(p)
-
-    return null unless ranges.length
-    # Calling containsPoint exclusive(pass true as 2nd arg) make opening pair under
-    # cursor is grouped to forwardingRanges
-    [enclosingRanges, forwardingRanges] = _.partition ranges, (range) ->
-      range.containsPoint(cursorPosition, true)
-    enclosingRange = _.last(sortRanges(enclosingRanges))
-    forwardingRanges = sortRanges(forwardingRanges)
-
-    if enclosingRange
-      forwardingRanges = forwardingRanges.filter (range) ->
-        enclosingRange.containsRange(range)
-
-    forwardingRanges[0]?.end.translate([0, -1]) or enclosingRange?.start
+    # AAnyPairAllowForwarding return forwarding range or enclosing range.
+    range = @new("AAnyPairAllowForwarding", {@member}).getRange(cursor.selection)
+    return null unless range?
+    {start, end} = range
+    if (start.row is cursorRow) and start.isGreaterThanOrEqual(cursorPosition)
+      # Forwarding range found
+      end.translate([0, -1])
+    else if end.row is cursorPosition.row
+      # Enclosing range was returned
+      # We move to start( open-pair ) only when close-pair was at same row as cursor-row.
+      start

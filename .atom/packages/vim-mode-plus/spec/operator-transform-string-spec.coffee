@@ -646,6 +646,7 @@ describe "Operator TransformString", ->
           milk
 
           """
+      # TODO#698 FIX when finished
       it "surround text for each word in visual selection", ->
         ensure 'v i p m s "',
           textC: """
@@ -653,7 +654,7 @@ describe "Operator TransformString", ->
           "apple"
           "pairs" "tomato"
           "orange"
-          |"milk"
+          "mil|k"
 
           """
 

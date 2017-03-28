@@ -7,6 +7,8 @@ Delegato = require 'delegato'
   getVimLastScreenRow
   getWordBufferRangeAndKindAtBufferPosition
   getFirstCharacterPositionForBufferRow
+  getBufferRangeForRowRange
+  getIndentLevelForBufferRow
   scanEditorInDirection
 } = require './utils'
 swrap = require './selection-wrapper'
@@ -63,6 +65,7 @@ vimStateMethods = [
 class Base
   Delegato.includeInto(this)
   @delegatesMethods(vimStateMethods..., toProperty: 'vimState')
+  @delegatesProperty('mode', 'submode', toProperty: 'vimState')
 
   constructor: (@vimState, properties=null) ->
     {@editor, @editorElement, @globalState} = @vimState
@@ -207,6 +210,12 @@ class Base
   getFirstCharacterPositionForBufferRow: (row) ->
     getFirstCharacterPositionForBufferRow(@editor, row)
 
+  getBufferRangeForRowRange: (rowRange) ->
+    getBufferRangeForRowRange(@editor, rowRange)
+
+  getIndentLevelForBufferRow: (row) ->
+    getIndentLevelForBufferRow(@editor, row)
+
   scanForward: (args...) ->
     scanEditorInDirection(@editor, 'forward', args...)
 
@@ -232,19 +241,19 @@ class Base
     @constructor.name
 
   getCursorBufferPosition: ->
-    if @isMode('visual')
+    if @mode is 'visual'
       @getCursorPositionForSelection(@editor.getLastSelection())
     else
       @editor.getCursorBufferPosition()
 
   getCursorBufferPositions: ->
-    if @isMode('visual')
+    if @mode is 'visual'
       @editor.getSelections().map(@getCursorPositionForSelection.bind(this))
     else
       @editor.getCursorBufferPositions()
 
   getBufferPositionForCursor: (cursor) ->
-    if @isMode('visual')
+    if @mode is 'visual'
       @getCursorPositionForSelection(cursor.selection)
     else
       cursor.getBufferPosition()
@@ -254,8 +263,12 @@ class Base
 
   toString: ->
     str = @getName()
-    str += ", target=#{@getTarget().toString()}" if @hasTarget()
-    str
+    if @hasTarget()
+      str += ", target=#{@target.getName()}, target.wise=#{@target.wise} "
+    else if @operator?
+      str += ", wise=#{@wise} , operator=#{@operator.getName()}"
+    else
+      str
 
   # Class methods
   # -------------------------

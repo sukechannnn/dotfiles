@@ -1,3 +1,50 @@
+# 0.85.1:
+- Fix, SUPER Critical: #175 Moving cursor in `visual-mode` make Atom editor really slow.
+  - vmp's mark is stored as marker and was created limitlessly without destroying previous-marker.
+  - As number of marker increased, editor get really slow.
+  - This is old Bug from original vim-mode, but impact get really significant from v0.58.0.
+    - Since from v0.58.0, to track previousSelection(used for `g v`) `<` and `>` mark is updated on every `visual-mode` movement.
+
+# 0.85.0:
+- Fix: When `stayOnYank` was enabled, `y 0`, `y h` no longer move cursor.
+- Fix: [Cosmetic but important] Fix very small cursor position jump( cosmetic ) when activating vL ( because of gap between px and em? )
+- Fix: Respect `v` operator-modifier for `t`( Till ) motion.
+  - e.g. In text "ab" when cursor is at "a"
+    - Old: `d t b` delete "a"( Good ), `d v t b` delete "a"( Bad ).
+    - New: `d t b` delete "a"( Good ), `d v t b` don't delete "a"( Good ).
+- Improve: Now can select line ending new line char in `visual-mode`.
+  - E.g. Move right by `l` at end of line select new-line.
+- Fix: #699 Lost goalColumn in `visual.blockwise` when move across blank-row.
+  - This is regression in v0.84.0.
+- Fix: #119 When `j`, `k` is used as operator's target, don't apply operation when failed to move.
+  - Now more compatible with pure Vim.
+  - Example:
+    - `d j` from last line do nothing. ( In previous version, delete last line ).
+    - `d k` from first line do nothing. ( In previous version, delete first line ).
+- Improve: `g v` after `vL`( visual-linewise ) to restore characterwise `column`.
+- Fix: `v i p d` then `.` repeat from different cursor position now works correctly
+- Internal:
+  - Overhaul: `CursorStyleManager`, `SelectionWrapper`, `TextObject`, `BlockwiseSelection`
+  - Rename `characterwiseHead` to `propertyHead` in `spec-helper.coffee`
+  - Remove lots of unnecessary `null` guard.
+- Breaking: Remove `All` text-obect, it's alias of `Entire` but not used.
+- Breaking: Remove `Edge` text-object, it's experimentally added in the past, but not maintained and not as useful as I originally thought.
+- Improve: TextObject
+  - Improve: No longer iterate `selectTextObject` over each memberSelection of blockwise selection( blockwiseSelection consists of multiple selection ).
+  - Improve: `Fold` , `Function` text-object now always expand if possible by checking containment against selected buffer range
+  - Improve: `Pair` text-object now always find from cursor position.
+  - Improve: Executing text-object from `vL` mode now works as expected in most of text-object.
+  - Internal: Set wise explicitly in most of text-obect rather than dynamically determine from selection range.
+  - Internal: Auto generate `Inner`, or `A` prefixed classes and `AllowForwarding` suffixed classes( reduced lots of boilerplate code ).
+- Improve: visual-blockwise ( `vB`-mode )
+  - #699 Fix: Now respect goalColumn in `vB` when move across blank row by `j` or `k`.
+    - Regression introduced in v0.84.0.
+  - #704 Rewrite vB-mode related code.
+    - vB selection is normalized before selecting text-object.
+    - So no longer iterate `selectTextObject` over each memberSelection of blockwise selection.
+  - Improve: #438 when vB selection respect `goalColumn`
+    - Original goalColumn is respected as long as selection-head is right-most column.
+
 # 0.84.1:
 - Fix: To fix vim-mode-plus-move-selected-text degradation.
 

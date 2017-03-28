@@ -13,6 +13,7 @@ SearchInputElement = require './search-input'
   matchScopes
   assert
   assertWithException
+  translatePointAndClip
 } = require './utils'
 swrap = require './selection-wrapper'
 
@@ -100,31 +101,18 @@ class VimState
   # BlockwiseSelections
   # -------------------------
   getBlockwiseSelections: ->
-    @blockwiseSelections
+    BlockwiseSelection.getSelections(@editor)
 
   getLastBlockwiseSelection: ->
-    _.last(@blockwiseSelections)
+    BlockwiseSelection.getLastSelection(@editor)
 
   getBlockwiseSelectionsOrderedByBufferPosition: ->
-    @getBlockwiseSelections().sort (a, b) ->
-      a.getStartSelection().compare(b.getStartSelection())
+    BlockwiseSelection.getSelectionsOrderedByBufferPosition(@editor)
 
   clearBlockwiseSelections: ->
-    @blockwiseSelections = []
-
-  selectBlockwiseForSelection: (selection) ->
-    @blockwiseSelections.push(new BlockwiseSelection(selection))
-
-  selectBlockwise: ->
-    for selection in @editor.getSelections()
-      @selectBlockwiseForSelection(selection)
-    @getLastBlockwiseSelection().autoscrollIfReversed()
+    BlockwiseSelection.clearSelections(@editor)
 
   # Other
-  # -------------------------
-  selectLinewise: ->
-    swrap.applyWise(@editor, 'linewise')
-
   # -------------------------
   toggleClassList: (className, bool=undefined) ->
     @editorElement.classList.toggle(className, bool)
@@ -171,7 +159,7 @@ class VimState
   emitDidFinishMutation: -> @emitter.emit('on-did-finish-mutation')
 
   onDidRestoreCursorPositions: (fn) -> @subscribe @emitter.on('did-restore-cursor-positions', fn)
-  emitDidRestoreCursorPositions: -> @emitter.emit('did-restore-cursor-positions')
+  emitDidRestoreCursorPositions: (event) -> @emitter.emit('did-restore-cursor-positions', event)
 
   onDidSetOperatorModifier: (fn) -> @subscribe @emitter.on('did-set-operator-modifier', fn)
   emitDidSetOperatorModifier: (options) -> @emitter.emit('did-set-operator-modifier', options)
@@ -219,6 +207,7 @@ class VimState
   destroy: ->
     return unless @isAlive()
     @constructor.vimStatesByEditor.delete(@editor)
+    BlockwiseSelection.clearSelections(@editor)
 
     @subscriptions.dispose()
 
@@ -261,14 +250,18 @@ class VimState
     nonEmptySelecitons = @editor.getSelections().filter (selection) -> not selection.isEmpty()
     if nonEmptySelecitons.length
       wise = swrap.detectWise(@editor)
+      @editorElement.component.updateSync()
       if @isMode('visual', wise)
-        for selection in nonEmptySelecitons when not swrap(selection).hasProperties()
-          swrap(selection).saveProperties()
+        for $selection in swrap.getSelections(@editor)
+          if $selection.hasProperties()
+            $selection.fixPropertyRowToRowRange() if wise is 'linewise'
+          else
+            $selection.saveProperties()
         @updateCursorsVisibility()
       else
         @activate('visual', wise)
     else
-      @activate('normal') if @isMode('visual')
+      @activate('normal') if @mode is 'visual'
 
   saveProperties: (event) ->
     return unless @isInterestingEvent(event)
@@ -294,14 +287,16 @@ class VimState
     @editor.setCursorBufferPosition(@editor.getCursorBufferPosition())
 
   resetNormalMode: ({userInvocation}={}) ->
-    if userInvocation ? false
-      if @editor.hasMultipleCursors()
-        @clearSelections()
+    BlockwiseSelection.clearSelections(@editor)
 
-      else if @hasPersistentSelections() and @getConfig('clearPersistentSelectionOnResetNormalMode')
-        @clearPersistentSelections()
-      else if @occurrenceManager.hasPatterns()
-        @occurrenceManager.resetPatterns()
+    if userInvocation ? false
+      switch
+        when @editor.hasMultipleCursors()
+          @clearSelections()
+        when @hasPersistentSelections() and @getConfig('clearPersistentSelectionOnResetNormalMode')
+          @clearPersistentSelections()
+        when @occurrenceManager.hasPatterns()
+          @occurrenceManager.resetPatterns()
 
       if @getConfig('clearHighlightSearchOnResetNormalMode')
         @globalState.set('highlightSearchPattern', null)
@@ -325,20 +320,27 @@ class VimState
   updateCursorsVisibility: ->
     @cursorStyleManager.refresh()
 
-  updatePreviousSelection: -> # FIXME: naming, updateLastSelectedInfo ?
+  # FIXME: naming, updateLastSelectedInfo ?
+  updatePreviousSelection: ->
     if @isMode('visual', 'blockwise')
-      properties = @getLastBlockwiseSelection()?.getCharacterwiseProperties()
+      properties = @getLastBlockwiseSelection()?.getProperties()
     else
-      properties = swrap(@editor.getLastSelection()).captureProperties()
+      properties = swrap(@editor.getLastSelection()).getProperties()
 
-    return unless properties?
+    # TODO#704 when cursor is added in visual-mode, corresponding selection prop yet not exists.
+    return unless properties
 
     {head, tail} = properties
-    if head.isGreaterThan(tail)
-      @mark.setRange('<', '>', [tail, head])
+
+    if head.isGreaterThanOrEqual(tail)
+      [start, end] = [tail, head]
+      head = end = translatePointAndClip(@editor, end, 'forward')
     else
-      @mark.setRange('<', '>', [head, tail])
-    @previousSelection = {properties, @submode}
+      [start, end] = [head, tail]
+      tail = end = translatePointAndClip(@editor, end, 'forward')
+
+    @mark.setRange('<', '>', [start, end])
+    @previousSelection = {properties: {head, tail}, @submode}
 
   # Persistent selection
   # -------------------------

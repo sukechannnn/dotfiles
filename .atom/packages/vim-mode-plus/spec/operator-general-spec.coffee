@@ -372,16 +372,6 @@ describe "Operator general", ->
         it "deletes both lines", ->
           ensure 'd k', text: "a\nb\n", cursor: [1, 0]
 
-      # [TODO] write more generic operator test. #119
-      # This is general behavior of all operator.
-      # When it cant move, its target selection should be empty so nothing happen.
-      xdescribe "when it can't move", ->
-        textOriginal = "a\nb\n"
-        cursorOriginal = [0, 0]
-        it "deletes delete nothing", ->
-          set text: textOriginal, cursor: cursorOriginal
-          ensure 'd k', text: textOriginal, cursor: cursorOriginal
-
     describe "when followed by a G", ->
       beforeEach ->
         originalText = "12345\nabcde\nABCDE"
@@ -596,6 +586,48 @@ describe "Operator general", ->
           ensure "V k y",
             cursor: [1, 2]
             register: '"': text: "111111\n222222\n", type: 'linewise'
+
+    describe "visual-mode.blockwise", ->
+      beforeEach ->
+        set
+          textC_: """
+          000000
+          1!11111
+          222222
+          333333
+          4|44444
+          555555\n
+          """
+        ensure "ctrl-v l l j",
+          selectedTextOrdered: ["111", "222", "444", "555"]
+          mode: ['visual', 'blockwise']
+
+      describe "when stayOnYank = false", ->
+        it "place cursor at start of block after yank", ->
+          ensure "y",
+            mode: 'normal'
+            textC_: """
+              000000
+              1!11111
+              222222
+              333333
+              4|44444
+              555555\n
+              """
+      describe "when stayOnYank = true", ->
+        beforeEach ->
+          settings.set('stayOnYank', true)
+        it "place cursor at head of block after yank", ->
+          ensure "y", ->
+            mode: 'normal'
+            textC_: """
+              000000
+              111111
+              222!222
+              333333
+              444444
+              555|555\n
+              """
 
     describe "y y", ->
       it "saves to register(type=linewise), cursor stay at same position", ->

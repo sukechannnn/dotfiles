@@ -1,6 +1,6 @@
 _ = require 'underscore-plus'
 
-{sortRanges, isEmpty} = require './utils'
+{sortRanges, assertWithException, trimRange} = require './utils'
 swrap = require './selection-wrapper'
 
 class BlockwiseSelection
@@ -9,54 +9,100 @@ class BlockwiseSelection
   goalColumn: null
   reversed: false
 
-  constructor: (selection) ->
-    {@editor} = selection
-    @initialize(selection)
+  @blockwiseSelectionsByEditor = new Map()
 
-    for memberSelection in @getSelections()
-      swrap(memberSelection).saveProperties()
-      swrap(memberSelection).setWiseProperty('blockwise')
+  @clearSelections: (editor) ->
+    @blockwiseSelectionsByEditor.delete(editor)
+
+  @has: (editor) ->
+    @blockwiseSelectionsByEditor.has(editor)
+
+  @getSelections: (editor) ->
+    @blockwiseSelectionsByEditor.get(editor) ? []
+
+  @getSelectionsOrderedByBufferPosition: (editor) ->
+    @getSelections(editor).sort (a, b) ->
+      a.getStartSelection().compare(b.getStartSelection())
+
+  @getLastSelection: (editor) ->
+    _.last(@blockwiseSelectionsByEditor.get(editor))
+
+  @saveSelection: (blockwiseSelection) ->
+    editor = blockwiseSelection.editor
+    @blockwiseSelectionsByEditor.set(editor, []) unless @has(editor)
+    @blockwiseSelectionsByEditor.get(editor).push(blockwiseSelection)
+
+  constructor: (selection) ->
+    assertWithException(swrap(selection).hasProperties(), "Trying to instantiate vB from properties-less selection")
+    @needSkipNormalization = false
+    @properties = {}
+    @editor = selection.editor
+    $selection = swrap(selection)
+
+    @goalColumn = selection.cursor.goalColumn
+    @reversed = memberReversed = selection.isReversed()
+
+    {head: {column: headColumn}, tail: {column: tailColumn}} = $selection.getProperties()
+    start = $selection.getBufferPositionFor('start', from: ['property'])
+    end = $selection.getBufferPositionFor('end', from: ['property'])
+
+    # Respect goalColumn only when it's value is Infinity and selection's head-column is bigger than tail-column
+    if (@goalColumn is Infinity) and headColumn >= tailColumn
+      if selection.isReversed()
+        start.column = @goalColumn
+      else
+        end.column = @goalColumn
+
+    if start.column > end.column
+      memberReversed = not memberReversed
+      startColumn = end.column
+      endColumn = start.column + 1
+    else
+      startColumn = start.column
+      endColumn = end.column + 1
+
+    ranges = [start.row..end.row].map (row) ->
+      [[row, startColumn], [row, endColumn]]
+
+    selection.setBufferRange(ranges.shift(), reversed: memberReversed)
+    @selections = [selection]
+    for range in ranges
+      @selections.push(@editor.addSelectionForBufferRange(range, reversed: memberReversed))
+    @updateGoalColumn()
+
+    for memberSelection in @getSelections() when $memberSelection = swrap(memberSelection)
+      $memberSelection.saveProperties() # TODO#698  remove this?
+      $memberSelection.getProperties().head.column = headColumn
+      $memberSelection.getProperties().tail.column = tailColumn
+
+    @constructor.saveSelection(this)
 
   getSelections: ->
     @selections
 
-  isEmpty: ->
-    @getSelections().every(isEmpty)
+  extendMemberSelectionsToEndOfLine: ->
+    for selection in @getSelections()
+      {start, end} = selection.getBufferRange()
+      end.column = Infinity
+      selection.setBufferRange([start, end])
 
-  initialize: (selection) ->
-    {@goalColumn} = selection.cursor
-    @selections = [selection]
-    wasReversed = reversed = selection.isReversed()
-
-    range = selection.getBufferRange()
-    if range.end.column is 0
-      range.end.row -= 1
-
-    if @goalColumn?
-      if wasReversed
-        range.start.column = @goalColumn
-      else
-        range.end.column = @goalColumn + 1
-
-    if range.start.column >= range.end.column
-      reversed = not reversed
-      range = range.translate([0, 1], [0, -1])
-
-    {start, end} = range
-    ranges = [start.row..end.row].map (row) ->
-      [[row, start.column], [row, end.column]]
-
-    selection.setBufferRange(ranges.shift(), {reversed})
-    for range in ranges
-      @selections.push(@editor.addSelectionForBufferRange(range, {reversed}))
-    @reverse() if wasReversed
-    @updateGoalColumn()
+  expandMemberSelectionsOverLineWithTrimRange: ->
+    for selection in @getSelections()
+      start = selection.getBufferRange().start
+      range = trimRange(@editor, @editor.bufferRangeForBufferRow(start.row))
+      selection.setBufferRange(range)
 
   isReversed: ->
     @reversed
 
   reverse: ->
     @reversed = not @reversed
+
+  getProperties: ->
+    {
+      head: swrap(@getHeadSelection()).getProperties().head
+      tail: swrap(@getTailSelection()).getProperties().tail
+    }
 
   updateGoalColumn: ->
     if @goalColumn?
@@ -88,107 +134,60 @@ class BlockwiseSelection
     else
       @getStartSelection()
 
-  getHeadBufferPosition: ->
-    @getHeadSelection().getHeadBufferPosition()
-
-  getTailBufferPosition: ->
-    @getTailSelection().getTailBufferPosition()
-
-  getStartBufferPosition: ->
-    @getStartSelection().getBufferRange().start
-
-  getEndBufferPosition: ->
-    @getEndSelection().getBufferRange().end
-
   getBufferRowRange: ->
     startRow = @getStartSelection().getBufferRowRange()[0]
     endRow = @getEndSelection().getBufferRowRange()[0]
     [startRow, endRow]
 
-  headReversedStateIsInSync: ->
-    @isReversed() is @getHeadSelection().isReversed()
-
   # [NOTE] Used by plugin package vmp:move-selected-text
   setSelectedBufferRanges: (ranges, {reversed}) ->
     sortRanges(ranges)
     range = ranges.shift()
-    @setHeadBufferRange(range, {reversed})
+
+    head = @getHeadSelection()
+    @removeSelections(except: head)
+    {goalColumn} = head.cursor
+    # When reversed state of selection change, goalColumn is cleared.
+    # But here for blockwise, I want to keep goalColumn unchanged.
+    # This behavior is not compatible with pure-Vim I know.
+    # But I believe this is more unnoisy and less confusion while moving
+    # cursor in visual-block mode.
+    head.setBufferRange(range, {reversed})
+    head.cursor.goalColumn ?= goalColumn if goalColumn?
+
     for range in ranges
       @selections.push @editor.addSelectionForBufferRange(range, {reversed})
     @updateGoalColumn()
 
-  # which must one of ['start', 'end', 'head', 'tail']
-  setPositionForSelections: (which) ->
-    for selection in @selections
-      swrap(selection).setBufferPositionTo(which)
-
-  clearSelections: ({except}={}) ->
+  removeSelections: ({except}={}) ->
     for selection in @selections.slice() when (selection isnt except)
-      @removeSelection(selection)
+      swrap(selection).clearProperties()
+      _.remove(@selections, selection)
+      selection.destroy()
 
   setHeadBufferPosition: (point) ->
     head = @getHeadSelection()
-    @clearSelections(except: head)
+    @removeSelections(except: head)
     head.cursor.setBufferPosition(point)
 
-  removeSelection: (selection) ->
-    _.remove(@selections, selection)
-    selection.destroy()
+  skipNormalization: ->
+    @needSkipNormalization = true
 
-  setHeadBufferRange: (range, options) ->
+  normalize: ->
+    return if @needSkipNormalization
+
+    properties = @getProperties() # Save prop BEFORE removing member selections.
+
     head = @getHeadSelection()
-    @clearSelections(except: head)
-    {goalColumn} = head.cursor
-    # When reversed state of selection change, goalColumn is cleared.
-    # But here for blockwise, I want to keep goalColumn unchanged.
-    # This behavior is not identical to pure Vim I know.
-    # But I believe this is more unnoisy and less confusion while moving
-    # cursor in visual-block mode.
-    head.setBufferRange(range, options)
-    head.cursor.goalColumn ?= goalColumn if goalColumn?
+    @removeSelections(except: head)
 
-  getCharacterwiseProperties: ->
-    head = @getHeadBufferPosition()
-    tail = @getTailBufferPosition()
+    {goalColumn} = head.cursor # FIXME this should not be necessary
+    $selection = swrap(head)
+    $selection.selectByProperties(properties)
+    $selection.saveProperties(true)
+    head.cursor.goalColumn ?= goalColumn if goalColumn # FIXME this should not be necessary
 
-    if @isReversed()
-      [start, end] = [head, tail]
-    else
-      [start, end] = [tail, head]
-
-    unless (@isSingleRow() or @headReversedStateIsInSync())
-      start.column -= 1
-      end.column += 1
-    {head, tail}
-
-  getBufferRange: ->
-    if @headReversedStateIsInSync()
-      start = @getStartSelection.getBufferrange().start
-      end = @getEndSelection.getBufferrange().end
-    else
-      start = @getStartSelection.getBufferrange().end.translate([0, -1])
-      end = @getEndSelection.getBufferrange().start.translate([0, +1])
-    {start, end}
-
-  # [FIXME] duplicate codes with setHeadBufferRange
-  restoreCharacterwise: ->
-    # When all selection is empty, we don't want to loose multi-cursor
-    # by restoreing characterwise range.
-    return if @isEmpty()
-
-    properties = @getCharacterwiseProperties()
-    head = @getHeadSelection()
-    @clearSelections(except: head)
-    swrap(head).selectByProperties(properties)
-    if head.getBufferRange().end.column is 0
-      swrap(head).translateSelectionEndAndClip('forward')
-
-  autoscroll: (options) ->
-    @getHeadSelection().autoscroll(options)
-
-  autoscrollIfReversed: (options) ->
-    # See #546 cursor out-of-screen issue happens only in reversed.
-    # So skip here for performance(but don't know if it's worth)
-    @autoscroll(options) if @isReversed()
+  autoscroll: ->
+    @getHeadSelection().autoscroll()
 
 module.exports = BlockwiseSelection

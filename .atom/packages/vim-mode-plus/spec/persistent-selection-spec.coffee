@@ -65,6 +65,13 @@ describe "Persistent Selection", ->
           ensurePersistentSelection 'j .',
             length: 2
             text: ['ooo', 'xxx']
+        it "create-persistent-selection forr current selection and repeatable by .", ->
+          ensurePersistentSelection 'v enter',
+            length: 1
+            text: ['o']
+          ensurePersistentSelection 'j .',
+            length: 2
+            text: ['o', 'x']
 
       describe "[No behavior diff currently] inner-persistent-selection and a-persistent-selection", ->
         it "apply operator to across all persistent-selections", ->
@@ -131,19 +138,16 @@ describe "Persistent Selection", ->
             # cursor: [[3, 12], [4, 12], [0, 12], [1, 12]]
 
     describe "select-occurrence-in-a-persistent-selection", ->
-      [update] = []
-      beforeEach ->
-        vimState.persistentSelection.markerLayer.onDidUpdate(update = jasmine.createSpy())
-
       it "select all instance of cursor word only within marked range", ->
         runs ->
-          paragraphText = "ooo xxx ooo\nxxx ooo xxx\n"
+          paragraphText = """
+            ooo xxx ooo
+            xxx ooo xxx\n
+            """
           ensurePersistentSelection 'g m i p } } j .', # Mark 2 inner-word and 1 inner-paragraph
             length: 2
             text: [paragraphText, paragraphText]
 
-        waitsFor ->
-          update.callCount is 1
         runs ->
           ensure 'g cmd-d',
             selectedText: ['ooo', 'ooo', 'ooo', 'ooo', 'ooo', 'ooo' ]

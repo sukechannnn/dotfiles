@@ -1,7 +1,6 @@
 _ = require 'underscore-plus'
 {
   haveSomeNonEmptySelection
-  getValidVimBufferRow
   isEmptyRow
   getWordPatternAtBufferPosition
   getSubwordPatternAtBufferPosition
@@ -9,6 +8,7 @@ _ = require 'underscore-plus'
   setBufferRow
   moveCursorToFirstCharacterAtRow
   ensureEndsWithNewLineForBufferRow
+  assertWithException
 } = require './utils'
 swrap = require './selection-wrapper'
 Base = require './base'
@@ -33,10 +33,10 @@ class Operator extends Base
   stayOptionName: null
   stayByMarker: false
   restorePositions: true
+  setToFirstCharacterOnLinewise: false
 
   acceptPresetOccurrence: true
   acceptPersistentSelection: true
-  acceptCurrentSelection: true
 
   bufferCheckpointByPurpose: null
   mutateSelectionOrderd: false
@@ -74,42 +74,23 @@ class Operator extends Base
       @editor.groupChangesSinceCheckpoint(checkpoint)
       @deleteBufferCheckpoint(purpose)
 
-  needStay: ->
-    @stayAtSamePosition ?
-      (@isOccurrence() and @getConfig('stayOnOccurrence')) or @getConfig(@stayOptionName)
-
-  needStayOnRestore: ->
-    @stayAtSamePosition ?
-      (@isOccurrence() and @getConfig('stayOnOccurrence') and @occurrenceSelected) or @getConfig(@stayOptionName)
-
-  isOccurrence: ->
-    @occurrence
-
-  setOccurrence: (@occurrence) ->
-    @occurrence
-
   setMarkForChange: (range) ->
     @vimState.mark.setRange('[', ']', range)
 
   needFlash: ->
     return unless @flashTarget
-    {mode, submode} = @vimState
-    if mode isnt 'visual' or (@target.isMotion() and submode isnt @target.wise)
-      @getConfig('flashOnOperate') and (@getName() not in @getConfig('flashOnOperateBlacklist'))
+    return unless @getConfig('flashOnOperate')
+    return if @getName() in @getConfig('flashOnOperateBlacklist')
+    (@mode isnt 'visual') or (@submode isnt @target.wise) # e.g. Y in vC
 
   flashIfNecessary: (ranges) ->
-    return unless @needFlash()
-    @vimState.flash(ranges, type: @getFlashType())
+    if @needFlash()
+      @vimState.flash(ranges, type: @getFlashType())
 
   flashChangeIfNecessary: ->
-    return unless @needFlash()
-
-    @onDidFinishOperation =>
-      if @flashCheckpoint is 'did-finish'
-        ranges = @mutationManager.getMarkerBufferRanges().filter (range) -> not range.isEmpty()
-      else
-        ranges = @mutationManager.getBufferRangesForCheckpoint(@flashCheckpoint)
-      @vimState.flash(ranges, type: @getFlashType())
+    if @needFlash()
+      @onDidFinishOperation =>
+        @vimState.flash(@mutationManager.getBufferRangesForCheckpoint(@flashCheckpoint), type: @getFlashType())
 
   getFlashType: ->
     if @occurrenceSelected
@@ -121,8 +102,8 @@ class Operator extends Base
     return unless @trackChange
 
     @onDidFinishOperation =>
-      if marker = @mutationManager.getMutationForSelection(@editor.getLastSelection())?.marker
-        @setMarkForChange(marker.getBufferRange())
+      if range = @mutationManager.getMutatedBufferRange(@editor.getLastSelection())
+        @setMarkForChange(range)
 
   constructor: ->
     super
@@ -133,25 +114,22 @@ class Operator extends Base
 
     # When preset-occurrence was exists, operate on occurrence-wise
     if @acceptPresetOccurrence and @occurrenceManager.hasMarkers()
-      @setOccurrence(true)
+      @occurrence = true
 
     # [FIXME] ORDER-MATTER
     # To pick cursor-word to find occurrence base pattern.
     # This has to be done BEFORE converting persistent-selection into real-selection.
     # Since when persistent-selection is actuall selected, it change cursor position.
-    if @isOccurrence() and not @occurrenceManager.hasMarkers()
+    if @occurrence and not @occurrenceManager.hasMarkers()
       @occurrenceManager.addPattern(@patternForOccurrence ? @getPatternForOccurrenceType(@occurrenceType))
 
     # This change cursor position.
     if @selectPersistentSelectionIfNecessary()
-      if @isMode('visual')
-        # [FIXME] Sync selection-wise this phase?
-        # e.g. selected persisted selection convert to vB sel in vB-mode?
-        null
-      else
+      # [FIXME] selection-wise is not synched if it already visual-mode
+      unless @mode is 'visual'
         @vimState.modeManager.activate('visual', swrap.detectWise(@editor))
 
-    @target = 'CurrentSelection' if @isMode('visual') and @acceptCurrentSelection
+    @target = 'CurrentSelection' if @mode is 'visual'
     @setTarget(@new(@target)) if _.isString(@target)
 
   subscribeResetOccurrencePatternIfNeeded: ->
@@ -168,8 +146,8 @@ class Operator extends Base
       return
 
     if options.occurrence?
-      @setOccurrence(options.occurrence)
-      if @isOccurrence()
+      @occurrence = options.occurrence
+      if @occurrence
         @occurrenceType = options.occurrenceType
         # This is o modifier case(e.g. `c o p`, `d O f`)
         # We RESET existing occurence-marker when `o` or `O` modifier is typed by user.
@@ -185,8 +163,8 @@ class Operator extends Base
 
       @persistentSelection.select()
       @editor.mergeIntersectingSelections()
-      swrap.saveProperties(@editor)
-
+      for $selection in swrap.getSelections(@editor) when not $selection.hasProperties()
+        $selection.saveProperties()
       true
     else
       false
@@ -217,8 +195,8 @@ class Operator extends Base
     @vimState.register.set({text, selection}) if text
 
   normalizeSelectionsIfNecessary: ->
-    if @target?.isMotion() and @isMode('visual')
-      @vimState.modeManager.normalizeSelections()
+    if @target?.isMotion() and (@mode is 'visual')
+      swrap.normalize(@editor)
 
   startMutation: (fn) ->
     if @canEarlySelect()
@@ -246,6 +224,7 @@ class Operator extends Base
           selections = @editor.getSelections()
         for selection in selections
           @mutateSelection(selection)
+        @mutationManager.setCheckpoint('did-finish')
         @restoreCursorPositionsIfNecessary()
 
     # Even though we fail to select target and fail to mutate,
@@ -255,10 +234,9 @@ class Operator extends Base
   # Return true unless all selection is empty.
   selectTarget: ->
     return @targetSelected if @targetSelected?
-    @mutationManager.init(useMarker: @needStay() and @stayByMarker)
+    @mutationManager.init({@stayByMarker})
 
-    # Currently only motion have forceWise methods
-    @target.forceWise?(@wise) if @wise?
+    @target.forceWise(@wise) if @wise?
     @emitWillSelectTarget()
 
     # Allow cursor position adjustment 'on-will-select-target' hook.
@@ -269,13 +247,13 @@ class Operator extends Base
     # Since MoveToNextOccurrence, MoveToPreviousOccurrence motion move by
     #  occurrence-marker, occurrence-marker has to be created BEFORE `@target.execute()`
     # And when repeated, occurrence pattern is already cached at @patternForOccurrence
-    if @isRepeated() and @isOccurrence() and not @occurrenceManager.hasMarkers()
+    if @isRepeated() and @occurrence and not @occurrenceManager.hasMarkers()
       @occurrenceManager.addPattern(@patternForOccurrence, {@occurrenceType})
 
     @target.execute()
 
     @mutationManager.setCheckpoint('did-select')
-    if @isOccurrence()
+    if @occurrence
       # To repoeat(`.`) operation where multiple occurrence patterns was set.
       # Here we save patterns which represent unioned regex which @occurrenceManager knows.
       @patternForOccurrence ?= @occurrenceManager.buildPattern()
@@ -300,13 +278,10 @@ class Operator extends Base
 
   restoreCursorPositionsIfNecessary: ->
     return unless @restorePositions
-    options =
-      stay: @needStayOnRestore()
-      occurrenceSelected: @occurrenceSelected
-      isBlockwise: @target?.isBlockwise?()
-
-    @mutationManager.restoreCursorPositions(options)
-    @emitDidRestoreCursorPositions()
+    stay = @stayAtSamePosition ? @getConfig(@stayOptionName) or (@occurrenceSelected and @getConfig('stayOnOccurrence'))
+    wise = @target.wise
+    @mutationManager.restoreCursorPositions({stay, wise, @occurrenceSelected, @setToFirstCharacterOnLinewise})
+    @emitDidRestoreCursorPositions({stay})
 
 # Select
 # When text-object is invoked from normal or viusal-mode, operation would be
@@ -323,14 +298,10 @@ class Select extends Operator
 
   execute: ->
     @startMutation(@selectTarget.bind(this))
-    if @target.isTextObject() and wise = @target.getWise()
-      if @isMode('visual')
-        switch wise
-          when 'characterwise'
-            swrap.saveProperties(@editor)
-          when 'linewise'
-            swrap.fixPropertiesForLinewise(@editor)
-      @activateModeIfNecessary('visual', wise)
+
+    if @target.isTextObject() and @target.selectSucceeded
+      @editor.scrollToCursorPosition()
+      @activateModeIfNecessary('visual', @target.wise)
 
 class SelectLatestChange extends Select
   @extend()
@@ -354,7 +325,7 @@ class SelectOccurrence extends Operator
   execute: ->
     @startMutation =>
       if @selectTarget()
-        @activateModeIfNecessary('visual', swrap.detectWise(@editor))
+        @activateModeIfNecessary('visual', 'characterwise')
 
 # Persistent Selection
 # =========================
@@ -364,10 +335,6 @@ class CreatePersistentSelection extends Operator
   stayAtSamePosition: true
   acceptPresetOccurrence: false
   acceptPersistentSelection: false
-
-  execute: ->
-    @restorePositions = not @isMode('visual', 'blockwise')
-    super
 
   mutateSelection: (selection) ->
     @persistentSelection.markBufferRange(selection.getBufferRange())
@@ -406,7 +373,7 @@ class TogglePresetOccurrence extends Operator
       pattern = null
       isNarrowed = @vimState.modeManager.isNarrowed()
 
-      if @isMode('visual') and not isNarrowed
+      if @mode is 'visual' and not isNarrowed
         @occurrenceType = 'base'
         pattern = new RegExp(_.escapeRegExp(@editor.getSelectedText()), 'g')
       else
@@ -439,26 +406,16 @@ class Delete extends Operator
   flashCheckpoint: 'did-select-occurrence'
   flashTypeForOccurrence: 'operator-remove-occurrence'
   stayOptionName: 'stayOnDelete'
+  setToFirstCharacterOnLinewise: true
 
   execute: ->
-    @onDidSelectTarget =>
-      return if @occurrenceSelected
-      if @target.isLinewise()
-        @onDidRestoreCursorPositions =>
-          @adjustCursor(cursor) for cursor in @editor.getCursors()
+    if @target.wise is 'blockwise'
+      @restorePositions = false
     super
 
   mutateSelection: (selection) =>
     @setTextToRegisterForSelection(selection)
     selection.deleteSelectedText()
-
-  adjustCursor: (cursor) ->
-    row = getValidVimBufferRow(@editor, cursor.getBufferRow())
-    if @needStayOnRestore()
-      point = @mutationManager.getInitialPointForSelection(cursor.selection)
-      cursor.setBufferPosition([row, point.column])
-    else
-      cursor.setBufferPosition(@getFirstCharacterPositionForBufferRow(row))
 
 class DeleteRight extends Delete
   @extend()
@@ -471,12 +428,12 @@ class DeleteLeft extends Delete
 class DeleteToLastCharacterOfLine extends Delete
   @extend()
   target: 'MoveToLastCharacterOfLine'
-  initialize: ->
-    if @isMode('visual', 'blockwise')
-      # FIXME Maybe because of bug of CurrentSelection,
-      # we use MoveToLastCharacterOfLine as target
-      @acceptCurrentSelection = false
-      swrap.setReversedState(@editor, false) # Ensure all selections to un-reversed
+
+  execute: ->
+    if @target.wise is 'blockwise'
+      @onDidSelectTarget =>
+        for blockwiseSelection in @getBlockwiseSelections()
+          blockwiseSelection.extendMemberSelectionsToEndOfLine()
     super
 
 class DeleteLine extends Delete
@@ -507,7 +464,7 @@ class YankToLastCharacterOfLine extends Yank
 # [ctrl-a]
 class Increase extends Operator
   @extend()
-  target: "InnerCurrentLine" # ctrl-a in normal-mode find target number in CurrentLine
+  target: "Empty" # ctrl-a in normal-mode find target number in current line manually
   flashTarget: false # do manually
   restorePositions: false # do manually
   step: 1
@@ -530,22 +487,23 @@ class Increase extends Operator
     newRanges
 
   mutateSelection: (selection) ->
-    scanRange = selection.getBufferRange()
-    if @instanceof('IncrementNumber') or @target.is('CurrentSelection')
-      @newRanges.push(@replaceNumberInBufferRange(scanRange)...)
-      selection.cursor.setBufferPosition(scanRange.start)
-    else
-      # ctrl-a, ctrl-x in `normal-mode`
-      initialPoint = @mutationManager.getInitialPointForSelection(selection)
+    {cursor} = selection
+    if @target.is('Empty') # ctrl-a, ctrl-x in `normal-mode`
+      cursorPosition = cursor.getBufferPosition()
+      scanRange = @editor.bufferRangeForBufferRow(cursorPosition.row)
       newRanges = @replaceNumberInBufferRange scanRange, ({range, stop}) ->
-        if range.end.isGreaterThan(initialPoint)
+        if range.end.isGreaterThan(cursorPosition)
           stop()
           true
         else
           false
 
-      point = newRanges[0]?.end.translate([0, -1]) ? initialPoint
-      selection.cursor.setBufferPosition(point)
+      point = newRanges[0]?.end.translate([0, -1]) ? cursorPosition
+      cursor.setBufferPosition(point)
+    else
+      scanRange = selection.getBufferRange()
+      @newRanges.push(@replaceNumberInBufferRange(scanRange)...)
+      cursor.setBufferPosition(scanRange.start)
 
   getNextNumber: (numberString) ->
     Number.parseInt(numberString, 10) + @step * @getCount()

@@ -1,5 +1,4 @@
 {getVimState, TextData} = require './spec-helper'
-swrap = require '../lib/selection-wrapper'
 
 describe "Visual Blockwise", ->
   [set, ensure, keystroke, editor, editorElement, vimState] = []
@@ -80,18 +79,23 @@ describe "Visual Blockwise", ->
       when 'top' then first
       when 'bottom' then last
     bs = vimState.getLastBlockwiseSelection()
+
     expect(bs.getHeadSelection()).toBe head
     tail = switch o.tail
       when 'top' then first
       when 'bottom' then last
     expect(bs.getTailSelection()).toBe tail
 
-    for s in others
+    for s in others ? []
       expect(bs.getHeadSelection()).not.toBe s
       expect(bs.getTailSelection()).not.toBe s
+
     if o.reversed?
+      expect(bs.isReversed()).toBe o.reversed
+
+    if o.headReversed?
       for s in selections
-        expect(s.isReversed()).toBe o.reversed
+        expect(s.isReversed()).toBe o.headReversed
 
   beforeEach ->
     getVimState (state, vimEditor) ->
@@ -230,16 +234,16 @@ describe "Visual Blockwise", ->
     describe 'o', ->
       it "change blockwiseHead to opposite side and reverse selection", ->
         keystroke 'o'
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: true
 
         keystroke 'o'
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: false
     describe 'capital O', ->
       it "reverse each selection", ->
         keystroke 'O'
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: true
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: true
         keystroke 'O'
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: false
 
   describe "shift from characterwise to blockwise", ->
     describe "when selection is not reversed", ->
@@ -258,7 +262,7 @@ describe "Visual Blockwise", ->
             '+'
             'C'
           ]
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: false
 
       it 'case-2', ->
         ensure 'h 3 j ctrl-v',
@@ -269,7 +273,7 @@ describe "Visual Blockwise", ->
             '-+'
             '-C'
           ]
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: true
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: true
 
       it 'case-3', ->
         ensure '2 h 3 j ctrl-v',
@@ -280,7 +284,7 @@ describe "Visual Blockwise", ->
             '--+'
             '--C'
           ]
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: true
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: true
 
       it 'case-4', ->
         ensure 'l 3 j ctrl-v',
@@ -291,7 +295,7 @@ describe "Visual Blockwise", ->
             '++'
             'C-'
           ]
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: false
       it 'case-5', ->
         ensure '2 l 3 j ctrl-v',
           mode: ['visual', 'blockwise']
@@ -301,7 +305,7 @@ describe "Visual Blockwise", ->
             '+++'
             'C--'
           ]
-        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', headReversed: false
 
     describe "when selection is reversed", ->
       beforeEach ->
@@ -319,7 +323,7 @@ describe "Visual Blockwise", ->
             '+'
             'C'
           ]
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: true
 
       it 'case-2', ->
         ensure 'h 3 k ctrl-v',
@@ -330,7 +334,7 @@ describe "Visual Blockwise", ->
             '-+'
             '-C'
           ]
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: true
 
       it 'case-3', ->
         ensure '2 h 3 k ctrl-v',
@@ -341,7 +345,7 @@ describe "Visual Blockwise", ->
             '--+'
             '--C'
           ]
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: true
 
       it 'case-4', ->
         ensure 'l 3 k ctrl-v',
@@ -352,7 +356,7 @@ describe "Visual Blockwise", ->
             '++'
             'C-'
           ]
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: false
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: false
 
       it 'case-5', ->
         ensure '2 l 3 k ctrl-v',
@@ -363,7 +367,7 @@ describe "Visual Blockwise", ->
             '+++'
             'C--'
           ]
-        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: false
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', headReversed: false
 
   describe "shift from blockwise to characterwise", ->
     preserveSelection = ->
@@ -398,6 +402,114 @@ describe "Visual Blockwise", ->
       it 'case-5', -> ensureCharacterwiseWasRestored('v l 3 k')
       it 'case-6', -> ensureCharacterwiseWasRestored('v 2 l 3 k')
       it 'case-7', -> set cursor: [5, 0]; ensureCharacterwiseWasRestored('v 5 l 3 k')
+
+  describe "keep goalColumn", ->
+    describe "when passing through blank row", ->
+      beforeEach ->
+        set
+          text: """
+          012345678
+
+          ABCDEFGHI\n
+          """
+
+      it "when [reversed = false, headReversed = false]", ->
+        set cursor: [0, 3]
+        ensure "ctrl-v l l l", cursor: [[0, 7]], selectedTextOrdered: ["3456"]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false, headReversed: false
+
+        ensure "j", cursor: [[0, 0], [1, 0]], selectedTextOrdered: ["0123", ""]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false, headReversed: true
+
+        ensure "j", cursor: [[0, 7], [1, 0], [2, 7]], selectedTextOrdered: ["3456", "", "DEFG"]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false, headReversed: false
+
+      it "when [reversed = true, headReversed = true]", ->
+        set cursor: [2, 6]
+        ensure "ctrl-v h h h", cursor: [[2, 3]], selectedTextOrdered: ["DEFG"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true, headReversed: true
+
+        ensure "k", cursor: [[1, 0], [2, 0]], selectedTextOrdered: ["", "ABCDEFG"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true, headReversed: true
+
+        ensure "k", cursor: [[0, 3], [1, 0], [2, 3]], selectedTextOrdered: ["3456", "", "DEFG"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true, headReversed: true
+
+      it "when [reversed = false, headReversed = true]", ->
+        set cursor: [0, 6]
+        ensure "ctrl-v h h h", cursor: [[0, 3]], selectedTextOrdered: ["3456"]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: true, headReversed: true
+
+        ensure "j", cursor: [[0, 0], [1, 0]], selectedTextOrdered: ["0123456", ""]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false, headReversed: true
+
+        ensure "j", cursor: [[0, 3], [1, 0], [2, 3]], selectedTextOrdered: ["3456", "", "DEFG"]
+        ensureBlockwiseSelection head: 'bottom', tail: 'top', reversed: false, headReversed: true
+
+      it "when [reversed = true, headReversed = false]", ->
+        set cursor: [2, 3]
+        ensure "ctrl-v l l l", cursor: [[2, 7]], selectedTextOrdered: ["DEFG"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: false, headReversed: false
+
+        ensure "k", cursor: [[1, 0], [2, 0]], selectedTextOrdered: ["", "ABCD"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true, headReversed: true
+
+        ensure "k", cursor: [[0, 7], [1, 0], [2, 7]], selectedTextOrdered:  ["3456", "", "DEFG"]
+        ensureBlockwiseSelection head: 'top', tail: 'bottom', reversed: true, headReversed: false
+
+    describe "when head cursor position is less than original goal column", ->
+      beforeEach ->
+        set
+          text: """
+          012345678901234567890123
+                 xxx01234
+          012345678901234567890123\n
+          """
+
+      describe "[tailColumn < headColum], goalColumn isnt Infinity", ->
+        it "shrinks block till head column by keeping goalColumn", ->
+          set cursor: [0, 10] # j, k motion keep goalColumn so starting `10` column means goalColumn is 10.
+          ensure "ctrl-v 1 0 l", selectedTextOrdered: ["01234567890"], cursor: [[0, 21]]
+          ensure "j", selectedTextOrdered: ["012345", "01234"], cursor: [[0, 16], [1, 15]]
+          ensure "j", selectedTextOrdered: ["01234567890", "01234", "01234567890"], cursor: [[0, 21], [1, 15], [2, 21]]
+        it "shrinks block till head column by keeping goalColumn", ->
+          set cursor: [2, 10]
+          ensure "ctrl-v 1 0 l", selectedTextOrdered: ["01234567890"], cursor: [[2, 21]]
+          ensure "k", selectedTextOrdered: ["01234", "012345"], cursor: [[1, 15], [2, 16]]
+          ensure "k", selectedTextOrdered: ["01234567890", "01234", "01234567890"], cursor: [[0, 21], [1, 15], [2, 21]]
+      describe "[tailColumn < headColum], goalColumn is Infinity", ->
+        it "keep each member selection selected till end-of-line( No shrink )", ->
+          set cursor: [0, 10] # $ motion set goalColumn to Infinity
+          ensure "ctrl-v $", selectedTextOrdered: ["01234567890123"], cursor: [[0, 24]]
+          ensure "j", selectedTextOrdered: ["01234567890123", "01234"], cursor: [[0, 24], [1, 15]]
+          ensure "j", selectedTextOrdered: ["01234567890123", "01234", "01234567890123"], cursor: [[0, 24], [1, 15], [2, 24]]
+        it "keep each member selection selected till end-of-line( No shrink )", ->
+          set cursor: [2, 10]
+          ensure "ctrl-v $", selectedTextOrdered: ["01234567890123"], cursor: [[2, 24]]
+          ensure "k", selectedTextOrdered: ["01234", "01234567890123"], cursor: [[1, 15], [2, 24]]
+          ensure "k", selectedTextOrdered: ["01234567890123", "01234", "01234567890123"], cursor: [[0, 24], [1, 15], [2, 24]]
+      describe "[tailColumn > headColum], goalColumn isnt Infinity", ->
+        it "Respect actual head column over goalColumn", ->
+          set cursor: [0, 20] # j, k motion keep goalColumn so starting `10` column means goalColumn is 10.
+          ensure "ctrl-v l l", selectedTextOrdered: ["012"], cursor: [[0, 23]]
+          ensure "j", selectedTextOrdered: ["567890", ""], cursor: [[0, 15], [1, 15]]
+          ensure "j", selectedTextOrdered: ["012", "", "012"], cursor: [[0, 23], [1, 15], [2, 23]]
+        it "Respect actual head column over goalColumn", ->
+          set cursor: [2, 20] # j, k motion keep goalColumn so starting `10` column means goalColumn is 10.
+          ensure "ctrl-v l l", selectedTextOrdered: ["012"], cursor: [[2, 23]]
+          ensure "k", selectedTextOrdered: ["", "567890"], cursor: [[1, 15], [2, 15]]
+          ensure "k", selectedTextOrdered: ["012", "", "012"], cursor: [[0, 23], [1, 15], [2, 23]]
+      describe "[tailColumn > headColum], goalColumn is Infinity", ->
+        it "Respect actual head column over goalColumn", ->
+          set cursor: [0, 20] # j, k motion keep goalColumn so starting `10` column means goalColumn is 10.
+          ensure "ctrl-v $", selectedTextOrdered: ["0123"], cursor: [[0, 24]]
+          ensure "j", selectedTextOrdered: ["567890", ""], cursor: [[0, 15], [1, 15]]
+          ensure "j", selectedTextOrdered: ["0123", "", "0123"], cursor: [[0, 24], [1, 15], [2, 24]]
+        it "Respect actual head column over goalColumn", ->
+          set cursor: [2, 20] # j, k motion keep goalColumn so starting `10` column means goalColumn is 10.
+          ensure "ctrl-v $", selectedTextOrdered: ["0123"], cursor: [[2, 24]]
+          ensure "k", selectedTextOrdered: ["", "567890"], cursor: [[1, 15], [2, 15]]
+          ensure "k", selectedTextOrdered: ["0123", "", "0123"], cursor: [[0, 24], [1, 15], [2, 24]]
 
   # [FIXME] not appropriate put here, re-consider all spec file layout later.
   describe "gv feature", ->

@@ -1,21 +1,22 @@
 # fork from https://github.com/sadovnychyi/autocomplete-python/blob/master/lib/definitions-view.coffee
 
 {$, $$, SelectListView} = require 'atom-space-pen-views'
-path = require 'path'
 
-module.exports =
-class DefinitionsView extends SelectListView
+module.exports = class DefinitionsView extends SelectListView
   initialize: ->
     super
     @storeFocusedElement()
     @addClass('symbols-view')
-    @panel ?= atom.workspace.addModalPanel(item: this)
+    @panel ?= atom.workspace.addModalPanel({item: this})
     @panel.show()
     @setLoading('Looking for definitions')
 
-    setTimeout(() =>
-      @focusFilterEditor()
-    , 100)
+    @list.unbind('mouseup')
+    @list.on 'click', 'li', (e) =>
+      @confirmSelection() if $(e.target).closest('li').hasClass('selected')
+      e.preventDefault()
+      return false
+    setTimeout(@focusFilterEditor.bind(this), 20)
 
   destroy: ->
     @cancel()
