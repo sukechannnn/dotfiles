@@ -32,6 +32,7 @@
     packagesWithKeymapsDisabled: [
       "symbols-view"
     ]
+    projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
     themes: [
       "one-dark-ui"
