@@ -25,6 +25,7 @@
 # https://github.com/bevry/cson#what-is-cson
 'atom-text-editor:not([mini])':
   'cmd-l': 'abort!'
+  'cmd-o': 'abort!'
 
 '.platform-darwin atom-text-editor':
   'cmd-d': 'pane:split-right-and-copy-active-item'
@@ -34,6 +35,7 @@
   'alt-cmd-up': 'editor:move-line-up'
   'alt-cmd-down': 'editor:move-line-down'
   'cmd-l': 'git-log:show'
+  'cmd-o': 'advanced-open-file:toggle'
 
 'body':
   'ctrl-cmd-e': 'window:focus-next-pane'
