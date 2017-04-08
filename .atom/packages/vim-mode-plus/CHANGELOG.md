@@ -1,3 +1,49 @@
+# 0.87.0:
+- New: #732 Add integration with `demo-mode` package.
+  - `demo-mode` is new Atom package I've released recently, it was originally developed as part of vim-mode-plus.
+  - When demo-mode is activated via `demo-mode:toggle`, vmp do special integration to
+    - Make operator flash duration longer than normal duration
+    - Demo-mode hover indicator show `keystorke`, `command` and `kind`(extra info added by vmp) on each keybinding dispatch.
+      - kind is one of `operator`, `text-object`, `motion`, `misc-command`
+- New: #722 New version of put command which paste content to suggested indent level with keeping pasting text layout.
+  - PR by @apazzolini
+  - Normal `p`, `P` paste content as-is, so ignores desirable( or suggested ) indent level.
+  - Following two command respect suggested indent level on linewise paste( no diff for characterwise paste ).
+    - `vim-mode-plus:put-before-with-auto-indent`: Same as `put-before`(`P`) with respect suggested indent level.
+    - `vim-mode-plus:put-after-with-auto-indent`:  Same as `put-after`(`p`) with respect suggested indent level.
+  - No keymaps provided by default
+- Improve: `o`, `O` to adjust IndentLevel when `o`, `O` is executed from empty row #723
+  - PR by @apazzolini
+  - To provider further pure-Vim compatible behavior.
+
+# 0.86.3
+- Improve: #727 Tweak incremental-search match highlight style to not hide covering text in some syntax-theme.
+
+# 0.86.2
+- Fix: #725 Now `v`( or `V` or `ctrl-v`) then `escape g v` correctly re-select previously selected range.
+- Improve: #726 Relax selection-property assertion.
+  - Fix: #716 No longer throw error when confirming color via color-picker then `escape`.
+
+# 0.86.0, 0.86.1(just changelog-typo-fix):
+- New: `insert-at-start-of-subword-occurrence` and `insert-at-end-of-subword-occurrence` command.
+  - Start insert at start or end of `subword` occurrence.
+  - E.g
+    - When I map `{`, and `}` to these command in `normal-mode`.
+      - `{ f`: start insert at each start of subword-occurrence within function.
+      - `} f`: start insert at each end of subword-occurrence within function.
+      - `{ p`: start insert at each start of subword-occurrence within paragraph.
+- Internal, Breaking: Remove `did-restore-cursor-positions` hook which was used in Operator code but no longer used.
+- Internal, Breaking: Remove many of simple accessor method like `getName`, `getOperator`, now just use `@name`, `@operator` to access these values.
+- Improve: Hide cursor on early select
+   - For `supportEarlySelect = true` operator( `surround`, `replace` ).
+   - These operator began to shows cursor on early-select from Atom v1.15, but now hide again for early-select timing.
+- Internal, Dev: #719 No longer use `HTMLElement` as search-input for speedy dev by hot-reload vmp.
+- Internal, Breaking: Move `InsertMode`(was in `insert-mode.coffee`) operations under `MiscCommands`( in `misc-commands.coffee`)
+- Improve: Keep original multi-cursor on occurrence operation by migrating mutation info.
+- Improve: Simplify mark manager and destroy all marker on `vimState.onDidDestroy`.
+- Improve: Clean up mutationManager.
+- Fix, Internal: Now do TYPE check for spec-helper's `ensure` function's argument, some test was silently skipped in previous release.
+
 # 0.85.1:
 - Fix, SUPER Critical: #175 Moving cursor in `visual-mode` make Atom editor really slow.
   - vmp's mark is stored as marker and was created limitlessly without destroying previous-marker.

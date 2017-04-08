@@ -7,14 +7,8 @@ _ = require 'underscore-plus'
 
 settings = require './settings'
 HoverManager = require './hover-manager'
-SearchInputElement = require './search-input'
-{
-  getVisibleEditors
-  matchScopes
-  assert
-  assertWithException
-  translatePointAndClip
-} = require './utils'
+SearchInput = require './search-input'
+{getVisibleEditors, matchScopes, translatePointAndClip} = require './utils'
 swrap = require './selection-wrapper'
 
 OperationStack = require './operation-stack'
@@ -67,9 +61,7 @@ class VimState
     @occurrenceManager = new OccurrenceManager(this)
     @mutationManager = new MutationManager(this)
     @flashManager = new FlashManager(this)
-
-    @searchInput = new SearchInputElement().initialize(this)
-
+    @searchInput = new SearchInput(this)
     @operationStack = new OperationStack(this)
     @cursorStyleManager = new CursorStyleManager(this)
     @blockwiseSelections = []
@@ -88,12 +80,6 @@ class VimState
 
     @subscriptions.add @editor.onDidDestroy(@destroy.bind(this))
     @constructor.vimStatesByEditor.set(@editor, this)
-
-  assert: (args...) ->
-    assert(args...)
-
-  assertWithException: (args...) ->
-    assertWithException(args...)
 
   getConfig: (param) ->
     settings.get(param)
@@ -157,9 +143,6 @@ class VimState
 
   onDidFinishMutation: (fn) -> @subscribe @emitter.on('on-did-finish-mutation', fn)
   emitDidFinishMutation: -> @emitter.emit('on-did-finish-mutation')
-
-  onDidRestoreCursorPositions: (fn) -> @subscribe @emitter.on('did-restore-cursor-positions', fn)
-  emitDidRestoreCursorPositions: (event) -> @emitter.emit('did-restore-cursor-positions', event)
 
   onDidSetOperatorModifier: (fn) -> @subscribe @emitter.on('did-set-operator-modifier', fn)
   emitDidSetOperatorModifier: (options) -> @emitter.emit('did-set-operator-modifier', options)
@@ -339,7 +322,8 @@ class VimState
       [start, end] = [head, tail]
       tail = end = translatePointAndClip(@editor, end, 'forward')
 
-    @mark.setRange('<', '>', [start, end])
+    @mark.set('<', start)
+    @mark.set('>', end)
     @previousSelection = {properties: {head, tail}, @submode}
 
   # Persistent selection

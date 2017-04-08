@@ -18,8 +18,6 @@ getEditorState = null # set by Base.init()
 {OperationAbortedError} = require './errors'
 
 vimStateMethods = [
-  "assert"
-  "assertWithException"
   "onDidChangeSearch"
   "onDidConfirmSearch"
   "onDidCancelSearch"
@@ -36,8 +34,6 @@ vimStateMethods = [
       "onDidFailSelectTarget"
       "emitDidFailSelectTarget"
 
-      "onDidRestoreCursorPositions"
-      "emitDidRestoreCursorPositions"
     "onWillFinishMutation"
     "emitWillFinishMutation"
     "onDidFinishMutation"
@@ -69,6 +65,7 @@ class Base
 
   constructor: (@vimState, properties=null) ->
     {@editor, @editorElement, @globalState} = @vimState
+    @name = @constructor.name
     _.extend(this, properties) if properties?
 
   # To override
@@ -77,37 +74,22 @@ class Base
   # Operation processor execute only when isComplete() return true.
   # If false, operation processor postpone its execution.
   isComplete: ->
-    if @isRequireInput() and not @hasInput()
+    if @requireInput and not @input?
       false
-    else if @isRequireTarget()
+    else if @requireTarget
       # When this function is called in Base::constructor
       # tagert is still string like `MoveToRight`, in this case isComplete
       # is not available.
-      @getTarget()?.isComplete?()
+      @target?.isComplete?()
     else
       true
 
-  target: null
-  hasTarget: -> @target?
-  getTarget: -> @target
-
   requireTarget: false
-  isRequireTarget: -> @requireTarget
-
   requireInput: false
-  isRequireInput: -> @requireInput
-
   recordable: false
-  isRecordable: -> @recordable
-
   repeated: false
-  isRepeated: -> @repeated
-  setRepeated: -> @repeated = true
-
-  # Intended to be used by TextObject or Motion
-  operator: null
-  getOperator: -> @operator
-  setOperator: (@operator) -> @operator
+  target: null # Set in Operator
+  operator: null # Set in operator's target( Motion or TextObject )
   isAsTargetExceptSelect: ->
     @operator? and not @operator.instanceof('Select')
 
@@ -180,12 +162,10 @@ class Base
     selectList.show(@vimState, options)
 
   input: null
-  hasInput: -> @input?
-  getInput: -> @input
-
-  focusInput: (charsMax) ->
+  focusInput: (charsMax, hideCursor) ->
     inputUI = @newInputUI()
-    inputUI.onDidConfirm (@input) =>
+    inputUI.onDidConfirm (input) =>
+      @input = input
       @processOperation()
 
     if charsMax > 1
@@ -193,7 +173,7 @@ class Base
         @vimState.hover.set(input)
 
     inputUI.onDidCancel(@cancelOperation.bind(this))
-    inputUI.focus(charsMax)
+    inputUI.focus(charsMax, hideCursor)
 
   getVimEofBufferPosition: ->
     getVimEofBufferPosition(@editor)
@@ -237,9 +217,6 @@ class Base
   isTextObject: ->
     @instanceof('TextObject')
 
-  getName: ->
-    @constructor.name
-
   getCursorBufferPosition: ->
     if @mode is 'visual'
       @getCursorPositionForSelection(@editor.getLastSelection())
@@ -262,11 +239,11 @@ class Base
     swrap(selection).getBufferPositionFor('head', from: ['property', 'selection'])
 
   toString: ->
-    str = @getName()
-    if @hasTarget()
-      str += ", target=#{@target.getName()}, target.wise=#{@target.wise} "
+    str = @name
+    if @target?
+      str += ", target=#{@target.name}, target.wise=#{@target.wise} "
     else if @operator?
-      str += ", wise=#{@wise} , operator=#{@operator.getName()}"
+      str += ", wise=#{@wise} , operator=#{@operator.name}"
     else
       str
 
@@ -278,9 +255,7 @@ class Base
 
     [
       './operator', './operator-insert', './operator-transform-string',
-      './motion', './motion-search',
-      './text-object',
-      './insert-mode', './misc-command'
+      './motion', './motion-search', './text-object', './misc-command'
     ].forEach(require)
 
     for __, klass of @getRegistries() when klass.isCommand()
@@ -337,5 +312,12 @@ class Base
         vimState._event = event
         vimState.operationStack.run(klass)
       event.stopPropagation()
+
+  # For demo-mode pkg integration
+  @operationKind: null
+  @getKindForCommandName: (command) ->
+    name = _.capitalize(_.camelize(command))
+    if name of registries
+      registries[name].operationKind
 
 module.exports = Base

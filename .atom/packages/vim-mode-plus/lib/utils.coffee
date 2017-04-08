@@ -4,12 +4,6 @@ settings = require './settings'
 {Disposable, Range, Point} = require 'atom'
 _ = require 'underscore-plus'
 
-assert = (condition, message, fn) ->
-  unless fn?
-    fn = (error) ->
-      console.error error.message
-  atom.assert(condition, message, fn)
-
 assertWithException = (condition, message, fn) ->
   atom.assert condition, message, (error) ->
     throw new Error(error.message)
@@ -123,15 +117,6 @@ pointIsAtVimEndOfFile = (editor, point) ->
 isEmptyRow = (editor, row) ->
   editor.bufferRangeForBufferRow(row).isEmpty()
 
-# Cursor state validateion
-# -------------------------
-cursorIsAtEndOfLineAtNonEmptyRow = (cursor) ->
-  pointIsAtEndOfLineAtNonEmptyRow(cursor.editor, cursor.getBufferPosition())
-
-cursorIsAtVimEndOfFile = (cursor) ->
-  pointIsAtVimEndOfFile(cursor.editor, cursor.getBufferPosition())
-
-# -------------------------
 getRightCharacterForBufferPosition = (editor, point, amount=1) ->
   editor.getTextInBufferRange(Range.fromPointWithDelta(point, 0, amount))
 
@@ -521,17 +506,6 @@ getWordBufferRangeAtBufferPosition = (editor, position, options={}) ->
   startPosition = getBeginningOfWordBufferPosition(editor, endPosition, options)
   new Range(startPosition, endPosition)
 
-adjustRangeToRowRange = ({start, end}, options={}) ->
-  # when linewise, end row is at column 0 of NEXT line
-  # So need adjust to actually selected row in same way as Seleciton::getBufferRowRange()
-  endRow = end.row
-  if end.column is 0
-    endRow = limitNumber(end.row - 1, min: start.row)
-  if options.endOnly ? false
-    new Range(start, [endRow, Infinity])
-  else
-    new Range([start.row, 0], [endRow, Infinity])
-
 # When range is linewise range, range end have column 0 of NEXT row.
 # Which is very unintuitive and unwanted result.
 shrinkRangeEndToBeforeNewLine = (range) ->
@@ -628,17 +602,6 @@ getRangeByTranslatePointAndClip = (editor, range, which, direction) ->
       new Range(newPoint, range.end)
     when 'end'
       new Range(range.start, newPoint)
-
-# Reloadable registerElement
-registerElement = (name, options) ->
-  element = document.createElement(name)
-  # if constructor is HTMLElement, we haven't registerd yet
-  if element.constructor is HTMLElement
-    Element = document.registerElement(name, options)
-  else
-    Element = element.constructor
-    Element.prototype = options.prototype if options.prototype?
-  Element
 
 getPackage = (name, fn) ->
   new Promise (resolve) ->
@@ -797,7 +760,6 @@ scanEditorInDirection = (editor, direction, pattern, options={}, fn) ->
     fn(event)
 
 module.exports = {
-  assert
   assertWithException
   getAncestors
   getKeyBindingForCommand
@@ -814,7 +776,6 @@ module.exports = {
   pointIsOnWhiteSpace
   pointIsAtEndOfLineAtNonEmptyRow
   pointIsAtVimEndOfFile
-  cursorIsAtVimEndOfFile
   getVimEofBufferPosition
   getVimEofScreenPosition
   getVimLastBufferRow
@@ -836,7 +797,6 @@ module.exports = {
   getTextInScreenRange
   moveCursorToNextNonWhitespace
   isEmptyRow
-  cursorIsAtEndOfLineAtNonEmptyRow
   getCodeFoldRowRanges
   getCodeFoldRowRangesContainesForRow
   getBufferRangeForRowRange
@@ -845,7 +805,6 @@ module.exports = {
   isIncludeFunctionScopeForRow
   detectScopeStartPositionForScope
   getBufferRows
-  registerElement
   smartScrollToBufferPosition
   matchScopes
   moveCursorDownBuffer

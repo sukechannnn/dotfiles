@@ -1,6 +1,6 @@
 {Disposable, CompositeDisposable} = require 'atom'
 Base = require './base'
-{moveCursorLeft} = require './utils'
+{moveCursorLeft, haveSomeNonEmptySelection, assertWithException} = require './utils'
 {Select, MoveToRelativeLine} = {}
 {OperationAbortedError} = require './errors'
 swrap = require './selection-wrapper'
@@ -60,8 +60,10 @@ class OperationStack
   # Main
   # -------------------------
   run: (klass, properties) ->
-    # console.log @vimState.getBlockwiseSelections().length
-    # console.log swrap.getPropertyStore().size
+    if @mode is 'visual'
+      for $selection in swrap.getSelections(@editor) when not $selection.hasProperties()
+        $selection.saveProperties()
+
     try
       @vimState.init() if @isEmpty()
       type = typeof(klass)
@@ -93,7 +95,7 @@ class OperationStack
 
   runRecorded: ->
     if operation = @recordedOperation
-      operation.setRepeated()
+      operation.repeated = true
       if @hasCount()
         count = @getCount()
         operation.count = count
@@ -106,7 +108,7 @@ class OperationStack
     return unless operation = @vimState.globalState.get(key)
 
     operation = operation.clone(@vimState)
-    operation.setRepeated()
+    operation.repeated = true
     operation.resetCount()
     if reverse
       operation.backwards = not operation.backwards
@@ -166,7 +168,7 @@ class OperationStack
     @finish()
 
   finish: (operation=null) ->
-    @recordedOperation = operation if operation?.isRecordable()
+    @recordedOperation = operation if operation?.recordable
     @vimState.emitDidFinishOperation()
     if operation?.isOperator()
       operation.resetState()
@@ -187,12 +189,10 @@ class OperationStack
     # We need to manually clear blockwiseSelection.
     # See #647
     @vimState.clearBlockwiseSelections() # FIXME, should be removed
-
-    unless @editor.getLastSelection().isEmpty()
-      if @vimState.getConfig('devThrowErrorOnNonEmptySelectionInNormalMode')
-        throw new Error("Selection is not empty in normal-mode: #{operation.toString()}")
-      else
-        @vimState.clearSelections()
+    if haveSomeNonEmptySelection(@editor)
+      if @vimState.getConfig('strictAssertion')
+        assertWithException(false, "Have some non-empty selection in normal-mode: #{operation.toString()}")
+      @vimState.clearSelections()
 
   ensureAllCursorsAreNotAtEndOfLine: ->
     for cursor in @editor.getCursors() when cursor.isAtEndOfLine()

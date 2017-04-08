@@ -3,18 +3,19 @@ _ = require 'underscore-plus'
   haveSomeNonEmptySelection
   isEmptyRow
   getWordPatternAtBufferPosition
+  getIndentLevelForBufferRow
   getSubwordPatternAtBufferPosition
   insertTextAtBufferPosition
   setBufferRow
   moveCursorToFirstCharacterAtRow
   ensureEndsWithNewLineForBufferRow
-  assertWithException
 } = require './utils'
 swrap = require './selection-wrapper'
 Base = require './base'
 
 class Operator extends Base
   @extend(false)
+  @operationKind: 'operator'
   requireTarget: true
   recordable: true
 
@@ -46,7 +47,7 @@ class Operator extends Base
   supportEarlySelect: false
   targetSelected: null
   canEarlySelect: ->
-    @supportEarlySelect and not @isRepeated()
+    @supportEarlySelect and not @repeated
   # -------------------------
 
   # Called when operation finished
@@ -75,13 +76,13 @@ class Operator extends Base
       @deleteBufferCheckpoint(purpose)
 
   setMarkForChange: (range) ->
-    @vimState.mark.setRange('[', ']', range)
+    @vimState.mark.set('[', range.start)
+    @vimState.mark.set(']', range.end)
 
   needFlash: ->
-    return unless @flashTarget
-    return unless @getConfig('flashOnOperate')
-    return if @getName() in @getConfig('flashOnOperateBlacklist')
-    (@mode isnt 'visual') or (@submode isnt @target.wise) # e.g. Y in vC
+    @flashTarget and @getConfig('flashOnOperate') and
+      (@name not in @getConfig('flashOnOperateBlacklist')) and
+      ((@mode isnt 'visual') or (@submode isnt @target.wise)) # e.g. Y in vC
 
   flashIfNecessary: (ranges) ->
     if @needFlash()
@@ -90,7 +91,8 @@ class Operator extends Base
   flashChangeIfNecessary: ->
     if @needFlash()
       @onDidFinishOperation =>
-        @vimState.flash(@mutationManager.getBufferRangesForCheckpoint(@flashCheckpoint), type: @getFlashType())
+        ranges = @mutationManager.getSelectedBufferRangesForCheckpoint(@flashCheckpoint)
+        @vimState.flash(ranges, type: @getFlashType())
 
   getFlashType: ->
     if @occurrenceSelected
@@ -102,7 +104,7 @@ class Operator extends Base
     return unless @trackChange
 
     @onDidFinishOperation =>
-      if range = @mutationManager.getMutatedBufferRange(@editor.getLastSelection())
+      if range = @mutationManager.getMutatedBufferRangeForSelection(@editor.getLastSelection())
         @setMarkForChange(range)
 
   constructor: ->
@@ -123,13 +125,14 @@ class Operator extends Base
     if @occurrence and not @occurrenceManager.hasMarkers()
       @occurrenceManager.addPattern(@patternForOccurrence ? @getPatternForOccurrenceType(@occurrenceType))
 
+
     # This change cursor position.
     if @selectPersistentSelectionIfNecessary()
       # [FIXME] selection-wise is not synched if it already visual-mode
       unless @mode is 'visual'
         @vimState.modeManager.activate('visual', swrap.detectWise(@editor))
 
-    @target = 'CurrentSelection' if @mode is 'visual'
+    @target = 'CurrentSelection' if @mode is 'visual' and @requireTarget
     @setTarget(@new(@target)) if _.isString(@target)
 
   subscribeResetOccurrencePatternIfNeeded: ->
@@ -178,7 +181,7 @@ class Operator extends Base
 
   # target is TextObject or Motion to operate on.
   setTarget: (@target) ->
-    @target.setOperator(this)
+    @target.operator = this
     @emitDidSetTarget(this)
 
     if @canEarlySelect()
@@ -247,7 +250,7 @@ class Operator extends Base
     # Since MoveToNextOccurrence, MoveToPreviousOccurrence motion move by
     #  occurrence-marker, occurrence-marker has to be created BEFORE `@target.execute()`
     # And when repeated, occurrence pattern is already cached at @patternForOccurrence
-    if @isRepeated() and @occurrence and not @occurrenceManager.hasMarkers()
+    if @repeated and @occurrence and not @occurrenceManager.hasMarkers()
       @occurrenceManager.addPattern(@patternForOccurrence, {@occurrenceType})
 
     @target.execute()
@@ -259,29 +262,22 @@ class Operator extends Base
       @patternForOccurrence ?= @occurrenceManager.buildPattern()
 
       if @occurrenceManager.select()
-        # To skip restoreing position from selection prop when shift visual-mode submode on SelectOccurrence
-        swrap.clearProperties(@editor)
-
         @occurrenceSelected = true
         @mutationManager.setCheckpoint('did-select-occurrence')
 
-    if haveSomeNonEmptySelection(@editor) or @target.getName() is "Empty"
+    if @targetSelected = haveSomeNonEmptySelection(@editor) or @target.name is "Empty"
       @emitDidSelectTarget()
       @flashChangeIfNecessary()
       @trackChangeIfNecessary()
-      @targetSelected = true
-      true
     else
       @emitDidFailSelectTarget()
-      @targetSelected = false
-      false
+    return @targetSelected
 
   restoreCursorPositionsIfNecessary: ->
     return unless @restorePositions
     stay = @stayAtSamePosition ? @getConfig(@stayOptionName) or (@occurrenceSelected and @getConfig('stayOnOccurrence'))
-    wise = @target.wise
-    @mutationManager.restoreCursorPositions({stay, wise, @occurrenceSelected, @setToFirstCharacterOnLinewise})
-    @emitDidRestoreCursorPositions({stay})
+    wise = if @occurrenceSelected then 'characterwise' else @target.wise
+    @mutationManager.restoreCursorPositions({stay, wise, @setToFirstCharacterOnLinewise})
 
 # Select
 # When text-object is invoked from normal or viusal-mode, operation would be
@@ -289,6 +285,11 @@ class Operator extends Base
 # When motion is invoked from visual-mode, operation would be
 #  => Select operator with target=motion)
 # ================================
+# Select is used in TWO situation.
+# - visual-mode operation
+#   - e.g: `v l`, `V j`, `v i p`...
+# - Directly invoke text-object from normal-mode
+#   - e.g: Invoke `Inner Paragraph` from command-palette.
 class Select extends Operator
   @extend(false)
   flashTarget: false
@@ -360,8 +361,8 @@ class TogglePersistentSelection extends CreatePersistentSelection
 # =========================
 class TogglePresetOccurrence extends Operator
   @extend()
+  target: "Empty"
   flashTarget: false
-  requireTarget: false
   acceptPresetOccurrence: false
   acceptPersistentSelection: false
   occurrenceType: 'base'
@@ -473,7 +474,7 @@ class Increase extends Operator
     @newRanges = []
     super
     if @newRanges.length
-      if @getConfig('flashOnOperate') and (@getName() not in @getConfig('flashOnOperateBlacklist'))
+      if @getConfig('flashOnOperate') and @name not in @getConfig('flashOnOperateBlacklist')
         @vimState.flash(@newRanges, type: @flashTypeForOccurrence)
 
   replaceNumberInBufferRange: (scanRange, fn=null) ->
@@ -559,7 +560,7 @@ class PutBefore extends Operator
         @setMarkForChange(newRange)
 
       # Flash
-      if @getConfig('flashOnOperate') and (@getName() not in @getConfig('flashOnOperateBlacklist'))
+      if @getConfig('flashOnOperate') and @name not in @getConfig('flashOnOperateBlacklist')
         toRange = (selection) => @mutationsBySelection.get(selection)
         @vimState.flash(@editor.getSelections().map(toRange), type: @getFlashType())
 
@@ -616,6 +617,42 @@ class PutBefore extends Operator
     return newRange
 
 class PutAfter extends PutBefore
+  @extend()
+  location: 'after'
+
+class PutBeforeWithAutoIndent extends PutBefore
+  @extend()
+
+  pasteLinewise: (selection, text) ->
+    newRange = super
+    # Adjust indentLevel with keeping original layout of pasting text.
+    # Suggested indent level of newRange.start.row is correct as long as newRange.start.row have minimum indent level.
+    # But when we paste following already indented three line text, we have to adjust indent level
+    #  so that `varFortyTwo` line have suggestedIndentLevel.
+    #
+    #        varOne: value # suggestedIndentLevel is determined by this line
+    #   varFortyTwo: value # We need to make final indent level of this row to be suggestedIndentLevel.
+    #      varThree: value
+    #
+    # So what we are doing here is apply suggestedIndentLevel with fixing issue above.
+    # 1. Determine minimum indent level among pasted range(= newRange ) excluding empty row
+    # 2. Then update indentLevel of each rows to final indentLevel of minimum-indented row have suggestedIndentLevel.
+    suggestedLevel = @editor.suggestedIndentForBufferRow(newRange.start.row)
+    minLevel = null
+    rowAndActualLevels = []
+    for row in [newRange.start.row...newRange.end.row]
+      actualLevel = getIndentLevelForBufferRow(@editor, row)
+      rowAndActualLevels.push([row, actualLevel])
+      unless isEmptyRow(@editor, row)
+        minLevel = Math.min(minLevel ? Infinity, actualLevel)
+
+    if minLevel? and (deltaToSuggestedLevel = suggestedLevel - minLevel)
+      for [row, actualLevel] in rowAndActualLevels
+        newLevel = actualLevel + deltaToSuggestedLevel
+        @editor.setIndentationForBufferRow(row, newLevel)
+    return newRange
+
+class PutAfterWithAutoIndent extends PutBeforeWithAutoIndent
   @extend()
   location: 'after'
 

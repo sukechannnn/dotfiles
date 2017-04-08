@@ -22,6 +22,9 @@ module.exports =
     @registerCommands()
     @registerVimStateCommands()
 
+    if atom.inSpecMode()
+      settings.set('strictAssertion', true)
+
     if atom.inDevMode()
       developer = new (require './developer')
       @subscribe(developer.init(service))
@@ -207,6 +210,32 @@ module.exports =
     @statusBarManager.attach()
     @subscribe new Disposable =>
       @statusBarManager.detach()
+
+  consumeDemoMode: ({onWillAddItem, onDidStart, onDidStop}) ->
+    @subscribe(
+      onDidStart(-> globalState.set('demoModeIsActive', true))
+      onDidStop(-> globalState.set('demoModeIsActive', false))
+      onWillAddItem(({item, event}) =>
+        if event.binding.command.startsWith('vim-mode-plus:')
+          commandElement = item.getElementsByClassName('command')[0]
+          commandElement.textContent = commandElement.textContent.replace(/^vim-mode-plus:/, '')
+
+        element = document.createElement('span')
+        element.classList.add('kind', 'pull-right')
+        element.textContent = @getKindForCommand(event.binding.command)
+        item.appendChild(element)
+      )
+    )
+
+  getKindForCommand: (command) ->
+    if command.startsWith('vim-mode-plus')
+      command = command.replace(/^vim-mode-plus:/, '')
+      if command.startsWith('operator-modifier')
+        kind = 'op-modifier'
+      else
+        Base.getKindForCommandName(command) ? 'vmp-other'
+    else
+      'non-vmp'
 
   # Service API
   # -------------------------

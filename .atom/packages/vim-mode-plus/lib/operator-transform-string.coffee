@@ -72,14 +72,15 @@ class Replace extends TransformString
   supportEarlySelect: true
 
   initialize: ->
-    @onDidSelectTarget(@focusInput.bind(this))
+    @onDidSelectTarget =>
+      @focusInput(1, true)
     super
 
   getNewText: (text) ->
     if @target.is('MoveRightBufferColumn') and text.length isnt @getCount()
       return
 
-    input = @getInput() or "\n"
+    input = @input or "\n"
     if input is "\n"
       @restorePositions = false
     text.replace(/./g, input)
@@ -313,7 +314,7 @@ class TransformStringBySelectList extends TransformString
 
   execute: ->
     # NEVER be executed since operationStack is replaced with selected transformer
-    throw new Error("#{@getName()} should not be executed")
+    throw new Error("#{@name} should not be executed")
 
 class TransformWordBySelectList extends TransformStringBySelectList
   @extend()
@@ -377,6 +378,7 @@ class AutoIndent extends Indent
 class ToggleLineComments extends TransformString
   @extend()
   stayByMarker: true
+  wise: 'linewise'
   mutateSelection: (selection) ->
     selection.toggleLineComments()
 
@@ -400,18 +402,17 @@ class SurroundBase extends TransformString
   autoIndent: false
 
   requireInput: true
-  requireTarget: true
   supportEarlySelect: true # Experimental
 
-  focusInputForSurround: ->
+  focusInputForSurroundChar: ->
     inputUI = @newInputUI()
-    inputUI.onDidConfirm(@onConfirmSurround.bind(this))
+    inputUI.onDidConfirm(@onConfirmSurroundChar.bind(this))
     inputUI.onDidCancel(@cancelOperation.bind(this))
-    inputUI.focus()
+    inputUI.focus(1, true)
 
-  focusInputForDeleteSurround: ->
+  focusInputForTargetPairChar: ->
     inputUI = @newInputUI()
-    inputUI.onDidConfirm(@onConfirmDeleteSurround.bind(this))
+    inputUI.onDidConfirm(@onConfirmTargetPairChar.bind(this))
     inputUI.onDidCancel(@cancelOperation.bind(this))
     inputUI.focus()
 
@@ -442,10 +443,10 @@ class SurroundBase extends TransformString
     else
       innerText
 
-  onConfirmSurround: (@input) ->
+  onConfirmSurroundChar: (@input) ->
     @processOperation()
 
-  onConfirmDeleteSurround: (char) ->
+  onConfirmTargetPairChar: (char) ->
     @setTarget @new('APair', pair: @getPair(char))
 
 class Surround extends SurroundBase
@@ -453,7 +454,7 @@ class Surround extends SurroundBase
   @description: "Surround target by specified character like `(`, `[`, `\"`"
 
   initialize: ->
-    @onDidSelectTarget(@focusInputForSurround.bind(this))
+    @onDidSelectTarget(@focusInputForSurroundChar.bind(this))
     super
 
   getNewText: (text) ->
@@ -480,13 +481,12 @@ class MapSurround extends Surround
 class DeleteSurround extends SurroundBase
   @extend()
   @description: "Delete specified surround character like `(`, `[`, `\"`"
-  requireTarget: false
 
   initialize: ->
-    @focusInputForDeleteSurround() unless @hasTarget()
+    @focusInputForTargetPairChar() unless @target?
     super
 
-  onConfirmDeleteSurround: (input) ->
+  onConfirmTargetPairChar: (input) ->
     super
     @input = input
     @processOperation()
@@ -516,19 +516,16 @@ class ChangeSurround extends SurroundBase
     @vimState.hover.set(char, @vimState.getOriginalCursorPosition())
 
   initialize: ->
-    if @hasTarget()
+    if @target?
       @onDidFailSelectTarget(@abort.bind(this))
     else
       @onDidFailSelectTarget(@cancelOperation.bind(this))
-      @focusInputForDeleteSurround()
+      @focusInputForTargetPairChar()
     super
 
     @onDidSelectTarget =>
       @showDeleteCharOnHover()
-      @focusInputForSurround()
-
-  onConfirmSurround: (@input) ->
-    @processOperation()
+      @focusInputForSurroundChar()
 
   getNewText: (text) ->
     innerText = @deleteSurround(text)
@@ -568,7 +565,7 @@ class JoinBase extends TransformString
   target: "MoveToRelativeLineMinimumOne"
 
   initialize: ->
-    @focusInput(10) if @isRequireInput()
+    @focusInput(10) if @requireInput
     super
 
   getNewText: (text) ->
