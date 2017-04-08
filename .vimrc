@@ -14,8 +14,11 @@ call dein#add('Shougo/neocomplete.vim')
 call dein#add('Shougo/neomru.vim')
 call dein#add('Shougo/neosnippet')
 call dein#add('scrooloose/nerdtree')
+call dein#add('jistr/vim-nerdtree-tabs')
 call dein#add('tomtom/tcomment_vim')
 call dein#add('Shougo/context_filetype.vim')
+call dein#add('cohama/lexima.vim')
+call dein#add('tpope/vim-endwise')
 
 call dein#end()
 "=====================
@@ -58,7 +61,12 @@ filetype plugin indent on
 "=====================
 
 let NERDTreeShowHidden = 1
-nnoremap <silent><C-e> :NERDTreeToggle<CR>
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
+nnoremap <silent><C-e> :NERDTreeTabsToggle<CR>
+nnoremap t t<C-e> 
+nnoremap <C-t> gt
+nnoremap <C-w> <C-w>w
+nnoremap <C-d> :vsplit<CR>
 
 "=====================
 "rsense
