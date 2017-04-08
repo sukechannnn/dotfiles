@@ -20,6 +20,8 @@ export PATH="$PATH:$GOPATH/bin"
 
 export PGDATA="/usr/local/var/postgres"
 
+export XDG_CONFIG_HOME="$HOME/.config"
+
 alias be='bundle exec'
 alias gis='git status'
 alias gca='git commit --allow-empty'
