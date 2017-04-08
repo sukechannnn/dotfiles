@@ -41,7 +41,6 @@
       "language-elixir"
       "language-slim"
       "go-plus"
-      "vim-mode-plus"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
