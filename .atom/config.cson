@@ -24,9 +24,9 @@
   "autocomplete-ctags":
     minimumPrefixLength: 2
   "autocomplete-plus":
+    confirmCompletion: "enter"
     minimumWordLength: 1
-  "autocomplete-ruby":
-    rsensePath: "/Users/obatayousuke/.anyenv/envs/rbenv/shims/rsense"
+    useCoreMovementCommands: false
   autosave:
     enabled: true
   core:
@@ -116,8 +116,11 @@
     ensureFirstHeaderIsH1: false
   "tree-view": {}
   "vim-mode-plus":
+    clearMultipleCursorsOnEscapeInsertMode: true
+    incrementalSearch: true
     setCursorToStartOfChangeOnUndoRedo: false
     setCursorToStartOfChangeOnUndoRedoStrategy: "simple"
+    useClipboardAsDefaultRegister: false
   welcome:
     showOnStartup: false
   whitespace:
