@@ -16,11 +16,9 @@ export default class Searcher {
     };
   }
 
-
   static filterMatch(match) {
     return (match !== null && match.text.trim().length < 350);
   }
-
 
   static fixColumn(match) {
     if ((match.column === 1) && (/^\s/.test(match.text) === false)) { // ripgrep's bug
@@ -40,30 +38,29 @@ export default class Searcher {
     };
   }
 
-  static atomBufferScan(fileTypes, regex, iterator, callback) {
+  static atomBufferScan(activeEditor, fileTypes, regex, iterator, callback) {
     // atomBufferScan just search opened files
-    const panels = atom.workspace.getPaneItems();
-    callback(panels.map((editor) => {
-      if (editor.constructor.name === 'TextEditor') {
-        const filePath = editor.getPath();
-        if (filePath) {
-          const fileExtension = `*.${filePath.split('.').pop()}`;
-          if (fileTypes.includes(fileExtension)) {
-            editor.scan(new RegExp(regex, 'ig'), (match) => {
-              const item = Searcher.transformUnsavedMatch(match);
-              item.fileName = filePath;
-              iterator([Searcher.fixColumn(item)].filter(Searcher.filterMatch));
-            });
-          }
-          return filePath;
+    const editors = atom.workspace.getTextEditors().filter(x => !Object.is(activeEditor, x));
+    editors.unshift(activeEditor);
+    callback(editors.map((editor) => {
+      const filePath = editor.getPath();
+      if (filePath) {
+        const fileExtension = `*.${filePath.split('.').pop()}`;
+        if (fileTypes.includes(fileExtension)) {
+          editor.scan(new RegExp(regex, 'ig'), (match) => {
+            const item = Searcher.transformUnsavedMatch(match);
+            item.fileName = filePath;
+            iterator([Searcher.fixColumn(item)].filter(Searcher.filterMatch));
+          });
         }
+        return filePath;
       }
       return null;
     }).filter(x => x !== null));
   }
 
-  static atomWorkspaceScan(scanPaths, fileTypes, regex, iterator, callback) {
-    this.atomBufferScan(fileTypes, regex, iterator, (openedFiles) => {
+  static atomWorkspaceScan(activeEditor, scanPaths, fileTypes, regex, iterator, callback) {
+    this.atomBufferScan(activeEditor, fileTypes, regex, iterator, (openedFiles) => {
       atom.workspace.scan(new RegExp(regex, 'ig'), { paths: fileTypes }, (result) => {
         if (openedFiles.includes(result.filePath)) {
           return null; // atom.workspace.scan can't set exclusions
@@ -80,8 +77,8 @@ export default class Searcher {
   }
 
 
-  static ripgrepScan(scanPaths, fileTypes, regex, iterator, callback) {
-    this.atomBufferScan(fileTypes, regex, iterator, (openedFiles) => {
+  static ripgrepScan(activeEditor, scanPaths, fileTypes, regex, iterator, callback) {
+    this.atomBufferScan(activeEditor, fileTypes, regex, iterator, (openedFiles) => {
       const args = fileTypes.map(x => `--glob=${x}`);
       args.push(...openedFiles.map(x => `--glob=!${x}`));
       args.push(...[
@@ -98,6 +95,12 @@ export default class Searcher {
         iterator(results.split('\n').map((result) => {
           if (result.trim().length) {
             const data = result.split(':');
+            // Windows filepath will become ['C','Windows/blah'], so this fixes it.
+            if (data[0].length === 1) {
+              const driveLetter = data.shift();
+              const path = data.shift();
+              data.unshift(`${driveLetter}:${path}`);
+            }
             return {
               text: result.substring([data[0], data[1], data[2]].join(':').length + 1),
               fileName: data[0],

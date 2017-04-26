@@ -1,5 +1,5 @@
 _ = require 'underscore-plus'
-{isNotEmpty} = require './utils'
+{isNotEmpty, replaceDecorationClassBy} = require './utils'
 
 flashTypes =
   operator:
@@ -12,11 +12,6 @@ flashTypes =
     decorationOptions:
       type: 'highlight'
       class: 'vim-mode-plus-flash operator-long'
-  'operator-demo':
-    allowMultiple: true
-    decorationOptions:
-      type: 'highlight'
-      class: 'vim-mode-plus-flash operator-demo'
   'operator-occurrence':
     allowMultiple: true
     decorationOptions:
@@ -53,17 +48,32 @@ flashTypes =
       type: 'highlight'
       class: 'vim-mode-plus-flash undo-redo-multiple-delete'
 
+addDemoSuffix = replaceDecorationClassBy.bind(null, (text) -> text + '-demo')
+removeDemoSuffix = replaceDecorationClassBy.bind(null, (text) -> text.replace(/-demo$/, ''))
+
 module.exports =
 class FlashManager
   constructor: (@vimState) ->
     {@editor} = @vimState
     @markersByType = new Map
     @vimState.onDidDestroy(@destroy.bind(this))
+    @postponedDestroyMarkersTasks = []
 
   destroy: ->
     @markersByType.forEach (markers) ->
       marker.destroy() for marker in markers
     @markersByType.clear()
+
+  destroyDemoModeMarkers: ->
+    for resolve in @postponedDestroyMarkersTasks
+      resolve()
+    @postponedDestroyMarkersTasks = []
+
+  destroyMarkersAfter: (markers, timeout) ->
+    setTimeout ->
+      for marker in markers
+        marker.destroy()
+    , timeout
 
   flash: (ranges, options, rangeType='buffer') ->
     ranges = [ranges] unless _.isArray(ranges)
@@ -72,11 +82,6 @@ class FlashManager
 
     {type, timeout} = options
     timeout ?= 1000
-
-    # HACK: in demo mode, replace flash type for longer flash
-    if @vimState.globalState.get('demoModeIsActive') and type in ['operator', 'operator-long']
-      type = 'operator-demo'
-      timeout = 2000
 
     {allowMultiple, decorationOptions} = flashTypes[type]
     markerOptions = {invalidate: 'touch'}
@@ -92,12 +97,15 @@ class FlashManager
         marker.destroy() for marker in @markersByType.get(type)
       @markersByType.set(type, markers)
 
-    @editor.decorateMarker(marker, decorationOptions) for marker in markers
+    decorations = markers.map (marker) => @editor.decorateMarker(marker, decorationOptions)
 
-    setTimeout ->
-      for marker in markers
-        marker.destroy()
-    , timeout
+    if @vimState.globalState.get('demoModeIsActive')
+      decorations.map(addDemoSuffix)
+      @postponedDestroyMarkersTasks.push =>
+        decorations.map(removeDemoSuffix)
+        @destroyMarkersAfter(markers, timeout)
+    else
+      @destroyMarkersAfter(markers, timeout)
 
   flashScreenRange: (args...) ->
     @flash(args.concat('screen')...)

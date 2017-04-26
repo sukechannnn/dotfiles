@@ -1,29 +1,59 @@
 /** @babel */
 
-/* eslint class-methods-use-this: ["error", { "exceptMethods": ["getFilterKey", "viewForItem"] }] */
-// fork from https://github.com/sadovnychyi/autocomplete-python/blob/master/lib/definitions-view.coffee
+/* eslint class-methods-use-this: ["error", {
+  "exceptMethods": ["getFilterKey", "elementForItem", "didChangeSelection", "didLoseFocus"]
+}] */
 
-import { $, $$, SelectListView } from 'atom-space-pen-views';
+import { Disposable, CompositeDisposable } from 'atom';
+import SelectListView from 'atom-select-list';
+import etch from 'etch';
 
-export default class DefinitionsView extends SelectListView {
-  constructor() {
-    super();
-    this.storeFocusedElement();
-    this.addClass('symbols-view');
-    this.setState('ready');
-    this.setLoading('Looking for definitions');
+function DefinitionsListView(props) {
+  this.props = props;
+  this.computeItems(false);
+  this.disposables = new CompositeDisposable();
+  etch.initialize(this);
+  this.element.classList.add('select-list');
+  this.disposables.add(this.refs.queryEditor.onDidChange(this.didChangeQuery.bind(this)));
+  if (!props.skipCommandsRegistration) {
+    this.disposables.add(this.registerAtomCommands());
+  }
+  this.disposables.add(new Disposable(() => { this.unbindBlur(); }));
+}
 
+DefinitionsListView.prototype = SelectListView.prototype;
+
+DefinitionsListView.prototype.bindBlur = function bindBlur() {
+  const editorElement = this.refs.queryEditor.element;
+  const didLoseFocus = this.didLoseFocus.bind(this);
+  editorElement.addEventListener('blur', didLoseFocus);
+};
+
+DefinitionsListView.prototype.unbindBlur = function unbindBlur() {
+  const editorElement = this.refs.queryEditor.element;
+  const didLoseFocus = this.didLoseFocus.bind(this);
+  editorElement.removeEventListener('blur', didLoseFocus);
+};
+
+
+export default class DefinitionsView {
+  constructor(emptyMessage = 'No definition found', maxResults = null) {
+    this.selectListView = new DefinitionsListView({
+      maxResults,
+      emptyMessage,
+      items: [],
+      filterKeyForItem: item => item.fileName,
+      elementForItem: this.elementForItem.bind(this),
+      didConfirmSelection: this.didConfirmSelection.bind(this),
+      didConfirmEmptySelection: this.didConfirmEmptySelection.bind(this),
+      didCancelSelection: this.didCancelSelection.bind(this),
+    });
+    this.element = this.selectListView.element;
+    this.element.classList.add('symbols-view');
     this.panel = atom.workspace.addModalPanel({ item: this, visible: false });
     this.items = [];
 
-    this.list.unbind('mouseup');
-    this.list.on('click', 'li', (e) => {
-      if ($(e.target).closest('li').hasClass('selected')) {
-        this.confirmSelection();
-      }
-      e.preventDefault();
-      return false;
-    });
+    this.setState('ready');
     setTimeout(this.show.bind(this), 300);
   }
 
@@ -43,14 +73,27 @@ export default class DefinitionsView extends SelectListView {
     throw new Error('state switch error');
   }
 
-  viewForItem({ text, fileName, line }) {
+  getFilterKey() {
+    return 'fileName';
+  }
+
+  elementForItem({ fileName, text, line }) {
     const relativePath = atom.project.relativizePath(fileName)[1];
-    return $$(function itemView() {
-      this.li({ class: 'two-lines' }, () => {
-        this.div(`${text}`, { class: 'primary-line' });
-        this.div(`${relativePath}, line ${line + 1}`, { class: 'secondary-line' });
-      });
-    });
+
+    const li = document.createElement('li');
+    li.classList.add('two-lines');
+
+    const primaryLine = document.createElement('div');
+    primaryLine.classList.add('primary-line');
+    primaryLine.textContent = text;
+    li.appendChild(primaryLine);
+
+    const secondaryLine = document.createElement('div');
+    secondaryLine.classList.add('secondary-line');
+    secondaryLine.textContent = `${relativePath}, line ${line + 1}`;
+    li.appendChild(secondaryLine);
+
+    return li;
   }
 
   addItems(items) {
@@ -59,62 +102,71 @@ export default class DefinitionsView extends SelectListView {
     }
     this.setState('loding');
 
-    if (this.items.length === 0) {
-      this.setItems(items);
-    } else {
-      this.show();
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        this.items.push(item);
-        const itemView = $(this.viewForItem(item));
-        itemView.data('select-list-item', item);
-        this.list.append(itemView);
-      }
-    }
+    this.items.push(...items);
+    this.items.filter((v, i, a) => a.indexOf(v) === i);
+
+    this.selectListView.update({ items: this.items });
     return null;
-  }
-
-  getFilterKey() {
-    return 'fileName';
-  }
-
-  showEmpty() {
-    this.show();
-    this.setError('No definition found');
-    this.setLoading();
   }
 
   confirmedFirst() {
     if (this.items.length > 0) {
-      this.confirmed(this.items[0]);
+      this.didConfirmSelection(this.items[0]);
     }
-  }
-
-  confirmed({ fileName, line, column }) {
-    if (this.state !== 'loding') {
-      return null;
-    }
-    this.cancelPosition = null;
-    this.cancelled();
-    const promise = atom.workspace.open(fileName);
-    promise.then((editor) => {
-      editor.setCursorBufferPosition([line, column]);
-      editor.scrollToCursorPosition();
-    });
-    return null;
   }
 
   show() {
     if (['ready', 'loding'].includes(this.state) && !this.panel.visible) {
+      this.previouslyFocusedElement = document.activeElement;
       this.panel.show();
-      this.focusFilterEditor();
+      this.selectListView.reset();
+      this.selectListView.focus();
+      this.selectListView.bindBlur();
     }
   }
 
-  cancelled() {
+  async cancel() {
     if (['ready', 'loding'].includes(this.state)) {
-      this.setState('cancelled');
-      this.panel.destroy();
+      if (!this.isCanceling) {
+        this.setState('cancelled');
+        this.selectListView.unbindBlur();
+        this.isCanceling = true;
+        await this.selectListView.update({ items: [] });
+        this.panel.hide();
+        if (this.previouslyFocusedElement) {
+          this.previouslyFocusedElement.focus();
+          this.previouslyFocusedElement = null;
+        }
+        this.isCanceling = false;
+      }
     }
+  }
+
+  didCancelSelection() {
+    this.cancel();
+  }
+
+  didConfirmEmptySelection() {
+    this.cancel();
+  }
+
+  async didConfirmSelection({ fileName, line, column }) {
+    if (this.state !== 'loding') {
+      return null;
+    }
+    const promise = atom.workspace.open(fileName);
+    await promise.then((editor) => {
+      editor.setCursorBufferPosition([line, column]);
+      editor.scrollToCursorPosition();
+    });
+    await this.cancel();
+    return null;
+  }
+
+  async destroy() {
+    await this.cancel();
+    this.panel.destroy();
+    this.selectListView.destroy();
+    return null;
   }
 }

@@ -12,9 +12,6 @@ describe "Persistent Selection", ->
     runs ->
       jasmine.attachToDOM(editorElement)
 
-  afterEach ->
-    vimState.resetNormalMode()
-
   describe "CreatePersistentSelection operator", ->
     textForMarker = (marker) ->
       editor.getTextInBufferRange(marker.getBufferRange())
@@ -175,13 +172,14 @@ describe "Persistent Selection", ->
         expect(vimState.persistentSelection.hasMarkers()).toBe(false)
 
     describe "clearPersistentSelectionOnResetNormalMode", ->
-      describe "default setting", ->
+      describe "when disabled", ->
         it "it won't clear persistentSelection", ->
+          settings.set('clearPersistentSelectionOnResetNormalMode', false)
           ensurePersistentSelection 'g m i w',
             length: 1
             text: ['ooo']
 
-          dispatch(editorElement, 'vim-mode-plus:reset-normal-mode')
+          ensure "escape", mode: 'normal'
           ensurePersistentSelection length: 1, text: ['ooo']
 
       describe "when enabled", ->
@@ -190,5 +188,5 @@ describe "Persistent Selection", ->
           ensurePersistentSelection 'g m i w',
             length: 1
             text: ['ooo']
-          dispatch(editorElement, 'vim-mode-plus:reset-normal-mode')
+          ensure "escape", mode: 'normal'
           expect(vimState.persistentSelection.hasMarkers()).toBe(false)

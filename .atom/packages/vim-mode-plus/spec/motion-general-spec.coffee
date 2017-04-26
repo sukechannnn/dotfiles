@@ -11,10 +11,6 @@ describe "Motion general", ->
       {editor, editorElement} = vimState
       {set, ensure, keystroke} = _vim
 
-  afterEach ->
-    vimState.resetNormalMode()
-    vimState.globalState.reset()
-
   describe "simple motions", ->
     text = null
     beforeEach ->
@@ -390,6 +386,7 @@ describe "Motion general", ->
   describe 'moveSuccessOnLinewise behaviral characteristic', ->
     originalText = null
     beforeEach ->
+      settings.set('useClipboardAsDefaultRegister', false)
       set
         text: """
           000

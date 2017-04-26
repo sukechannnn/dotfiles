@@ -1,3 +1,185 @@
+# 0.91.0:
+- Improve, Performance: Reduce amount of IO( number of files to read ) on startup further. #760
+  - Avoid require on initial package activation. Especially following widely-used libs is not longer `require`d on startup.
+    - `lib/selection-wrapper.coffee`
+    - `lib/utils.coffee`
+    - `underscore-plus`
+  - Now `swrap` and `utils` are accessible via lazy-prop( `vimState.utils` and `vimState.swrap` ).
+- Developer: When `debug` setting was set to `true`, log lazy-require info when atom `inDevMode`.
+
+# 0.90.2:
+- Fix: For `search` on initial active-editor after startup, `highlightSearch` did not happened.
+  - This is regression introduced as part of lazy instantiation of `HighlightSearchManager`.
+
+# 0.90.1:
+- Fix: Sorry, removed leftover `console.log` in atom running in dev mode.
+
+# 0.90.0:
+- Improve: Reduce activation time of vim-mode-plus to reduce your frustration on Atom startup. #758
+  - About 2x faster activation time( Full detail is on #758 ).
+  - With Two technique
+    - Define all vmp-command from pre-populated command-table and lazy-require necessary command file on execution.
+    - Defer instantiation of xxxManager referred by `vimState`.
+      - E.g. `vimState.highlightSearch` is instance of `HighlightSearchManager` and it's now set on-demand.
+  - [For vmp developer only] If command signature was changed, need update command-table.
+    - Command signature it's name and scope(e.g. `vim-mode-plus:move-down` and `atom-text-editor` )
+    - [Caution] `write-command-table-on-disk` command is available only when atom running in dev-mode.
+    - [Caution] Directly update `lib/command-table.coffee` if populated-table was changed from loaded one.
+- New, Breaking: Default keymap update #753
+  - macOS user only
+    - `ctrl-s` mapped to `transform-string-by-select-list` in `normal-mode` and `visual-mode`
+  - All user
+    - `z` in `operator-pending` is short hand of `a z`(`a-fold`).
+      - You can do `y z` instead of `y a z`. E.g. When you yank foldable whole `if` block.
+      - You can do `c z` instead of `c a z`. E.g. When you change foldable whole `if` block.
+    - `g r` mapped to `reverse`
+    - `g s` mapped to `sort`
+    - `g c` mapped to `select-latest-change` which correspond to `g v` ( `select-previous-selection` )
+    - `g C` mapped to `camel-case`
+  - What was broken?
+    Before: `g c` was for `camel-case`, `g C` was for `pascal-case`.
+    Now: `g c` is for `select-latest-change`, `g C` is for `camel-case`. No default `pascal-case`.
+- New: Target alias for surround #751, #755
+  - Now `b`, `B`, `r`, `a` char is aliased to corresponding target.
+    - `b` is alias for `(` or `)`
+    - `B` is alias for `{` or `}`
+    - `r` is alias for `[` or `]`
+    - `a` is alias for `<` or `>`( I don't like this, just followed how `surround.vim` is doing ).
+  - These alias can be used in `surround`, `delete-surround`, `change-surround`.
+    - When have these keymap: `surround`( `y s` ), `delete-surround`( `d s` ), `change-surround`(`c s`)
+      - `y s i w b` is equals to `y s i w (`.
+      - `y s i w B` is equals to `y s i w {`
+      - `y s i w r` is equals to `y s i w [`
+      - `y s i w a` is equals to `y s i w <`
+- New: InnerPair pre-targeted `rotate` command
+  - Commands:
+    - `rotate-arguments-of-inner-pair`
+    - `rotate-arguments-backwards-of-inner-pair`
+  - No keymap by default.
+  - E.g.
+    - When you map `g >` to `rotate-arguments-of-inner-pair` and `g <` to `backwards`
+    - You can rotate arg of parenthesis by `g >` and `.` if necessary, `g <` for backwards.
+- Internal: Cleanup `developer.coffee` and remove unused dev commands.
+
+# 0.89.0:
+- New: Text-object for arguments
+  - Keymap:
+    - `i ,`: `inner-arguments`
+    - `a ,`: `a-arguments`
+    - `,`: `inner-arguments`( shorthand keymap available only in operator-pending-mode )
+  - Example:
+    - `c i ,`( you can do `c ,`)
+    - `d i ,`( you can do `d ,`)
+    - `d a ,`
+    - `v a ,`
+  - From where this text-object find arguments?
+    - Auto-detect inner range of `()`, `[]`, `{}` pairs and parse argument and select.
+    - When it failed to find inner-pair range, it fallbacks to current-line range.
+  - How to determine separator of arguments?
+    - Heuristically determine separator from comma `, ` or white-space.
+      - When some separator contains comma, it treat comma as separator.
+      - When no separator contains comma, it treat white-space as separator.
+- New, Setting: #747 Conditional keymap setting `keymapPToPutWithAutoIndent`.
+  - When enabled, `p`, and `P` paste with-auto-indent for linewise paste.
+  - Why I added this helper setting?
+    - You can set keymap by yourself in your `keymap.cson`
+      - But you need to be careful to not overwrite `p` in `operator-pending-mode`.
+    - In `normal-mode`, `p` is mapped to `put`.
+    - In `operator-pending-mode`, `p` is mapped to `inner-paragraph`, as shorthand of `i p`.
+    - When set `p` keymap in your `keymap.cson` without breaking predefined shorthand `p`.
+    - You need to exclude `operator-pending-mode` scope like this.
+      ```coffescript
+      'atom-text-editor.vim-mode-plus:not(.insert-mode):not(.operator-pending-mode)':
+        'p': 'vim-mode-plus:put-after-with-auto-indent'
+      ```
+    - But I don't think I can expect normal user to do so. So
+- New: `rotate`, `rotate-backwards` operator
+  - No keymap by default.
+  - ChangeOrder family operator, which rotate line in `linewise`, argument in `charactewise`.
+- New: #748 ChangeOrder family( child ) operator now work differently for charactewise-target.
+  - Affects: `reverse`, `rotate`, `rotate-backwards`, `sort`, `sort-case-insensitively`, `sort-by-number`
+  - [Same]: When `linewise` target, it change order of line.
+  - [New]: When `characterwise` target, it auto-detect arguments and change order of arguments within characterwise-range.
+- New: Operator `split-arguments` and `split-arguments-with-remove-separator`
+  - Commands:
+    - `split-arguments`: split arguments into multiple-lines within specified target without removing separator.
+    - `split-arguments-with-remove-separator`: behave same as `split-arguments` but it remove separator(sugh as `, `).
+  - Keymap `g ,` to `split-arguments` by default( aggressive decision ).
+    - Pure-Vim's `g , ` is "move to newer cursor position of change list", but vmp have no `changelist` anyway.
+- New: [Experimental] Added `inner-pair` pre-targeted version of `split-arguments` and `reverse` to evaluate it's usefulness.
+  - No keymap
+  - Commands:
+    - `split-arguments-of-inner-any-pair`
+    - `reverse-inner-any-pair`
+- Breaking: Remove `showCursorInVisualMode` setting
+  - Notify and ask confirmation for auto-remove from `config.cson` if it set to non-default value.
+- Improve: `r enter` to replace with new-line now correctly auto-indent inserted new-line.
+- Improve: When `surround` linewse-target, now auto-indent surrounded lines more accurately than previous release.
+
+# 0.88.0:
+- Doc: New wiki page
+  - DifferencesFromPureVim
+  - VmpUniqueKeymaps
+- Keymaps: Normal keymap addition
+  - New: Now `subword` text-object have default keymap, you can change subword by `c i d`.
+    - `i d`: `inner-subword`
+    - `a d`: `a-subword`
+  - `cmd-a` is mapped to `inner-entire` in `operator-pending` and `visual-mode` for macOS user.
+    - So macOS user can use `cmd-a` as shorthand of `i e`(`inner-entire`).
+    - E.g. Change all occurrence in text by `c o cmd-a` instead of `c o i e`
+- Keymaps: Shorthand keymaps in `operator-pending` mode
+  - Prerequisite
+    - In `operator-pending-mode`, next command must be `text-object` or `motion`
+    - So all `operator` command in `operator-pending-mode` is INVALID.
+    - This mean, we can safely use operator command's keymap in `operator-pending-mode` as shorthand keymap of `text-object` or `motion`.
+    - But using these keymap for `motion` is meaningless since motion is single-key, but text-object key is two keystroke(e.g. `i w`).
+    - So I pre-defined short-hand keymap for text-object which was work for me.
+  - What was defined?
+    - `c` as shorthand of `inner-smart-word`, but `c c` is not affected.
+      - You can `yank word` by `y c` instead of `y i w`. ( change by `c c` if you enabled it in setting )
+      - To make `c c` works for `change inner-smart-word`, set `keymapCCToChangeInnerSmartWord` to `true`( `false` by default )
+      - `smart-word` is similar to `word` but it's include `-` char.
+    - `C` as shorthand of `inner-whole-word`
+      - You can `yank whole-word` by `y C` instead of `y i W`. ( change by `c C` )
+    - `d` as shorthand of `inner-subword`, but `d d` is not affected.
+      - You can `yank subword` by `y d` instead of `y i d`. ( change by `c d` )
+    - `p` as shorthand of `inner-paragraph`
+      - You can `yank paragraph` by `y p` instead of `y i p`. ( change by `c p` )
+- Keymaps: Conditional keymap enabled by setting.
+  - Prerequisite
+    - Added several configuration option which is 1-to-1 mapped to keymap.
+    - When set to `true`, corresponding keymap is defined.
+    - This is just as helper to define complex keymap via checkbox.
+    - For me, I enabled all of these setting and I want strongly recommend you to evaluate these setting at least once.
+    - These keymaps are picked from my local keymap which was realy work well for a log time.
+  - Here is new setting, all `false` by default. Effect(good and bad) of these keymap is explained in vmp's setting-view.
+    - `keymapUnderscoreToReplaceWithRegister`
+    - `keymapCCToChangeInnerSmartWord`
+    - `keymapSemicolonToInnerAnyPairInOperatorPendingMode`
+    - `keymapSemicolonToInnerAnyPairInVisualMode`
+    - `keymapBackslashToInnerCommentOrParagraphWhenToggleLineCommentsIsPending`
+- Breaking: Default setting change:
+  - `clearPersistentSelectionOnResetNormalMode`: `true`( `false` in previous version )
+  - `clearHighlightSearchOnResetNormalMode`: `true`( `false` in previous version )
+  - `highlightSearch`: `true`( `false` in previous version )
+  - `useClipboardAsDefaultRegister`: `true`( `false` in previous version )
+- New: #743, #739 New config option `dontUpdateRegisterOnChangeOrSubstitute`( default `false` ).
+  - When set to `true`, all `c`, `s`, `C`, `S` operation no longer update register content.
+  - If you want keep register content unchanged by `c i w`, set this to `false`.
+- New: TextObject `comment-or-paragraph` for use of easy comment-in/out when `g /` is pending.
+- Fix: For commands `set-register-name-to-*` or `set-register-name-to-_`, now show hover and correctly set `with-register` CSS scope on editorElement.
+- Fix, Improve: #744 Make vmp work well with other atom-pkg or atom's native feature.
+  - Update selection prop on command dispatch of outer-vmp command
+    - Now correctly update cursor visibility and start `visual-mode` after `cmd-e` then `cmd-g`.
+  - Update selection prop if editor retake `focus`.
+    - Now correctly start `visual-mode` after `cmd-f` result was confirmed by `enter`.
+- Improve: Better integration with `demo-mode` package
+  - Postpone destroying operator-flash while demo-mode's hover indicator is displayed.
+- Improve: When undo/redoing occurrence operation, flash was suppressed when all occurrence start and end with same column, but now flashed.
+- Improve: Improve containment check for `togggle-preset-occurrence`
+  - When cursor is at right column of non-word char(e.g. closing parenthesis `)`), not longer misunderstand that cursor is on occurrence-marker.
+- Internal: #742 Rewrite `RegisterManager`, reduced complex logic which make me really confuse.
+
 # 0.87.0:
 - New: #732 Add integration with `demo-mode` package.
   - `demo-mode` is new Atom package I've released recently, it was originally developed as part of vim-mode-plus.

@@ -21,7 +21,7 @@ export default {
       /(^|\s|\.){word}\s*[:=]\s*function\s*\(/,
       /(^|\s)function\s+{word}\s*\(/,
       /(^|\s)class\s+{word}(\s|$)/,
-      /(^|\s){word}\([^(]*?\)\s*\{/,
+      /(^|\s){word}\s*\([^(]*?\)\s*\{/,
     ],
     files: ['*.js'],
     dependencies: ['CoffeeScript', 'TypeScript'],
@@ -142,7 +142,7 @@ export default {
       /(^|\s)filesdef\s.*(\s|\*|\(){word}(\s|;|\)|$)/,
       /(^|\s|\*|:|&){word}\s*\(.*\)(\s*|\s*const\s*)(\{|$)/,
     ],
-    files: ['*.c', '*.cc', '*.cpp', '*.h', '*.hh', '*.hpp', '*.inc'],
+    files: ['*.c', '*.cc', '*.cpp', '*.cxx', '*.h', '*.hh', '*.hpp', '*.inc'],
   },
 
   Shell: {

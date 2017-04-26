@@ -10,9 +10,6 @@ describe "Prefixes", ->
       {editor, editorElement} = vimState
       {set, ensure, keystroke} = vim
 
-  afterEach ->
-    vimState.resetNormalMode()
-
   describe "Repeat", ->
     describe "with operations", ->
       beforeEach ->
@@ -181,17 +178,28 @@ describe "Prefixes", ->
       beforeEach ->
         set register: '"': text: '345'
         set register: 'a': text: 'abc'
+        set register: '*': text: 'abc'
         atom.clipboard.write "clip"
         set text: "012\n", cursor: [0, 2]
         ensure 'i', mode: 'insert'
 
-      it "inserts contents of the unnamed register with \"", ->
-        ensure ['ctrl-r', input: '"'], text: '013452\n'
-
-      describe "when useClipboardAsDefaultRegister enabled", ->
-        it "inserts contents from clipboard with \"", ->
+      describe "useClipboardAsDefaultRegister = true", ->
+        beforeEach ->
           settings.set 'useClipboardAsDefaultRegister', true
+          set register: '"': text: '345'
+          atom.clipboard.write "clip"
+
+        it "inserts contents from clipboard with \"", ->
           ensure ['ctrl-r', input: '"'], text: '01clip2\n'
+
+      describe "useClipboardAsDefaultRegister = false", ->
+        beforeEach ->
+          settings.set 'useClipboardAsDefaultRegister', false
+          set register: '"': text: '345'
+          atom.clipboard.write "clip"
+
+        it "inserts contents from \" with \"", ->
+          ensure ['ctrl-r', input: '"'], text: '013452\n'
 
       it "inserts contents of the 'a' register", ->
         ensure ['ctrl-r', input: 'a'], text: '01abc2\n'

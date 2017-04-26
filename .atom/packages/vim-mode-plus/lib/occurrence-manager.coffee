@@ -1,7 +1,5 @@
 _ = require 'underscore-plus'
 {Emitter, CompositeDisposable} = require 'atom'
-swrap = require './selection-wrapper'
-
 {
   shrinkRangeEndToBeforeNewLine
   collectRangeInBufferRow
@@ -15,7 +13,7 @@ class OccurrenceManager
   markerOptions: {invalidate: 'inside'}
 
   constructor: (@vimState) ->
-    {@editor, @editorElement} = @vimState
+    {@editor, @editorElement, @swrap} = @vimState
     @disposables = new CompositeDisposable
     @disposables.add @vimState.onDidDestroy(@destroy.bind(this))
     @emitter = new Emitter
@@ -127,7 +125,12 @@ class OccurrenceManager
       range.intersectsWith(marker.getBufferRange(), exclusive)
 
   getMarkerAtPoint: (point) ->
-    @markerLayer.findMarkers(containsBufferPosition: point)[0]
+    markers = @markerLayer.findMarkers(containsBufferPosition: point)
+    # We have to check all returned marker until found, since we do aditional marker validation.
+    # e.g. For text `abc()`, mark for `abc` and `(`. cursor on `(` char return multiple marker
+    # and we pick `(` by isGreaterThan check.
+    for marker in markers when marker.getBufferRange().end.isGreaterThan(point)
+      return marker
 
   # Select occurrence marker bufferRange intersecting current selections.
   # - Return: true/false to indicate success or fail
@@ -166,7 +169,7 @@ class OccurrenceManager
         @vimState.mutationManager.migrateMutation(selection, selections[index])
 
       @destroyMarkers(markersSelected)
-      for $selection in swrap.getSelections(@editor)
+      for $selection in @swrap.getSelections(@editor)
         $selection.saveProperties()
       true
     else

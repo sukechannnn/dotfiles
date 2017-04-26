@@ -122,20 +122,23 @@ export default {
     return {
       providerName: 'goto-definition-hyperclick',
       wordRegExp: /[$0-9a-zA-Z_-]+/g,
-      getSuggestionForWord: (textEditor, text, range) => ({
+      getSuggestionForWord: (editor, text, range) => ({
         range,
         callback() {
           if (text) {
-            self.go();
+            self.go(editor);
           }
         },
       }),
     };
   },
 
-  go() {
-    const editor = atom.workspace.getActiveTextEditor();
-    const { regex, fileTypes, message } = this.getScanOptions(editor);
+  go(editor) {
+    const activeEditor = (
+      editor && editor.constructor.name === 'TextEditor'
+    ) ? editor : atom.workspace.getActiveTextEditor();
+
+    const { regex, fileTypes, message } = this.getScanOptions(activeEditor);
     if (!regex) {
       return atom.notifications.addWarning(message);
     }
@@ -155,7 +158,7 @@ export default {
     const callback = () => {
       this.state = 'completed';
       if (this.definitionsView.items.length === 0) {
-        this.definitionsView.showEmpty();
+        this.definitionsView.show();
       } else if (this.definitionsView.items.length === 1) {
         this.definitionsView.confirmedFirst();
       }
@@ -164,9 +167,9 @@ export default {
     const scanPaths = atom.project.getDirectories().map(x => x.path);
 
     if (atom.config.get('goto-definition.performanceMode')) {
-      Searcher.ripgrepScan(scanPaths, fileTypes, regex, iterator, callback);
+      Searcher.ripgrepScan(activeEditor, scanPaths, fileTypes, regex, iterator, callback);
     } else {
-      Searcher.atomWorkspaceScan(scanPaths, fileTypes, regex, iterator, callback);
+      Searcher.atomWorkspaceScan(activeEditor, scanPaths, fileTypes, regex, iterator, callback);
     }
     return null;
   },

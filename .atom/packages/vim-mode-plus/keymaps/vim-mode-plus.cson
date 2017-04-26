@@ -146,18 +146,18 @@
   'g ~': 'vim-mode-plus:toggle-case'
   'g U': 'vim-mode-plus:upper-case'
   'g u': 'vim-mode-plus:lower-case'
-  'g c': 'vim-mode-plus:camel-case'
-  'g C': 'vim-mode-plus:pascal-case'
+  'g C': 'vim-mode-plus:camel-case'
+  # 'g C': 'vim-mode-plus:pascal-case'
   'g /': 'vim-mode-plus:toggle-line-comments'
   'g -': 'vim-mode-plus:dash-case'
   'g space': 'vim-mode-plus:compact-spaces'
   'g q': 'vim-mode-plus:auto-flow'
   'g |': 'vim-mode-plus:trim-string'
   'g cmd-d': 'vim-mode-plus:select-occurrence'
+  'g ,': 'vim-mode-plus:split-arguments'
   # 'g _': 'vim-mode-plus:snake-case'
-  # 'g r':   'vim-mode-plus:reverse'
-  # 'g s':   'vim-mode-plus:sort'
-  # 'ctrl-s': 'vim-mode-plus:transform-string-by-select-list'
+  'g r':   'vim-mode-plus:reverse' # incompatible-with-pure-vim
+  'g s':   'vim-mode-plus:sort' # incompatible-to-pure-vim
   # 'g tab': 'vim-mode-plus:convert-to-soft-tab'
   # 'g shift-tab': 'vim-mode-plus:convert-to-hard-tab'
 
@@ -250,6 +250,11 @@
 
   # 'g n': 'vim-mode-plus:move-to-next-number'
   # 'g N': 'vim-mode-plus:move-to-previous-number'
+
+
+# macOS only
+'.platform-darwin atom-text-editor.vim-mode-plus:not(.insert-mode)':
+  'ctrl-s': 'vim-mode-plus:transform-string-by-select-list'
 
 'atom-text-editor.vim-mode-plus.has-occurrence:not(.insert-mode)':
   'tab': 'vim-mode-plus:move-to-next-occurrence'
@@ -402,8 +407,10 @@
   'v': 'vim-mode-plus:activate-characterwise-visual-mode'
   'V': 'vim-mode-plus:activate-linewise-visual-mode'
   'ctrl-v': 'vim-mode-plus:activate-blockwise-visual-mode'
+
   'g v': 'vim-mode-plus:select-previous-selection'
-  # 'g c':    'vim-mode-plus:select-latest-change'
+  'g c': 'vim-mode-plus:select-latest-change'
+
   'u': 'vim-mode-plus:undo'
   'ctrl-r': 'vim-mode-plus:redo'
   'O': 'vim-mode-plus:insert-above-with-newline'
@@ -429,10 +436,33 @@
   'O': 'vim-mode-plus:operator-modifier-subword-occurrence'
   'I': 'vim-mode-plus:move-to-first-character-of-line'
   'A': 'vim-mode-plus:move-to-last-character-of-line'
+
+  # Shorthand keymap for two-keystroke text-object
+  'c': 'vim-mode-plus:inner-smart-word' # `y c` for `y i w`
+  'd': 'vim-mode-plus:inner-subword'    # `y d` for `y i d`
+  'C': 'vim-mode-plus:inner-whole-word' # `y C` for `y i W`
+  'p': 'vim-mode-plus:inner-paragraph'  # `y p` for `y i p`
+  ',': 'vim-mode-plus:inner-arguments'  # `y ,` for `y i ,`
+  'z': 'vim-mode-plus:a-fold'           # `y z` for `y a z`
+
+  # In this scope, all operator keys are safely remappable.
+  # e.g. p, d, D, x, u, X, S, ., r
+
+# operator-pending with operator specified
+# -------------------------
+# `c c` to works as change current line.
+'atom-text-editor.vim-mode-plus.operator-pending-mode.change-pending':
+  'c': 'vim-mode-plus:change'
+
+# `d d` to works as delete current line
+'atom-text-editor.vim-mode-plus.operator-pending-mode.delete-pending':
+  'd': 'vim-mode-plus:delete'
+
+# for `g q q` to auto-flow current line
+'atom-text-editor.vim-mode-plus.operator-pending-mode.auto-flow-pending':
   'q': 'vim-mode-plus:auto-flow'
 
-# operator-pending.has-occurrence [Experimental]
-# -------------------------
+# operator-pending.has-occurrence
 'atom-text-editor.vim-mode-plus.operator-pending-mode.has-occurrence':
   'p': 'vim-mode-plus:inner-paragraph'
   'P': 'vim-mode-plus:inner-paragraph' # in-case SHIFT is not keyuped. when O modifier
@@ -534,6 +564,7 @@
 
   'i e': 'vim-mode-plus:inner-entire'
   'a e': 'vim-mode-plus:a-entire'
+  'cmd-a': 'vim-mode-plus:inner-entire'
 
   # [NOTE] subject to change in future
   'i c': 'vim-mode-plus:inner-latest-change'
@@ -546,8 +577,11 @@
   'i v': 'vim-mode-plus:inner-visible-area'
   'a v': 'vim-mode-plus:a-visible-area'
 
-  # 'a q': 'vim-mode-plus:a-subword'
-  # 'i q': 'vim-mode-plus:inner-subword'
+  'a d': 'vim-mode-plus:a-subword'
+  'i d': 'vim-mode-plus:inner-subword'
+
+  'a ,': 'vim-mode-plus:a-arguments'
+  'i ,': 'vim-mode-plus:inner-arguments'
 
 # visual
 # -------------------------

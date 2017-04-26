@@ -1,6 +1,5 @@
 {Point, Disposable, CompositeDisposable} = require 'atom'
 Delegato = require 'delegato'
-swrap = require './selection-wrapper'
 
 # Display cursor in visual-mode
 # ----------------------------------
@@ -12,13 +11,14 @@ class CursorStyleManager
 
   constructor: (@vimState) ->
     {@editorElement, @editor} = @vimState
-    @subscriptions = new CompositeDisposable
-    @subscriptions.add atom.config.observe('editor.lineHeight', @refresh)
-    @subscriptions.add atom.config.observe('editor.fontSize', @refresh)
+    @disposables = new CompositeDisposable
+    @disposables.add atom.config.observe('editor.lineHeight', @refresh)
+    @disposables.add atom.config.observe('editor.fontSize', @refresh)
+    @vimState.onDidDestroy(@destroy)
 
-  destroy: ->
+  destroy: =>
     @styleDisposables?.dispose()
-    @subscriptions.dispose()
+    @disposables.dispose()
 
   refresh: =>
     # Intentionally skip in spec mode, since not all spec have DOM attached( and don't want to ).
@@ -27,7 +27,7 @@ class CursorStyleManager
 
     # We must dispose previous style modification for non-visual-mode
     @styleDisposables?.dispose()
-    return unless (@mode is 'visual' and @vimState.getConfig('showCursorInVisualMode'))
+    return unless @mode is 'visual'
 
     @styleDisposables = new CompositeDisposable
     if @submode is 'blockwise'
@@ -49,7 +49,7 @@ class CursorStyleManager
       @styleDisposables.add @modifyStyle(cursor, cursorNode)
 
   getCursorBufferPositionToDisplay: (selection) ->
-    bufferPosition = swrap(selection).getBufferPositionFor('head', from: ['property'])
+    bufferPosition = @vimState.swrap(selection).getBufferPositionFor('head', from: ['property'])
     if @editor.hasAtomicSoftTabs() and not selection.isReversed()
       screenPosition = @editor.screenPositionForBufferPosition(bufferPosition.translate([0, +1]), clipDirection: 'forward')
       bufferPositionToDisplay = @editor.bufferPositionForScreenPosition(screenPosition).translate([0, -1])

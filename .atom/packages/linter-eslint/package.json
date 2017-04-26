@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
+        "raw": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
+        "rawSpec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
+        "spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11739-9858-1iegk0u"
+      "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/apm-install-dir-117320-33898-3r05i5.klt3issjor"
     ]
   ],
-  "_from": "../d-11739-9858-pyqmr7/package.tgz",
-  "_id": "linter-eslint@8.1.5",
+  "_from": "../d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
+  "_id": "linter-eslint@8.1.6",
   "_inCache": true,
   "_installable": true,
   "_location": "/linter-eslint",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
+    "raw": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
+    "rawSpec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
+    "spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11739-9858-pyqmr7/package.tgz",
-  "_shasum": "bff8988140293b66ac61c32ba8458e00eb782241",
+  "_resolved": "file:../d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
+  "_shasum": "86c1f2c0c94b772c948c77919d6474035c5a607c",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9858-pyqmr7/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11739-9858-1iegk0u",
+  "_spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117320-33898-tw7jn2.d2hwjexw29/package.tgz",
+  "_where": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/apm-install-dir-117320-33898-3r05i5.klt3issjor",
   "bugs": {
     "url": "https://github.com/AtomLinter/linter-eslint/issues"
   },
@@ -154,6 +154,7 @@
     "eslint": "^3.17.0",
     "eslint-config-airbnb-base": "^11.0.0",
     "eslint-plugin-import": "^2.2.0",
+    "jasmine-fix": "^1.0.1",
     "rimraf": "^2.5.4"
   },
   "engines": {
@@ -190,7 +191,8 @@
       "atom": "true"
     },
     "env": {
-      "node": true
+      "node": true,
+      "browser": true
     }
   },
   "homepage": "https://github.com/AtomLinter/linter-eslint#readme",
@@ -221,5 +223,5 @@
     "test": "apm test",
     "watch": "npm run compile -- -w"
   },
-  "version": "8.1.5"
+  "version": "8.1.6"
 }

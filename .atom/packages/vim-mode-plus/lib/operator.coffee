@@ -1,16 +1,14 @@
 _ = require 'underscore-plus'
 {
-  haveSomeNonEmptySelection
   isEmptyRow
   getWordPatternAtBufferPosition
-  getIndentLevelForBufferRow
   getSubwordPatternAtBufferPosition
   insertTextAtBufferPosition
   setBufferRow
   moveCursorToFirstCharacterAtRow
   ensureEndsWithNewLineForBufferRow
+  adjustIndentWithKeepingLayout
 } = require './utils'
-swrap = require './selection-wrapper'
 Base = require './base'
 
 class Operator extends Base
@@ -130,7 +128,7 @@ class Operator extends Base
     if @selectPersistentSelectionIfNecessary()
       # [FIXME] selection-wise is not synched if it already visual-mode
       unless @mode is 'visual'
-        @vimState.modeManager.activate('visual', swrap.detectWise(@editor))
+        @vimState.modeManager.activate('visual', @swrap.detectWise(@editor))
 
     @target = 'CurrentSelection' if @mode is 'visual' and @requireTarget
     @setTarget(@new(@target)) if _.isString(@target)
@@ -166,7 +164,7 @@ class Operator extends Base
 
       @persistentSelection.select()
       @editor.mergeIntersectingSelections()
-      for $selection in swrap.getSelections(@editor) when not $selection.hasProperties()
+      for $selection in @swrap.getSelections(@editor) when not $selection.hasProperties()
         $selection.saveProperties()
       true
     else
@@ -195,11 +193,11 @@ class Operator extends Base
 
   setTextToRegister: (text, selection) ->
     text += "\n" if (@target.isLinewise() and (not text.endsWith('\n')))
-    @vimState.register.set({text, selection}) if text
+    @vimState.register.set(null, {text, selection}) if text
 
   normalizeSelectionsIfNecessary: ->
     if @target?.isMotion() and (@mode is 'visual')
-      swrap.normalize(@editor)
+      @swrap.normalize(@editor)
 
   startMutation: (fn) ->
     if @canEarlySelect()
@@ -265,7 +263,7 @@ class Operator extends Base
         @occurrenceSelected = true
         @mutationManager.setCheckpoint('did-select-occurrence')
 
-    if @targetSelected = haveSomeNonEmptySelection(@editor) or @target.name is "Empty"
+    if @targetSelected = @vimState.haveSomeNonEmptySelection() or @target.name is "Empty"
       @emitDidSelectTarget()
       @flashChangeIfNecessary()
       @trackChangeIfNecessary()
@@ -625,31 +623,7 @@ class PutBeforeWithAutoIndent extends PutBefore
 
   pasteLinewise: (selection, text) ->
     newRange = super
-    # Adjust indentLevel with keeping original layout of pasting text.
-    # Suggested indent level of newRange.start.row is correct as long as newRange.start.row have minimum indent level.
-    # But when we paste following already indented three line text, we have to adjust indent level
-    #  so that `varFortyTwo` line have suggestedIndentLevel.
-    #
-    #        varOne: value # suggestedIndentLevel is determined by this line
-    #   varFortyTwo: value # We need to make final indent level of this row to be suggestedIndentLevel.
-    #      varThree: value
-    #
-    # So what we are doing here is apply suggestedIndentLevel with fixing issue above.
-    # 1. Determine minimum indent level among pasted range(= newRange ) excluding empty row
-    # 2. Then update indentLevel of each rows to final indentLevel of minimum-indented row have suggestedIndentLevel.
-    suggestedLevel = @editor.suggestedIndentForBufferRow(newRange.start.row)
-    minLevel = null
-    rowAndActualLevels = []
-    for row in [newRange.start.row...newRange.end.row]
-      actualLevel = getIndentLevelForBufferRow(@editor, row)
-      rowAndActualLevels.push([row, actualLevel])
-      unless isEmptyRow(@editor, row)
-        minLevel = Math.min(minLevel ? Infinity, actualLevel)
-
-    if minLevel? and (deltaToSuggestedLevel = suggestedLevel - minLevel)
-      for [row, actualLevel] in rowAndActualLevels
-        newLevel = actualLevel + deltaToSuggestedLevel
-        @editor.setIndentationForBufferRow(row, newLevel)
+    adjustIndentWithKeepingLayout(@editor, newRange)
     return newRange
 
 class PutAfterWithAutoIndent extends PutBeforeWithAutoIndent

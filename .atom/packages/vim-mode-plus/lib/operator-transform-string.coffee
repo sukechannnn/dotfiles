@@ -1,4 +1,3 @@
-LineEndingRegExp = /(?:\n|\r\n)$/
 _ = require 'underscore-plus'
 {BufferedProcess, Range} = require 'atom'
 
@@ -8,8 +7,10 @@ _ = require 'underscore-plus'
   limitNumber
   toggleCaseForCharacter
   splitTextByNewLine
+  splitArguments
+  getIndentLevelForBufferRow
+  adjustIndentWithKeepingLayout
 } = require './utils'
-swrap = require './selection-wrapper'
 Base = require './base'
 Operator = Base.getClass('Operator')
 
@@ -21,6 +22,7 @@ class TransformString extends Operator
   stayOptionName: 'stayOnTransformString'
   autoIndent: false
   autoIndentNewline: false
+  autoIndentAfterInsertText: false
   @stringTransformers: []
 
   @registerToSelectList: ->
@@ -28,7 +30,17 @@ class TransformString extends Operator
 
   mutateSelection: (selection) ->
     if text = @getNewText(selection.getText(), selection)
-      selection.insertText(text, {@autoIndent})
+      if @autoIndentAfterInsertText
+        startRow = selection.getBufferRange().start.row
+        startRowIndentLevel = getIndentLevelForBufferRow(@editor, startRow)
+      range = selection.insertText(text, {@autoIndent, @autoIndentNewline})
+      if @autoIndentAfterInsertText
+        # Currently used by SplitArguments and Surround( linewise target only )
+        range = range.translate([0, 0], [-1, 0]) if @target.isLinewise()
+        @editor.setIndentationForBufferRow(range.start.row, startRowIndentLevel)
+        @editor.setIndentationForBufferRow(range.end.row, startRowIndentLevel)
+        # Adjust inner range, end.row is already( if needed ) translated so no need to re-translate.
+        adjustIndentWithKeepingLayout(@editor, range.translate([1, 0], [0, 0]))
 
 class ToggleCase extends TransformString
   @extend()
@@ -65,15 +77,16 @@ class LowerCase extends TransformString
 # -------------------------
 class Replace extends TransformString
   @extend()
-  input: null
+  @registerToSelectList()
   flashCheckpoint: 'did-select-occurrence'
+  input: null
   requireInput: true
   autoIndentNewline: true
   supportEarlySelect: true
 
   initialize: ->
     @onDidSelectTarget =>
-      @focusInput(1, true)
+      @focusInput(hideCursor: true)
     super
 
   getNewText: (text) ->
@@ -397,10 +410,15 @@ class SurroundBase extends TransformString
     ['{', '}']
     ['<', '>']
   ]
+  pairsByAlias: {
+    b: ['(', ')']
+    B: ['{', '}']
+    r: ['[', ']']
+    a: ['<', '>']
+  }
+
   pairCharsAllowForwarding: '[](){}'
   input: null
-  autoIndent: false
-
   requireInput: true
   supportEarlySelect: true # Experimental
 
@@ -408,7 +426,7 @@ class SurroundBase extends TransformString
     inputUI = @newInputUI()
     inputUI.onDidConfirm(@onConfirmSurroundChar.bind(this))
     inputUI.onDidCancel(@cancelOperation.bind(this))
-    inputUI.focus(1, true)
+    inputUI.focus(hideCursor: true)
 
   focusInputForTargetPairChar: ->
     inputUI = @newInputUI()
@@ -417,16 +435,16 @@ class SurroundBase extends TransformString
     inputUI.focus()
 
   getPair: (char) ->
-    if pair = _.detect(@pairs, (pair) -> char in pair)
-      pair
-    else
-      [char, char]
+    pair = @pairsByAlias[char]
+    pair ?= _.detect(@pairs, (pair) -> char in pair)
+    pair ?= [char, char]
+    pair
 
   surround: (text, char, options={}) ->
     keepLayout = options.keepLayout ? false
     [open, close] = @getPair(char)
-    if (not keepLayout) and LineEndingRegExp.test(text)
-      @autoIndent = true # [FIXME]
+    if (not keepLayout) and text.endsWith("\n")
+      @autoIndentAfterInsertText = true
       open += "\n"
       close += "\n"
 
@@ -565,7 +583,7 @@ class JoinBase extends TransformString
   target: "MoveToRelativeLineMinimumOne"
 
   initialize: ->
-    @focusInput(10) if @requireInput
+    @focusInput(charsMax: 10) if @requireInput
     super
 
   getNewText: (text) ->
@@ -606,7 +624,7 @@ class SplitString extends TransformString
 
   initialize: ->
     @onDidSetTarget =>
-      @focusInput(10)
+      @focusInput(charsMax: 10)
     super
 
   getNewText: (text) ->
@@ -623,39 +641,119 @@ class SplitStringWithKeepingSplitter extends SplitString
   @registerToSelectList()
   keepSplitter: true
 
-class ChangeOrder extends TransformString
-  @extend(false)
-  wise: 'linewise'
+class SplitArguments extends TransformString
+  @extend()
+  @registerToSelectList()
+  keepSeparator: true
+  autoIndentAfterInsertText: true
 
   getNewText: (text) ->
-    @getNewRows(splitTextByNewLine(text)).join("\n") + "\n"
+    allTokens = splitArguments(text.trim())
+    newText = ''
+    while allTokens.length
+      {text, type} = allTokens.shift()
+      if type is 'separator'
+        if @keepSeparator
+          text = text.trim() + "\n"
+        else
+          text = "\n"
+      newText += text
+    "\n" + newText + "\n"
+
+class SplitArgumentsWithRemoveSeparator extends SplitArguments
+  @extend()
+  @registerToSelectList()
+  keepSeparator: false
+
+class SplitArgumentsOfInnerAnyPair extends SplitArguments
+  @extend()
+  @registerToSelectList()
+  target: "InnerAnyPair"
+
+class ChangeOrder extends TransformString
+  @extend(false)
+  getNewText: (text) ->
+    if @target.isLinewise()
+      @getNewList(splitTextByNewLine(text)).join("\n") + "\n"
+    else
+      @sortArgumentsInTextBy(text, (args) => @getNewList(args))
+
+  sortArgumentsInTextBy: (text, fn) ->
+    leadingSpaces = trailingSpaces = ''
+    start = text.search(/\S/)
+    end = text.search(/\s*$/)
+    leadingSpaces = trailingSpaces = ''
+    leadingSpaces = text[0...start] if start isnt -1
+    trailingSpaces = text[end...] if end isnt -1
+    text = text[start...end]
+
+    allTokens = splitArguments(text)
+    args = allTokens
+      .filter (token) -> token.type is 'argument'
+      .map (token) -> token.text
+    newArgs = fn(args)
+
+    newText = ''
+    while allTokens.length
+      {text, type} = allTokens.shift()
+      newText += switch type
+        when 'separator' then text
+        when 'argument' then newArgs.shift()
+    leadingSpaces + newText + trailingSpaces
 
 class Reverse extends ChangeOrder
   @extend()
   @registerToSelectList()
-  @description: "Reverse lines(e.g reverse selected three line)"
-  getNewRows: (rows) ->
+  getNewList: (rows) ->
     rows.reverse()
+
+class ReverseInnerAnyPair extends Reverse
+  @extend()
+  target: "InnerAnyPair"
+
+class Rotate extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  backwards: false
+  getNewList: (rows) ->
+    if @backwards
+      rows.push(rows.shift())
+    else
+      rows.unshift(rows.pop())
+    rows
+
+class RotateBackwards extends ChangeOrder
+  @extend()
+  @registerToSelectList()
+  backwards: true
+
+class RotateArgumentsOfInnerPair extends Rotate
+  @extend()
+  target: "InnerAnyPair"
+
+class RotateArgumentsBackwardsOfInnerPair extends RotateArgumentsOfInnerPair
+  @extend()
+  backwards: true
 
 class Sort extends ChangeOrder
   @extend()
   @registerToSelectList()
-  @description: "Sort lines alphabetically"
-  getNewRows: (rows) ->
+  @description: "Sort alphabetically"
+  getNewList: (rows) ->
     rows.sort()
 
 class SortCaseInsensitively extends ChangeOrder
   @extend()
   @registerToSelectList()
-  @description: "Sort lines alphabetically (case insensitive)"
-  getNewRows: (rows) ->
+  @description: "Sort alphabetically with case insensitively"
+  getNewList: (rows) ->
     rows.sort (rowA, rowB) ->
       rowA.localeCompare(rowB, sensitivity: 'base')
 
 class SortByNumber extends ChangeOrder
   @extend()
   @registerToSelectList()
-  @description: "Sort lines numerically"
-  getNewRows: (rows) ->
+  @description: "Sort numerically"
+  getNewList: (rows) ->
     _.sortBy rows, (row) ->
       Number.parseInt(row) or Infinity

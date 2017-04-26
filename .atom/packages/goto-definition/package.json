@@ -2,40 +2,40 @@
   "_args": [
     [
       {
-        "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
+        "raw": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
         "scope": null,
         "escapedName": null,
         "name": null,
-        "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
-        "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
+        "rawSpec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
+        "spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
         "type": "local"
       },
-      "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11739-9842-1kazbap"
+      "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/apm-install-dir-117325-26991-la98z5.48yx7833di"
     ]
   ],
-  "_from": "../d-11739-9842-17bsi7p/package.tgz",
-  "_id": "goto-definition@1.3.1",
+  "_from": "../d-117325-26991-1mti1br.u0n97ldi/package.tgz",
+  "_id": "goto-definition@1.3.3",
   "_inCache": true,
   "_installable": true,
   "_location": "/goto-definition",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
+    "raw": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
     "scope": null,
     "escapedName": null,
     "name": null,
-    "rawSpec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
-    "spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
+    "rawSpec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
+    "spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
     "type": "local"
   },
   "_requiredBy": [
     "#USER"
   ],
-  "_resolved": "file:../d-11739-9842-17bsi7p/package.tgz",
-  "_shasum": "f2a01fbaab2085a68bcb73c7114610d811d422c2",
+  "_resolved": "file:../d-117325-26991-1mti1br.u0n97ldi/package.tgz",
+  "_shasum": "5e64a546f6d0970add882d297c0aa6ea22ec1c8c",
   "_shrinkwrap": null,
-  "_spec": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/d-11739-9842-17bsi7p/package.tgz",
-  "_where": "/private/var/folders/2x/f2n4w8bn3dj_jw0ngb58qz_00000gn/T/apm-install-dir-11739-9842-1kazbap",
+  "_spec": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/d-117325-26991-1mti1br.u0n97ldi/package.tgz",
+  "_where": "/private/var/folders/k9/3hnxyxfx54l14pxl8xj4gnpw0000gn/T/apm-install-dir-117325-26991-la98z5.48yx7833di",
   "author": {
     "name": "faceair"
   },
@@ -43,7 +43,8 @@
     "url": "https://github.com/faceair/atom-goto-definition/issues"
   },
   "dependencies": {
-    "atom-space-pen-views": "^2.2.0"
+    "atom-select-list": "^0.2.0",
+    "etch": "^0.12.2"
   },
   "description": "Goto definition.",
   "devDependencies": {
@@ -53,11 +54,8 @@
     "eslint-plugin-jsx-a11y": "^4.0.0",
     "eslint-plugin-react": "^6.10.3"
   },
-  "engines": {
-    "atom": ">0.50.0"
-  },
   "homepage": "https://github.com/faceair/atom-goto-definition#readme",
-  "license": "GPL",
+  "license": "GPL-2.0",
   "main": "./lib/goto-definition",
   "name": "goto-definition",
   "optionalDependencies": {},
@@ -78,5 +76,5 @@
     "lint": "eslint .",
     "test": "apm test"
   },
-  "version": "1.3.1"
+  "version": "1.3.3"
 }

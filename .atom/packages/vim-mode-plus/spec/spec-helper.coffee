@@ -2,8 +2,8 @@ _ = require 'underscore-plus'
 semver = require 'semver'
 {Range, Point, Disposable} = require 'atom'
 {inspect} = require 'util'
-swrap = require '../lib/selection-wrapper'
 settings = require '../lib/settings'
+globalState = require '../lib/global-state'
 
 KeymapManager = atom.keymaps.constructor
 {normalizeKeystrokes} = require(atom.config.resourcePath + "/node_modules/atom-keymap/lib/helpers")
@@ -17,6 +17,11 @@ supportedModeClass = [
   'blockwise'
   'characterwise'
 ]
+
+# Init spec state
+# -------------------------
+beforeEach ->
+  globalState.reset()
 
 # Utils
 # -------------------------
@@ -35,12 +40,6 @@ withMockPlatform = (target, platform, fn) ->
 
 buildKeydownEvent = (key, options) ->
   KeymapManager.buildKeydownEvent(key, options)
-
-getHeadProperty = (selection) ->
-  swrap(selection).getBufferPositionFor('head', from: ['property'])
-
-getTailProperty = (selection) ->
-  swrap(selection).getBufferPositionFor('tail', from: ['property'])
 
 buildKeydownEventFromKeystroke = (keystroke, target) ->
   modifier = ['ctrl', 'alt', 'shift', 'cmd']
@@ -292,6 +291,14 @@ class VimEditor
       method = 'ensure' + _.capitalize(_.camelize(name))
       this[method](options[name])
 
+  bindEnsureOption: (optionsBase) =>
+    (keystroke, options) =>
+      intersectingOptions = _.intersection(_.keys(options), _.keys(optionsBase))
+      if intersectingOptions.length
+        throw new Error("conflict with bound options #{inspect(intersectingOptions)}")
+
+      @ensure(keystroke, _.defaults(_.clone(options), optionsBase))
+
   ensureByDispatch: (command, options) =>
     dispatch(atom.views.getView(@editor), command)
     for name in ensureOptionsOrdered when options[name]?
@@ -403,10 +410,14 @@ class VimEditor
     expect(actual).toEqual(toArray(text))
 
   ensurePropertyHead: (points) ->
+    getHeadProperty = (selection) =>
+      @vimState.swrap(selection).getBufferPositionFor('head', from: ['property'])
     actual = (getHeadProperty(s) for s in @editor.getSelections())
     expect(actual).toEqual(toArrayOfPoint(points))
 
   ensurePropertyTail: (points) ->
+    getTailProperty = (selection) =>
+      @vimState.swrap(selection).getBufferPositionFor('tail', from: ['property'])
     actual = (getTailProperty(s) for s in @editor.getSelections())
     expect(actual).toEqual(toArrayOfPoint(points))
 

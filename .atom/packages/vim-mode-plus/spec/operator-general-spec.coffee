@@ -10,10 +10,6 @@ describe "Operator general", ->
       {editor, editorElement} = vimState
       {set, ensure, ensureByDispatch, keystroke} = vim
 
-  afterEach ->
-    vimState.globalState.reset('register')
-    vimState.resetNormalMode()
-
   describe "cancelling operations", ->
     it "clear pending operation", ->
       keystroke '/'
@@ -654,6 +650,9 @@ describe "Operator general", ->
         ensure ['"', input: 'A', 'y y'], register: a: text: "012 345\n012 345\n"
 
     describe "with a motion", ->
+      beforeEach ->
+        settings.set('useClipboardAsDefaultRegister', false)
+
       it "yank from here to destnation of motion", ->
         ensure 'y e', cursor: [0, 4], register: {'"': text: '345'}
 
@@ -810,6 +809,8 @@ describe "Operator general", ->
   describe "the p keybinding", ->
     describe "with single line character contents", ->
       beforeEach ->
+        settings.set('useClipboardAsDefaultRegister', false)
+
         set textC: "|012\n"
         set register: '"': text: '345'
         set register: 'a': text: 'a'
@@ -944,6 +945,7 @@ describe "Operator general", ->
     describe "put-after-with-auto-indent command", ->
       beforeEach ->
         waitsForPromise ->
+          settings.set('useClipboardAsDefaultRegister', false)
           atom.packages.activatePackage('language-javascript')
         runs ->
           set grammar: 'source.js'
@@ -1136,6 +1138,17 @@ describe "Operator general", ->
       ensure 'r enter',
         text: '\n2\n\n4\n\n'
         cursor: [[1, 0], [3, 0]]
+
+    it "auto indent when replaced with singe new line", ->
+      set
+        textC_: """
+        __a|bc
+        """
+      ensure 'r enter',
+        textC_: """
+        __a
+        __|c
+        """
 
     it "composes properly with motions", ->
       ensure ['2 r', input: 'x'], text: 'xx\nxx\n\n'

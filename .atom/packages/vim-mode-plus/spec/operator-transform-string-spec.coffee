@@ -10,9 +10,6 @@ describe "Operator TransformString", ->
       {editor, editorElement} = vimState
       {set, ensure, keystroke} = vim
 
-  afterEach ->
-    vimState.resetNormalMode()
-
   describe 'the ~ keybinding', ->
     beforeEach ->
       set
@@ -344,17 +341,21 @@ describe "Operator TransformString", ->
         cursor: [0, 0]
 
     it "transform text by motion and repeatable", ->
-      ensure 'g c $', text: 'vimMode\natom-text-editor\n', cursor: [0, 0]
+      ensure 'g C $', text: 'vimMode\natom-text-editor\n', cursor: [0, 0]
       ensure 'j .', text: 'vimMode\natomTextEditor\n', cursor: [1, 0]
 
     it "transform selection", ->
-      ensure 'V j g c', text: 'vimMode\natomTextEditor\n', cursor: [0, 0]
+      ensure 'V j g C', text: 'vimMode\natomTextEditor\n', cursor: [0, 0]
 
     it "repeating twice works on current-line and won't move cursor", ->
-      ensure 'l g c g c', text: 'vimMode\natom-text-editor\n', cursor: [0, 1]
+      ensure 'l g C g C', text: 'vimMode\natom-text-editor\n', cursor: [0, 1]
 
   describe 'PascalCase', ->
     beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'g C': 'vim-mode-plus:pascal-case'
+
       set
         text: 'vim-mode\natom-text-editor\n'
         cursor: [0, 0]
@@ -550,6 +551,34 @@ describe "Operator TransformString", ->
             line )
           """
 
+    describe 'alias keymap for surround, change-surround, delete-surround', ->
+      it "surround by aliased char", ->
+        set textC: "|abc"; ensure ['y s i w', input: 'b'], text: "(abc)"
+        set textC: "|abc"; ensure ['y s i w', input: 'B'], text: "{abc}"
+        set textC: "|abc"; ensure ['y s i w', input: 'r'], text: "[abc]"
+        set textC: "|abc"; ensure ['y s i w', input: 'a'], text: "<abc>"
+      it "delete surround by aliased char", ->
+        set textC: "|(abc)"; ensure ['d S', input: 'b'], text: "abc"
+        set textC: "|{abc}"; ensure ['d S', input: 'B'], text: "abc"
+        set textC: "|[abc]"; ensure ['d S', input: 'r'], text: "abc"
+        set textC: "|<abc>"; ensure ['d S', input: 'a'], text: "abc"
+      it "change surround by aliased char", ->
+        set textC: "|(abc)"; ensure ['c S', input: 'bB'], text: "{abc}"
+        set textC: "|(abc)"; ensure ['c S', input: 'br'], text: "[abc]"
+        set textC: "|(abc)"; ensure ['c S', input: 'ba'], text: "<abc>"
+
+        set textC: "|{abc}"; ensure ['c S', input: 'Bb'], text: "(abc)"
+        set textC: "|{abc}"; ensure ['c S', input: 'Br'], text: "[abc]"
+        set textC: "|{abc}"; ensure ['c S', input: 'Ba'], text: "<abc>"
+
+        set textC: "|[abc]"; ensure ['c S', input: 'rb'], text: "(abc)"
+        set textC: "|[abc]"; ensure ['c S', input: 'rB'], text: "{abc}"
+        set textC: "|[abc]"; ensure ['c S', input: 'ra'], text: "<abc>"
+
+        set textC: "|<abc>"; ensure ['c S', input: 'ab'], text: "(abc)"
+        set textC: "|<abc>"; ensure ['c S', input: 'aB'], text: "{abc}"
+        set textC: "|<abc>"; ensure ['c S', input: 'ar'], text: "[abc]"
+
     describe 'surround', ->
       it "surround text object with ( and repeatable", ->
         ensure ['y s i w', input: '('],
@@ -566,6 +595,33 @@ describe "Operator TransformString", ->
           textC: "|{apple}\npairs: [brackets]\npairs: [brackets]\n( multi\n  line )"
         ensure 'j .',
           textC: "{apple}\n|{pairs: [brackets]}\npairs: [brackets]\n( multi\n  line )"
+
+      describe 'adjustIndentation when surround linewise target', ->
+        beforeEach ->
+          waitsForPromise ->
+            atom.packages.activatePackage('language-javascript')
+          runs ->
+            set
+              textC: """
+                hello = () => {
+                  if true {
+                  |  console.log('hello');
+                  }
+                }
+                """
+              grammar: 'source.js'
+
+        it "adjustIndentation surrounded text ", ->
+          ensure ['y s i f', input: '{'],
+            textC: """
+              hello = () => {
+              |  {
+                  if true {
+                    console.log('hello');
+                  }
+                }
+              }
+              """
 
       describe 'with motion which takes user-input', ->
         beforeEach ->
@@ -604,6 +660,32 @@ describe "Operator TransformString", ->
             ensure ['y s i w', input: '}'], text: "(apple)\n{orange}\nlemmon"
             keystroke 'j'
             ensure ['y s i w', input: ']'], text: "(apple)\n{orange}\n[lemmon]"
+
+        describe "it distinctively handle aliased keymap", ->
+          describe "normal pair-chars are set to add space", ->
+            beforeEach ->
+              settings.set('charactersToAddSpaceOnSurround', ['(', '{', '[', '<'])
+            it "distinctively handle", ->
+              set textC: "|abc"; ensure ['y s i w', input: '('], text: "( abc )"
+              set textC: "|abc"; ensure ['y s i w', input: 'b'], text: "(abc)"
+              set textC: "|abc"; ensure ['y s i w', input: '{'], text: "{ abc }"
+              set textC: "|abc"; ensure ['y s i w', input: 'B'], text: "{abc}"
+              set textC: "|abc"; ensure ['y s i w', input: '['], text: "[ abc ]"
+              set textC: "|abc"; ensure ['y s i w', input: 'r'], text: "[abc]"
+              set textC: "|abc"; ensure ['y s i w', input: '<'], text: "< abc >"
+              set textC: "|abc"; ensure ['y s i w', input: 'a'], text: "<abc>"
+          describe "aliased pair-chars are set to add space", ->
+            beforeEach ->
+              settings.set('charactersToAddSpaceOnSurround', ['b', 'B', 'r', 'a'])
+            it "distinctively handle", ->
+              set textC: "|abc"; ensure ['y s i w', input: '('], text: "(abc)"
+              set textC: "|abc"; ensure ['y s i w', input: 'b'], text: "( abc )"
+              set textC: "|abc"; ensure ['y s i w', input: '{'], text: "{abc}"
+              set textC: "|abc"; ensure ['y s i w', input: 'B'], text: "{ abc }"
+              set textC: "|abc"; ensure ['y s i w', input: '['], text: "[abc]"
+              set textC: "|abc"; ensure ['y s i w', input: 'r'], text: "[ abc ]"
+              set textC: "|abc"; ensure ['y s i w', input: '<'], text: "<abc>"
+              set textC: "|abc"; ensure ['y s i w', input: 'a'], text: "< abc >"
 
     describe 'map-surround', ->
       beforeEach ->
@@ -1240,92 +1322,274 @@ describe "Operator TransformString", ->
           f\n
           """
 
-  describe "Reverse, Sort, SortByNumber", ->
+  describe "SplitArguments, SplitArgumentsWithRemoveSeparator", ->
+    beforeEach ->
+      atom.keymaps.add "test",
+        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+          'g ,': 'vim-mode-plus:split-arguments'
+          'g !': 'vim-mode-plus:split-arguments-with-remove-separator'
+
+      waitsForPromise ->
+        atom.packages.activatePackage('language-javascript')
+      runs ->
+        set
+          grammar: 'source.js'
+          text: """
+            hello = () => {
+              {f1, f2, f3} = require('hello')
+              f1(f2(1, "a, b, c"), 2, (arg) => console.log(arg))
+              s = `abc def hij`
+            }
+            """
+
+    describe "SplitArguments", ->
+      it "split by commma with adjust indent", ->
+        set cursor: [1, 3]
+        ensure 'g , i {',
+          textC: """
+            hello = () => {
+              |{
+                f1,
+                f2,
+                f3
+              } = require('hello')
+              f1(f2(1, "a, b, c"), 2, (arg) => console.log(arg))
+              s = `abc def hij`
+            }
+            """
+      it "split by commma with adjust indent", ->
+        set cursor: [2, 5]
+        ensure 'g , i (',
+          textC: """
+            hello = () => {
+              {f1, f2, f3} = require('hello')
+              f1|(
+                f2(1, "a, b, c"),
+                2,
+                (arg) => console.log(arg)
+              )
+              s = `abc def hij`
+            }
+            """
+        keystroke 'j w'
+        ensure 'g , i (',
+          textC: """
+            hello = () => {
+              {f1, f2, f3} = require('hello')
+              f1(
+                f2|(
+                  1,
+                  "a, b, c"
+                ),
+                2,
+                (arg) => console.log(arg)
+              )
+              s = `abc def hij`
+            }
+            """
+      it "split by white-space with adjust indent", ->
+        set cursor: [3, 10]
+        ensure 'g , i `',
+          textC: """
+            hello = () => {
+              {f1, f2, f3} = require('hello')
+              f1(f2(1, "a, b, c"), 2, (arg) => console.log(arg))
+              s = |`
+              abc
+              def
+              hij
+              `
+            }
+            """
+
+    describe "SplitByArgumentsWithRemoveSeparator", ->
+      beforeEach ->
+      it "remove splitter when split", ->
+        set cursor: [1, 3]
+        ensure 'g ! i {',
+          textC: """
+          hello = () => {
+            |{
+              f1
+              f2
+              f3
+            } = require('hello')
+            f1(f2(1, "a, b, c"), 2, (arg) => console.log(arg))
+            s = `abc def hij`
+          }
+          """
+
+  describe "Change Order faimliy: Reverse, Sort, SortCaseInsensitively, SortByNumber", ->
     beforeEach ->
       atom.keymaps.add "test",
         'atom-text-editor.vim-mode-plus:not(.insert-mode)':
           'g r': 'vim-mode-plus:reverse'
           'g s': 'vim-mode-plus:sort'
           'g S': 'vim-mode-plus:sort-by-number'
-      set
-        textC: """
-        |z
+    describe "characterwise target", ->
+      describe "Reverse", ->
+        it "[comma separated] reverse text", ->
+          set textC: "   ( dog, ca|t, fish, rabbit, duck, gopher, squid )"
+          ensure 'g r i (', textC_: "   (| squid, gopher, duck, rabbit, fish, cat, dog )"
+        it "[comma sparated] reverse text", ->
+          set textC: "   ( 'dog ca|t', 'fish rabbit', 'duck gopher squid' )"
+          ensure 'g r i (', textC_: "   (| 'duck gopher squid', 'fish rabbit', 'dog cat' )"
+        it "[space sparated] reverse text", ->
+          set textC: "   ( dog ca|t fish rabbit duck gopher squid )"
+          ensure 'g r i (', textC_: "   (| squid gopher duck rabbit fish cat dog )"
+        it "[comma sparated multi-line] reverse text", ->
+          set textC: """
+            {
+              |1, 2, 3, 4,
+              5, 6,
+              7,
+              8, 9
+            }
+            """
+          ensure 'g r i {',
+            textC: """
+            {
+            |  9, 8, 7, 6,
+              5, 4,
+              3,
+              2, 1
+            }
+            """
+        it "[comma sparated multi-line] keep comma followed to last entry", ->
+          set textC: """
+            [
+              |1, 2, 3, 4,
+              5, 6,
+            ]
+            """
+          ensure 'g r i [',
+            textC: """
+            [
+            |  6, 5, 4, 3,
+              2, 1,
+            ]
+            """
+        it "[comma sparated multi-line] aware of nexted pair and quotes and escaped quote", ->
+          set textC: """
+            (
+              |"(a, b, c)", "[( d e f", test(g, h, i),
+              "\\"j, k, l",
+              '\\'m, n', test(o, p),
+            )
+            """
+          ensure 'g r i (',
+            textC: """
+            (
+            |  test(o, p), '\\'m, n', "\\"j, k, l",
+              test(g, h, i),
+              "[( d e f", "(a, b, c)",
+            )
+            """
+        it "[space sparated multi-line] aware of nexted pair and quotes and escaped quote", ->
+          set textC_: """
+            (
+              |"(a, b, c)" "[( d e f"      test(g, h, i)
+              "\\"j, k, l"___
+              '\\'m, n'    test(o, p)
+            )
+            """
+          ensure 'g r i (',
+            textC_: """
+            (
+            |  test(o, p) '\\'m, n'      "\\"j, k, l"
+              test(g, h, i)___
+              "[( d e f"    "(a, b, c)"
+            )
+            """
+      describe "Sort", ->
+        it "[comma separated] sort text", ->
+          set textC: "   ( dog, ca|t, fish, rabbit, duck, gopher, squid )"
+          ensure 'g s i (', textC: "   (| cat, dog, duck, fish, gopher, rabbit, squid )"
+      describe "SortByNumber", ->
+        it "[comma separated] sort by number", ->
+          set textC_: "___(9, 1, |10, 5)"
+          ensure 'g S i (', textC_: "___(|1, 5, 9, 10)"
 
-        10a
-        b
-        a
-
-        5
-        1\n
-        """
-    describe "Reverse", ->
-      it "reverse rows", ->
-        ensure 'g r G',
+    describe "linewise target", ->
+      beforeEach ->
+        set
           textC: """
-          |1
-          5
+          |z
 
-          a
-          b
           10a
-
-          z\n
-          """
-    describe "Sort", ->
-      it "sort rows", ->
-        ensure 'g s G',
-          textC: """
-          |
-
-          1
-          10a
-          5
-          a
-          b
-          z\n
-          """
-    describe "SortByNumber", ->
-      it "sort rows numerically", ->
-        ensure "g S G",
-          textC: """
-          |1
-          5
-          10a
-          z
-
           b
           a
-          \n
+
+          5
+          1\n
           """
+      describe "Reverse", ->
+        it "reverse rows", ->
+          ensure 'g r G',
+            textC: """
+            |1
+            5
 
-  describe "SortCaseInsensitively", ->
-    beforeEach ->
-      atom.keymaps.add "test",
-        'atom-text-editor.vim-mode-plus:not(.insert-mode)':
-          'g s': 'vim-mode-plus:sort-case-insensitively'
-    it "Sort rows case-insensitively", ->
-      set
-        textC: """
-        |apple
-        Beef
-        APPLE
-        DOG
-        beef
-        Apple
-        BEEF
-        Dog
-        dog\n
-        """
+            a
+            b
+            10a
 
-      ensure "g s G",
-        text: """
-        apple
-        Apple
-        APPLE
-        beef
-        Beef
-        BEEF
-        dog
-        Dog
-        DOG\n
-        """
+            z\n
+            """
+      describe "Sort", ->
+        it "sort rows", ->
+          ensure 'g s G',
+            textC: """
+            |
+
+            1
+            10a
+            5
+            a
+            b
+            z\n
+            """
+      describe "SortByNumber", ->
+        it "sort rows numerically", ->
+          ensure "g S G",
+            textC: """
+            |1
+            5
+            10a
+            z
+
+            b
+            a
+            \n
+            """
+      describe "SortCaseInsensitively", ->
+        beforeEach ->
+          atom.keymaps.add "test",
+            'atom-text-editor.vim-mode-plus:not(.insert-mode)':
+              'g s': 'vim-mode-plus:sort-case-insensitively'
+        it "Sort rows case-insensitively", ->
+          set
+            textC: """
+            |apple
+            Beef
+            APPLE
+            DOG
+            beef
+            Apple
+            BEEF
+            Dog
+            dog\n
+            """
+
+          ensure "g s G",
+            text: """
+            apple
+            Apple
+            APPLE
+            beef
+            Beef
+            BEEF
+            dog
+            Dog
+            DOG\n
+            """
