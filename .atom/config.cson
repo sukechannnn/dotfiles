@@ -39,8 +39,8 @@
       "react-snippets"
       "autocomplete-elixir"
       "language-elixir"
-      "language-slim"
       "go-plus"
+      "autocomplete-paths"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -114,7 +114,8 @@
   term2: {}
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
-  "tree-view": {}
+  "tree-view":
+    hideVcsIgnoredFiles: true
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
     incrementalSearch: true
