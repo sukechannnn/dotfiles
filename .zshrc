@@ -84,25 +84,13 @@ zle -N peco-select-history
 bindkey '^r' peco-select-history
 
 # 過去移動したディレクトリに移動
-### search a destination from cdr list
-function peco-get-destination-from-cdr() {
-  cdr -l | \
-  sed -e 's/^[[:digit:]]*[[:blank:]]*//' | \
-  awk '{c=gsub("/","/"); print c,length($0),$0}' | \
-  sort -n | \
-  cut -d' ' -f1- | \
-  peco --query "$LBUFFER"
-}
-
-### search a destination from cdr list and cd the destination
-function peco-cdr() {
-  local destination="$(peco-get-destination-from-cdr)"
-  if [ -n "$destination" ]; then
-    BUFFER="cd $destination"
-    zle accept-line
-  else
-    zle reset-prompt
-  fi
+function peco-cdr () {
+    local selected_dir=$(cdr -l | awk '{ print $2 }' | peco)
+    if [ -n "$selected_dir" ]; then
+        BUFFER="cd ${selected_dir}"
+        zle accept-line
+    fi
+    zle clear-screen
 }
 zle -N peco-cdr
 bindkey '^x' peco-cdr
