@@ -26,6 +26,11 @@
 'atom-text-editor:not([mini])':
   'cmd-l': 'abort!'
   'cmd-o': 'abort!'
+  'cmd-q': 'abort!'
+
+'body':
+  'cmd-q cmd-q': 'application:quit'
+  'ctrl-cmd-e': 'window:focus-next-pane'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
@@ -41,9 +46,6 @@
   'alt-cmd-down': 'editor:move-line-down'
   'cmd-l': 'git-log:show'
   'cmd-o': 'advanced-open-file:toggle'
-
-'body':
-  'ctrl-cmd-e': 'window:focus-next-pane'
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
