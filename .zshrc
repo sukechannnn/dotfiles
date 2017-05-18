@@ -50,7 +50,7 @@ alias gca='git commit --allow-empty'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
-alias gpull='git pull origin master'
+alias gpul='git pull origin master'
 
 #---------------------------------------------------------------------
 # cdr
