@@ -51,14 +51,15 @@
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
     themes: [
-      "atom-material-ui"
-      "atom-material-syntax"
+      "nord-atom-ui"
+      "nord-atom-syntax"
     ]
   editor:
     autoIndent: true
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
+    fontSize: 16
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -102,6 +103,10 @@
       "git-diff": true
       "git-diffDecorationsZIndex": 0
     useHardwareAcceleration: false
+  "nord-atom-syntax":
+    accessibility: {}
+  "nord-atom-ui":
+    darkerFormFocusEffect: true
   "one-dark-ui":
     fontSize: 10
     layoutMode: "Compact"
