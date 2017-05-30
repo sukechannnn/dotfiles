@@ -7,3 +7,4 @@ gem install pry-doc
 gem install pry-stack_explorer
 gem install tapp
 gem install rubocop
+gem install github-nippou --pre
