@@ -4,11 +4,12 @@ atom-material-ui@2.0.4
 atom-ternjs@0.18.3
 autocomplete-elixir@1.5.14
 autocomplete-paths@1.0.5
-busy-signal@1.4.1
+autocomplete-ruby-rct@0.1.0
+busy-signal@1.4.3
 color-picker@2.2.5
 css-snippets@1.1.0
-cursor-history@0.10.1
-file-icons@2.1.6
+cursor-history@0.11.1
+file-icons@2.1.7
 file-types@0.5.5
 git-log@0.4.1
 go-plus@5.5.5
@@ -31,7 +32,7 @@ nord-atom-syntax@0.9.1
 nord-atom-ui@0.11.0
 rails-snippets@2.15.1
 react@0.16.2
-react-snippets@0.7.3
+react-snippets@0.7.4
 ruby-block@0.3.6
 split-diff@1.4.0
 vim-mode-plus@0.93.0
