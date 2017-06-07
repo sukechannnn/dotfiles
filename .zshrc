@@ -35,6 +35,7 @@ eval "$(anyenv init -)"
 
 export GOPATH="$HOME/go"
 export PATH="$PATH:$GOPATH/bin" 
+export GOROOT=`go env GOROOT`
 
 export PGDATA="/usr/local/var/postgres"
 
