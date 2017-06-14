@@ -40,9 +40,10 @@
       "react-snippets"
       "autocomplete-elixir"
       "language-elixir"
-      "go-plus"
       "autocomplete-paths"
+      "autocomplete-ruby-rct"
     ]
+    excludeVcsIgnoredPaths: false
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
@@ -75,6 +76,22 @@
     rb: "source.ruby.rails"
   "git-log":
     fontScale: 0.9
+  "go-plus":
+    autocomplete: {}
+    config: {}
+    disabledBundledPackages: [
+      "go-debug"
+    ]
+    format: {}
+    guru: {}
+    lint: {}
+    panel:
+      currentHeight: "0.4700352526439483vh"
+      maxHeight: "100vw"
+      minHeight: "3vw"
+    test:
+      coverageHighlightMode: "disabled"
+      runTestsWithVerboseFlag: true
   "goto-definition": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
@@ -87,7 +104,7 @@
   "linter-matlab": {}
   "linter-sass-lint": {}
   "linter-ui-default":
-    showPanel: true
+    panelHeight: 56
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
