@@ -6,3 +6,4 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.atom ~/.atom
 ln -sf ~/dotfiles/nvim ~/.config
+ln -sf ~/dotfiles/.bundle/config ~/.bundle/config
