@@ -31,7 +31,6 @@
     enabled: true
   core:
     audioBeep: false
-    automaticallyUpdate: false
     disabledPackages: [
       "vim-mode"
       "atom-ctags"
@@ -60,7 +59,6 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 16
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -103,8 +101,7 @@
   "linter-erb": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
-  "linter-ui-default":
-    panelHeight: 56
+  "linter-ui-default": {}
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -120,8 +117,6 @@
       "git-diff": true
       "git-diffDecorationsZIndex": 0
     useHardwareAcceleration: false
-  "nord-atom-syntax":
-    accessibility: {}
   "nord-atom-ui":
     darkerFormFocusEffect: true
   "one-dark-ui":
