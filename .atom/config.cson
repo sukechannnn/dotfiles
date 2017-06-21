@@ -103,8 +103,7 @@
   "linter-erb": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
-  "linter-ui-default":
-    panelHeight: 56
+  "linter-ui-default": {}
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
