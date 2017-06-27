@@ -48,6 +48,7 @@
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
       "symbols-view"
+      "platformio-ide-terminal"
     ]
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
@@ -128,6 +129,15 @@
     layoutMode: "Compact"
   "open-recent":
     listDirectoriesAddedToProject: true
+  "platformio-ide-terminal":
+    ansiColors:
+      normal:
+        blue: "#027ccb"
+    core:
+      scrollback: 10000
+    style:
+      defaultPanelHeight: "250px"
+      theme: "one-dark"
   react: {}
   "rubocop-auto-correct":
     correctFile: true

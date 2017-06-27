@@ -56,3 +56,13 @@
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
+
+# platformio-ide-terminal
+'.platform-darwin atom-workspace':
+  'ctrl-cmd-t': 'platformio-ide-terminal:new'
+  'ctrl-cmd-x': 'platformio-ide-terminal:close'
+  'alt-cmd-f': 'platformio-ide-terminal:focus'
+
+'.platform-darwin .platformio-ide-terminal .terminal':
+  'cmd-c': 'platformio-ide-terminal:copy'
+  'cmd-v': 'platformio-ide-terminal:paste'
