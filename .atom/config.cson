@@ -108,6 +108,7 @@
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
+    openPreviewInSplitPane: false
     useGitHubStyle: true
   "markdown-preview-plus":
     breakOnSingleNewline: true
