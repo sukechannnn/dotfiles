@@ -45,7 +45,7 @@
   'up': 'autocomplete-plus:move-up'
 
 '.platform-darwin atom-text-editor':
-  'cmd-d': 'pane:split-right-and-copy-active-item'
+  'shift-cmd-V': 'pane:split-right-and-copy-active-item'
 
 'atom-workspace atom-text-editor:not([mini])':
   'shift-cmd-D': 'pane:split-down-and-copy-active-item'
