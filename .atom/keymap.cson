@@ -45,7 +45,7 @@
   'up': 'autocomplete-plus:move-up'
 
 '.platform-darwin atom-text-editor':
-  'cmd-d': 'pane:split-right-and-copy-active-item'
+  'shift-cmd-V': 'pane:split-right-and-copy-active-item'
 
 'atom-workspace atom-text-editor:not([mini])':
   'shift-cmd-D': 'pane:split-down-and-copy-active-item'
@@ -56,3 +56,14 @@
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
+
+# platformio-ide-terminal
+'.platform-darwin atom-workspace':
+  'ctrl-alt-t': 'platformio-ide-terminal:new'
+  'ctrl-alt-x': 'platformio-ide-terminal:close'
+  'ctrl-`': 'platformio-ide-terminal:toggle'
+  'alt-cmd-f': 'platformio-ide-terminal:focus'
+
+'.platform-darwin .platformio-ide-terminal .terminal':
+  'cmd-c': 'platformio-ide-terminal:copy'
+  'cmd-v': 'platformio-ide-terminal:paste'
