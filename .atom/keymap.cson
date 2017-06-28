@@ -59,8 +59,9 @@
 
 # platformio-ide-terminal
 '.platform-darwin atom-workspace':
-  'ctrl-cmd-t': 'platformio-ide-terminal:new'
-  'ctrl-cmd-x': 'platformio-ide-terminal:close'
+  'ctrl-alt-t': 'platformio-ide-terminal:new'
+  'ctrl-alt-x': 'platformio-ide-terminal:close'
+  'ctrl-`': 'platformio-ide-terminal:toggle'
   'alt-cmd-f': 'platformio-ide-terminal:focus'
 
 '.platform-darwin .platformio-ide-terminal .terminal':
