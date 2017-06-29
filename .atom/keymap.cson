@@ -30,7 +30,7 @@
 
 'body':
   'cmd-q cmd-q': 'application:quit'
-  'ctrl-cmd-e': 'window:focus-next-pane'
+  'shift-cmd-E': 'window:focus-next-pane'
   'tab': 'core:move-down'
 
 'atom-workspace':
