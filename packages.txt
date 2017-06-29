@@ -6,10 +6,11 @@ autocomplete-elixir@1.5.14
 autocomplete-paths@1.0.5
 autocomplete-ruby-rct@0.1.0
 busy-signal@1.4.3
+change-case@0.6.5
 color-picker@2.2.5
 css-snippets@1.1.0
 cursor-history@0.11.1
-file-icons@2.1.7
+file-icons@2.1.8
 file-types@0.5.5
 git-log@0.4.1
 go-plus@5.5.5
@@ -24,19 +25,19 @@ language-elixir@0.19.0
 language-matlab@0.2.1
 language-nginx@0.8.0
 language-slim@0.5.0
-linter@2.1.4
+linter@2.2.0
 linter-eslint@8.2.1
 linter-ruby@1.2.5
-linter-ui-default@1.6.1
-markdown-scroll-sync@2.1.2
+linter-ui-default@1.6.2
 markdown-writer@2.6.5
 multi-cursor@2.1.5
 nord-atom-syntax@0.9.1
 nord-atom-ui@0.11.0
+platformio-ide-terminal@2.5.1
 rails-snippets@2.15.1
 react@0.16.2
 react-snippets@0.8.0
 ruby-block@0.3.6
-split-diff@1.4.1
+split-diff@1.4.3
 vim-mode-plus@0.93.0
 
