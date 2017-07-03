@@ -134,8 +134,12 @@
     ansiColors:
       normal:
         blue: "#027ccb"
+      zBright:
+        brightBlue: "#8771fd"
     core:
       scrollback: 10000
+    iconColors:
+      blue: "#a26dfc"
     style:
       defaultPanelHeight: "250px"
       theme: "one-dark"
