@@ -38,6 +38,8 @@
   'ctrl-o':     'cursor-history:prev'
   'ctrl-cmd-i': 'cursor-history:next-within-editor'
   'ctrl-cmd-o': 'cursor-history:prev-within-editor'
+  'cmd-m': 'minimap:toggle'
+  'shift-cmd-W': 'abort!'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
