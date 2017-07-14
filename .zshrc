@@ -52,6 +52,8 @@ alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin master'
+alias rubodiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
+alias rubodiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
 
 #---------------------------------------------------------------------
 # cdr

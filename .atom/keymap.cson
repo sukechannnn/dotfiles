@@ -30,7 +30,7 @@
 
 'body':
   'cmd-q cmd-q': 'application:quit'
-  'ctrl-cmd-e': 'window:focus-next-pane'
+  'shift-cmd-E': 'window:focus-next-pane'
   'tab': 'core:move-down'
 
 'atom-workspace':
@@ -38,6 +38,8 @@
   'ctrl-o':     'cursor-history:prev'
   'ctrl-cmd-i': 'cursor-history:next-within-editor'
   'ctrl-cmd-o': 'cursor-history:prev-within-editor'
+  'cmd-m': 'minimap:toggle'
+  'shift-cmd-W': 'abort!'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'

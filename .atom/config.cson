@@ -42,7 +42,6 @@
       "autocomplete-paths"
       "autocomplete-ruby-rct"
     ]
-    excludeVcsIgnoredPaths: false
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
@@ -114,6 +113,7 @@
     useLazyHeaders: false
   "merge-conflicts": {}
   minimap:
+    absoluteMode: true
     autoToggle: false
     plugins:
       "git-diff": true
@@ -130,11 +130,19 @@
     ansiColors:
       normal:
         blue: "#027ccb"
+        red: "#cd705f"
+      zBright:
+        brightBlue: "#8771fd"
+        brightRed: "#ff9168"
     core:
       scrollback: 10000
+    iconColors:
+      blue: "#a26dfc"
     style:
       defaultPanelHeight: "250px"
       theme: "one-dark"
+  "rails-open-rspec":
+    splitPane: false
   react: {}
   "rubocop-auto-correct":
     correctFile: true
@@ -147,7 +155,8 @@
   term2: {}
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
-  "tree-view": {}
+  "tree-view":
+    squashDirectoryNames: true
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
     incrementalSearch: true
