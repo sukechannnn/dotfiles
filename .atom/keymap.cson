@@ -25,7 +25,6 @@
 # https://github.com/bevry/cson#what-is-cson
 'atom-text-editor:not([mini])':
   'cmd-l': 'abort!'
-  'cmd-o': 'abort!'
   'cmd-q': 'abort!'
 
 'body':
@@ -40,6 +39,7 @@
   'ctrl-cmd-o': 'cursor-history:prev-within-editor'
   'cmd-m': 'minimap:toggle'
   'shift-cmd-W': 'abort!'
+  'cmd-r': 'window:reload'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
@@ -54,7 +54,6 @@
   'alt-cmd-up': 'editor:move-line-up'
   'alt-cmd-down': 'editor:move-line-down'
   'cmd-l': 'git-log:show'
-  'cmd-o': 'advanced-open-file:toggle'
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
