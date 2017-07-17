@@ -191,9 +191,6 @@
 ".js.regexp.source":
   editor:
     tabLength: 4
-".js.source":
-  editor:
-    tabLength: 4
 ".json.source":
   editor:
     preferredLineLength: 130
