@@ -54,6 +54,7 @@ alias gicm='git commit --message'
 alias gpul='git pull origin master'
 alias rubodiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
 alias rubodiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
+alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 
 #---------------------------------------------------------------------
 # cdr
