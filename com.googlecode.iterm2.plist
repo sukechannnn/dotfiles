@@ -225,9 +225,9 @@
 	<key>NSWindow Frame SUUpdateAlert</key>
 	<string>410 364 620 392 0 0 1440 877 </string>
 	<key>NSWindow Frame SharedPreferences</key>
-	<string>153 127 796 473 0 0 1440 877 </string>
+	<string>518 388 796 473 0 0 1440 900 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>0 11 1434 866 0 0 1440 877 </string>
+	<string>156 -82 1360 837 0 0 1440 877 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
 	<string>159 4 1210 827 0 0 1440 877 </string>
 	<key>New Bookmarks</key>
@@ -389,12 +389,16 @@
 			<true/>
 			<key>Background Color</key>
 			<dict>
+				<key>Alpha Component</key>
+				<real>1</real>
 				<key>Blue Component</key>
-				<real>0.12080743163824081</real>
+				<real>0.255645751953125</real>
+				<key>Color Space</key>
+				<string>sRGB</string>
 				<key>Green Component</key>
-				<real>0.11896204203367233</real>
+				<real>0.21929911439555383</real>
 				<key>Red Component</key>
-				<real>0.11912211030721664</real>
+				<real>0.19951649894937873</real>
 			</dict>
 			<key>Background Image Is Tiled</key>
 			<false/>
@@ -463,12 +467,16 @@
 			<false/>
 			<key>Foreground Color</key>
 			<dict>
+				<key>Alpha Component</key>
+				<real>1</real>
 				<key>Blue Component</key>
-				<real>0.93375736474990845</real>
+				<real>0.9327387916855514</real>
+				<key>Color Space</key>
+				<string>sRGB</string>
 				<key>Green Component</key>
-				<real>0.89300316572189331</real>
+				<real>0.9327387916855514</real>
 				<key>Red Component</key>
-				<real>0.35391446948051453</real>
+				<real>0.945770263671875</real>
 			</dict>
 			<key>Guid</key>
 			<string>0514FDA6-028C-4356-A0EC-C021D4C27C6E</string>
@@ -935,7 +943,7 @@
 			<key>Terminal Type</key>
 			<string>xterm-256color</string>
 			<key>Transparency</key>
-			<real>0.042359306651928705</real>
+			<real>0.0</real>
 			<key>Triggers</key>
 			<array/>
 			<key>Unlimited Scrollback</key>
@@ -1759,7 +1767,7 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2017-07-03T01:48:35Z</date>
+	<date>2017-07-18T05:00:39Z</date>
 	<key>SUSendProfileInfo</key>
 	<false/>
 	<key>SavePasteHistory</key>
@@ -1808,5 +1816,9 @@
 	<false/>
 	<key>iTerm Version</key>
 	<string>3.1.beta.5</string>
+	<key>kCPKSelectionViewPreferredModeKey</key>
+	<integer>0</integer>
+	<key>kCPKSelectionViewShowHSBTextFieldsKey</key>
+	<false/>
 </dict>
 </plist>
