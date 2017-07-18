@@ -1,11 +1,11 @@
 .DS_Store
 .atom/split-diff/
 .atom/recovery/
+.atom/packages/
+.atom/compile-cache/
+.atom/blob-store/
+.atom/storage/
 .apm
 .node-gyp
-blob-store
-compile-cache
-packages
-storage
 dev
 .npm
