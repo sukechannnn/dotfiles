@@ -52,8 +52,8 @@ alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin master'
-alias rubodiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
-alias rubodiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
+alias rubdiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
+alias rubdiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 
 #---------------------------------------------------------------------
