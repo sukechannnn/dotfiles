@@ -62,6 +62,7 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
+    fontSize: 16
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -105,7 +106,8 @@
   "linter-erb": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
-  "linter-ui-default": {}
+  "linter-ui-default":
+    panelHeight: 56
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
