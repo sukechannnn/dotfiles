@@ -40,6 +40,7 @@
   'cmd-m': 'minimap:toggle'
   'shift-cmd-W': 'abort!'
   'cmd-r': 'window:reload'
+  'shift-cmd-w': 'tree-view:toggle-focus'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
