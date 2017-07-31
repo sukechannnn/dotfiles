@@ -52,8 +52,10 @@ alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin master'
+alias glgl='git log --topo-order --graph --pretty=format:"${_git_log_oneline_format}"'
 alias rubdiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
 alias rubdiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
+alias springspec='bundle exec spring rspec'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 
 #---------------------------------------------------------------------
