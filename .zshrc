@@ -23,7 +23,7 @@ SAVEHIST=1000000
 # 新規メールが来ても、メッセージを出さない。
 MAILCHECK=0
 
-fpath=(/usr/local/share/zsh-completions $fpath)
+fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
 
 eval "$(direnv hook zsh)"
 #---------------------------------------------------------------------
