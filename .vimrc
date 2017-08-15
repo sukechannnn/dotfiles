@@ -63,7 +63,7 @@ filetype plugin indent on
 
 let NERDTreeShowHidden = 1
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
-nnoremap <silent><C-e> :NERDTreeTabsToggle<CR>
+nnoremap <silent><C-n> :NERDTreeTabsToggle<CR>
 nnoremap t t<C-e> 
 nnoremap <C-t> gt
 nnoremap <C-w> <C-w>w

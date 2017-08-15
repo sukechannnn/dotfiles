@@ -29,7 +29,7 @@
 
 'body':
   'cmd-q cmd-q': 'application:quit'
-  'shift-cmd-E': 'window:focus-next-pane'
+  'shift-cmd-J': 'window:focus-next-pane'
   'tab': 'core:move-down'
 
 'atom-workspace':
@@ -40,6 +40,7 @@
   'cmd-m': 'minimap:toggle'
   'shift-cmd-W': 'abort!'
   'cmd-r': 'window:reload'
+  'shift-cmd-w': 'tree-view:toggle-focus'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
@@ -48,6 +49,7 @@
 
 '.platform-darwin atom-text-editor':
   'shift-cmd-V': 'pane:split-right-and-copy-active-item'
+  'ctrl-cmd-v': 'pane:split-left'
 
 'atom-workspace atom-text-editor:not([mini])':
   'shift-cmd-D': 'pane:split-down-and-copy-active-item'

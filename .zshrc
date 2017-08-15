@@ -23,7 +23,7 @@ SAVEHIST=1000000
 # 新規メールが来ても、メッセージを出さない。
 MAILCHECK=0
 
-fpath=(/usr/local/share/zsh-completions $fpath)
+fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
 
 eval "$(direnv hook zsh)"
 #---------------------------------------------------------------------
@@ -48,12 +48,15 @@ export XDG_CONFIG_HOME="$HOME/.config"
 alias be='bundle exec'
 alias gis='git status'
 alias gca='git commit --allow-empty'
+alias gco='noglob git checkout'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin master'
-alias rubodiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
-alias rubodiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
+alias glgl='git log --topo-order --graph --pretty=format:"${_git_log_oneline_format}"'
+alias rubdiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
+alias rubdiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
+alias springspec='bundle exec spring rspec'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 
 #---------------------------------------------------------------------

@@ -3,6 +3,8 @@
     createDirectories: true
     createFileInstantly: true
     defaultInputValue: "Project root"
+  "atom-clock":
+    dateFormat: "MMMM Do, dddd, h:mm"
   "atom-material-ui":
     colors:
       abaseColor: "#7e57c2"
@@ -31,6 +33,7 @@
     enabled: true
   core:
     audioBeep: false
+    automaticallyUpdate: false
     disabledPackages: [
       "vim-mode"
       "atom-ctags"
@@ -59,6 +62,7 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
+    fontSize: 16
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -91,6 +95,7 @@
       coverageHighlightMode: "disabled"
       runTestsWithVerboseFlag: true
   "goto-definition": {}
+  "hey-pane": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
   "japanese-wrap":
@@ -101,7 +106,8 @@
   "linter-erb": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
-  "linter-ui-default": {}
+  "linter-ui-default":
+    panelHeight: 56
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -119,6 +125,8 @@
       "git-diff": true
       "git-diffDecorationsZIndex": 0
     useHardwareAcceleration: false
+  "nord-atom-syntax":
+    accessibility: {}
   "nord-atom-ui":
     darkerFormFocusEffect: true
   "one-dark-ui":
