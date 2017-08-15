@@ -48,6 +48,7 @@ export XDG_CONFIG_HOME="$HOME/.config"
 alias be='bundle exec'
 alias gis='git status'
 alias gca='git commit --allow-empty'
+alias gco='noglob git checkout'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
