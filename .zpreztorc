@@ -43,7 +43,8 @@ zstyle ':prezto:load' pmodule \
   'syntax-highlighting' \
   'tmux' \
   'utility' \
-  'prompt'
+  'prompt' \
+  'autosuggestions'
 #
 # Editor
 #
