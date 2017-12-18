@@ -58,6 +58,7 @@ alias rubdiff='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -
 alias rubdiff-a='rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
 alias springspec='bundle exec spring rspec'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
+alias gifc='git diff --cached'
 
 #---------------------------------------------------------------------
 # cdr
