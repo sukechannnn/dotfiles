@@ -44,7 +44,7 @@
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'
-  # 'down': 'autocomplete-plus:move-down'
+  'down': 'autocomplete-plus:move-down'
   'up': 'autocomplete-plus:move-up'
 
 '.platform-darwin atom-text-editor':
