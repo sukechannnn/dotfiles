@@ -59,6 +59,14 @@
 			<key>Text</key>
 			<string>0514FDA6-028C-4356-A0EC-C021D4C27C6E</string>
 		</dict>
+		<key>0x64-0x40000</key>
+		<dict>
+			<key>Action</key>
+			<integer>25</integer>
+			<key>Text</key>
+			<string>Duplicate Tab
+Duplicate Tab</string>
+		</dict>
 		<key>0x76-0x140000</key>
 		<dict>
 			<key>Action</key>
@@ -243,11 +251,13 @@
 	<key>NSWindow Frame SessionsPreferences</key>
 	<string>269 126 606 469 0 0 1440 900 </string>
 	<key>NSWindow Frame SharedPreferences</key>
-	<string>518 351 796 473 0 0 1440 900 </string>
+	<string>311 376 796 473 0 0 1440 877 </string>
+	<key>NSWindow Frame UKCrashReporter</key>
+	<string>1595 473 592 584 1440 0 1920 1057 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
 	<string>0 4 1360 873 0 0 1440 877 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
-	<string>80 4 1360 896 0 0 1440 900 </string>
+	<string>80 4 1360 873 0 0 1440 877 </string>
 	<key>New Bookmarks</key>
 	<array>
 		<dict>
@@ -1794,7 +1804,7 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2017-11-07T08:29:54Z</date>
+	<date>2017-12-18T02:26:38Z</date>
 	<key>SUSendProfileInfo</key>
 	<false/>
 	<key>SUSkippedVersion</key>
@@ -1825,6 +1835,8 @@
 	<integer>10</integer>
 	<key>TripleClickSelectsFullWrappedLines</key>
 	<false/>
+	<key>UKCrashReporterLastCrashReportDate</key>
+	<real>1513330688</real>
 	<key>URLHandlersByGuid</key>
 	<dict/>
 	<key>UseBorder</key>
