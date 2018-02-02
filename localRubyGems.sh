@@ -5,4 +5,3 @@ gem install pry
 gem install pry-byebug
 gem install pry-doc
 gem install pry-stack_explorer
-gem install rubocop -v '0.49.1'
