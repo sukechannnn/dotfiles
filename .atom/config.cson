@@ -38,13 +38,13 @@
       "vim-mode"
       "atom-ctags"
       "spell-check"
-      "react"
       "react-snippets"
       "autocomplete-elixir"
       "language-elixir"
       "autocomplete-paths"
       "autocomplete-ruby-rct"
       "github"
+      "go-plus"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -63,7 +63,7 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 16
+    fontSize: 15
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -105,10 +105,12 @@
     disableLanguageGfm: false
   linter: {}
   "linter-erb": {}
+  "linter-eslint": {}
   "linter-matlab": {}
   "linter-sass-lint": {}
   "linter-ui-default":
     panelHeight: 56
+    showPanel: true
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -168,6 +170,7 @@
     squashDirectoryNames: true
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
+    ignoreCaseForSearch: true
     incrementalSearch: true
     setCursorToStartOfChangeOnUndoRedo: false
     setCursorToStartOfChangeOnUndoRedoStrategy: "simple"
