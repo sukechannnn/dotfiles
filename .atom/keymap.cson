@@ -50,6 +50,7 @@
 '.platform-darwin atom-text-editor':
   'shift-cmd-V': 'pane:split-right-and-copy-active-item'
   'ctrl-cmd-v': 'pane:split-left'
+  'alt-g': 'inline-git-diff:toggle'
 
 'atom-workspace atom-text-editor:not([mini])':
   'shift-cmd-D': 'pane:split-down-and-copy-active-item'

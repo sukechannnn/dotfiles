@@ -3,6 +3,9 @@
     createDirectories: true
     createFileInstantly: true
     defaultInputValue: "Project root"
+  "atom-beautify":
+    general:
+      _analyticsUserId: "47f63636-1749-47d3-9787-9c9daf994464"
   "atom-clock":
     dateFormat: "MMMM Do, dddd, h:mm"
   "atom-material-ui":
@@ -39,12 +42,13 @@
       "atom-ctags"
       "spell-check"
       "react-snippets"
-      "autocomplete-elixir"
-      "language-elixir"
       "autocomplete-paths"
       "autocomplete-ruby-rct"
       "github"
       "go-plus"
+      "atom-elixir"
+      "tablr"
+      "linter-ruby"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -63,7 +67,6 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 15
     invisibles:
       tab: "·"
     preferredLineLength: 128
@@ -152,6 +155,8 @@
     style:
       defaultPanelHeight: "250px"
       theme: "one-dark"
+  "prettier-atom":
+    formatOnSaveOptions: {}
   "rails-open-rspec":
     splitPane: false
   react: {}
@@ -166,8 +171,7 @@
   term2: {}
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
-  "tree-view":
-    squashDirectoryNames: true
+  "tree-view": {}
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
     ignoreCaseForSearch: true
