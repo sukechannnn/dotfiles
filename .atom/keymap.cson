@@ -57,17 +57,7 @@
   'alt-cmd-up': 'editor:move-line-up'
   'alt-cmd-down': 'editor:move-line-down'
   'cmd-l': 'git-log:show'
+  'shift-cmd-C': 'copy-path:copy-project-relative-path'
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'
-
-# platformio-ide-terminal
-'.platform-darwin atom-workspace':
-  'ctrl-alt-t': 'platformio-ide-terminal:new'
-  'ctrl-alt-x': 'platformio-ide-terminal:close'
-  'ctrl-`': 'platformio-ide-terminal:toggle'
-  'alt-cmd-f': 'platformio-ide-terminal:focus'
-
-'.platform-darwin .platformio-ide-terminal .terminal':
-  'cmd-c': 'platformio-ide-terminal:copy'
-  'cmd-v': 'platformio-ide-terminal:paste'
