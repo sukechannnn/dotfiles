@@ -48,6 +48,7 @@
       "tablr"
       "linter-ruby"
     ]
+    fileSystemWatcher: "experimental"
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
