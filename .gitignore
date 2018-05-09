@@ -5,6 +5,7 @@
 .atom/compile-cache/
 .atom/blob-store/
 .atom/storage/
+.atom/.atom/
 .apm
 .node-gyp
 dev
