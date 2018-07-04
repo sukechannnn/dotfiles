@@ -23,6 +23,9 @@ SAVEHIST=1000000
 # 新規メールが来ても、メッセージを出さない。
 MAILCHECK=0
 
+# Do not raise `zsh: no matches found`
+setopt nonomatch
+
 fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
 
 eval "$(direnv hook zsh)"
@@ -53,12 +56,13 @@ alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin `git symbolic-ref --short HEAD`'
-alias glgl='git log --topo-order --graph --pretty=format:"${_git_log_oneline_format}"'
+alias glgl='git log --graph --pretty=format:"${_git_log_oneline_format}"'
 alias rubodiff='bundle exec rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - )'
 alias rubodiff-a='bundle exec rubocop $( git diff HEAD --name-only | grep -e ".*\.rb" | paste -s - ) -a'
 alias springspec='bundle exec spring rspec'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
+alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
 
 #---------------------------------------------------------------------
 # cdr
