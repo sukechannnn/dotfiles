@@ -48,7 +48,6 @@
       "tablr"
       "linter-ruby"
     ]
-    fileSystemWatcher: "experimental"
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
@@ -58,20 +57,18 @@
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
     themes: [
-      "nord-atom-ui"
-      "nord-atom-syntax"
+      "one-light-ui"
+      "github-atom-light-syntax"
     ]
   editor:
     autoIndent: true
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    invisibles:
-      tab: "·"
+    fontSize: 13
+    invisibles: {}
     preferredLineLength: 128
     scrollPastEnd: true
-    showIndentGuide: true
-    showInvisibles: true
   "exception-reporting":
     userId: "5cbdbbef-3435-207a-5ec9-b94dc729fc98"
   "file-types":
@@ -79,6 +76,8 @@
     erb: "text.html.ruby"
     "js.erb": "source.js"
     rb: "source.ruby.rails"
+  "flatwhite-syntax":
+    ebmedded: "Full"
   "git-log":
     fontScale: 0.9
   "go-plus":
@@ -112,7 +111,6 @@
   "linter-sass-lint": {}
   "linter-ui-default":
     panelHeight: 56
-    showPanel: true
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -137,6 +135,9 @@
   "one-dark-ui":
     fontSize: 10
     layoutMode: "Compact"
+  "one-light-ui":
+    fontSize: 10
+    tabSizing: "Maximum"
   "open-recent":
     listDirectoriesAddedToProject: true
   "platformio-ide-terminal":
