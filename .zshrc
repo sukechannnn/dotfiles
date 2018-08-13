@@ -25,6 +25,7 @@ MAILCHECK=0
 
 # Do not raise `zsh: no matches found`
 setopt nonomatch
+setopt IGNORE_BRACES
 
 fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
 
@@ -52,6 +53,7 @@ alias be='bundle exec'
 alias gis='git status'
 alias gca='git commit --allow-empty'
 alias gco='noglob git checkout'
+alias gcop='noglob git checkout `git branch | peco`'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
