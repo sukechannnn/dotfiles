@@ -40,13 +40,13 @@
     disabledPackages: [
       "vim-mode"
       "atom-ctags"
-      "spell-check"
       "autocomplete-paths"
       "github"
       "go-plus"
       "atom-elixir"
       "tablr"
       "linter-ruby"
+      "spell-check"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
@@ -57,18 +57,19 @@
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
     themes: [
-      "one-light-ui"
-      "github-atom-light-syntax"
+      "nord-atom-ui"
+      "nord-atom-syntax"
     ]
   editor:
     autoIndent: true
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 13
     invisibles: {}
     preferredLineLength: 128
     scrollPastEnd: true
+    showIndentGuide: true
+    showInvisibles: true
   "exception-reporting":
     userId: "5cbdbbef-3435-207a-5ec9-b94dc729fc98"
   "file-types":
@@ -171,7 +172,8 @@
   term2: {}
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
-  "tree-view": {}
+  "tree-view":
+    hideVcsIgnoredFiles: true
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
     ignoreCaseForSearch: true
