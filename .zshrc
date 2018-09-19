@@ -25,7 +25,6 @@ MAILCHECK=0
 
 # Do not raise `zsh: no matches found`
 setopt nonomatch
-setopt IGNORE_BRACES
 
 fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
 
@@ -44,6 +43,8 @@ export GOROOT=`go env GOROOT`
 export PGDATA="/usr/local/var/postgres"
 
 export XDG_CONFIG_HOME="$HOME/.config"
+
+export PATH="$PATH:/usr/local/share/git-core/contrib/diff-highlight"
 
 #---------------------------------------------------------------------
 # alias
