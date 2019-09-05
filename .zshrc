@@ -14,6 +14,14 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
+# RPROMPT に時刻を追加
+
+precmd () {
+  psvar=()
+  psvar[1]=$(date "+%H:%M:%S");
+}
+RPROMPT+=" %1v"
+
 # メモリ内の履歴の数
 HISTSIZE=1000000
 
@@ -46,6 +54,11 @@ export XDG_CONFIG_HOME="$HOME/.config"
 
 export PATH="$PATH:/usr/local/share/git-core/contrib/diff-highlight"
 
+export PATH="$PATH:/usr/local/opt/avr-gcc@7/bin"
+
+export PATH="/usr/local/opt/libxml2/bin:$PATH"
+export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
+
 #---------------------------------------------------------------------
 # alias
 #---------------------------------------------------------------------
@@ -62,10 +75,11 @@ alias gpul='git pull origin `git symbolic-ref --short HEAD`'
 alias glgl='git log --graph --pretty=format:"${_git_log_oneline_format}"'
 alias rubodiff='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//)'
 alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//) -a'
-alias springspec='bundle exec spring rspec'
+alias sp='bundle exec rspec'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
+alias vim='nvim'
 
 #---------------------------------------------------------------------
 # cdr

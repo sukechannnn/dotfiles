@@ -10,10 +10,10 @@
     dateFormat: "MMMM Do, dddd, h:mm"
   "atom-material-ui":
     colors:
-      abaseColor: "#7e57c2"
-      accentColor: "#b0e457"
-      predefinedColor: "Purple"
-    fonts: {}
+      abaseColor: "#3a447a"
+      predefinedColor: "Indigo"
+    fonts:
+      fontSize: 15
     tabs:
       compactTabs: true
       tintedTabBar: true
@@ -34,6 +34,8 @@
     useCoreMovementCommands: false
   autosave:
     enabled: true
+  "better-git-blame":
+    searchInLayerEnabled: false
   core:
     audioBeep: false
     automaticallyUpdate: false
@@ -43,9 +45,6 @@
       "autocomplete-paths"
       "github"
       "go-plus"
-      "atom-elixir"
-      "tablr"
-      "linter-ruby"
       "spell-check"
     ]
     followSymlinks: false
@@ -57,7 +56,7 @@
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
     themes: [
-      "nord-atom-ui"
+      "one-dark-ui"
       "nord-atom-syntax"
     ]
   editor:
@@ -65,7 +64,10 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    invisibles: {}
+    fontSize: 12
+    invisibles:
+      eol: " "
+      space: "-"
     preferredLineLength: 128
     scrollPastEnd: true
     showIndentGuide: true
@@ -112,6 +114,7 @@
   "linter-sass-lint": {}
   "linter-ui-default":
     panelHeight: 56
+    showPanel: true
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
@@ -133,9 +136,7 @@
     accessibility: {}
   "nord-atom-ui":
     darkerFormFocusEffect: true
-  "one-dark-ui":
-    fontSize: 10
-    layoutMode: "Compact"
+  "one-dark-ui": {}
   "one-light-ui":
     fontSize: 10
     tabSizing: "Maximum"
@@ -165,6 +166,7 @@
     correctFile: true
   "ruby-block":
     highlightLineNumber: true
+  "ruby-solargraph": {}
   "status-bar": {}
   "symbols-tree-view":
     scrollAnimation: false
@@ -172,8 +174,7 @@
   term2: {}
   "tidy-markdown":
     ensureFirstHeaderIsH1: false
-  "tree-view":
-    hideVcsIgnoredFiles: true
+  "tree-view": {}
   "vim-mode-plus":
     clearMultipleCursorsOnEscapeInsertMode: true
     ignoreCaseForSearch: true
