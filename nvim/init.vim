@@ -17,9 +17,7 @@ call dein#begin(expand('~/.vim/dein'))
 call dein#add('Shougo/dein.vim')
 call dein#add('Shougo/vimproc.vim', {'build': 'make'})
 call dein#add('Shougo/neocomplete.vim')
-call dein#add('Shougo/deoplete.nvim')
 call dein#add('Shougo/neomru.vim')
-call dein#add('Shougo/neosnippet')
 call dein#add('Shougo/unite.vim')
 call dein#add('scrooloose/nerdtree')
 call dein#add('jistr/vim-nerdtree-tabs')
@@ -28,13 +26,25 @@ call dein#add('Shougo/context_filetype.vim')
 call dein#add('cohama/lexima.vim')
 call dein#add('tpope/vim-endwise')
 
-call dein#end()
+call dein#add('Shougo/deoplete.nvim')
+if !has('nvim')
+  call dein#add('roxma/nvim-yarp')
+  call dein#add('roxma/vim-hug-neovim-rpc')
+endif
+let g:deoplete#enable_at_startup = 1
+
+call dein#add('Shougo/neosnippet.vim')
+call dein#add('Shougo/neosnippet-snippets')
 
 "=====================
 "deoplete setting
 "=====================
 let g:deoplete#enable_at_startup = 1
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
+
+imap <C-k>     <Plug>(neosnippet_expand_or_jump)
+smap <C-k>     <Plug>(neosnippet_expand_or_jump)
+xmap <C-k>     <Plug>(neosnippet_expand_target)
 
 "=====================
 "neocomplcache setting
