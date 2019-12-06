@@ -6,6 +6,7 @@
 .atom/blob-store/
 .atom/storage/
 .atom/.atom/
+.atom/.atom-socket-secret-*
 .apm
 .node-gyp
 dev
