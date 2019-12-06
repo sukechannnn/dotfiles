@@ -45,7 +45,7 @@ export PATH="$HOME/.anyenv/bin:$PATH"
 eval "$(anyenv init -)"
 
 export GOPATH="$HOME/go"
-export PATH="$PATH:$GOPATH/bin" 
+export PATH="$PATH:$GOPATH/bin"
 export GOROOT=`go env GOROOT`
 
 export PGDATA="/usr/local/var/postgres"
@@ -58,6 +58,8 @@ export PATH="$PATH:/usr/local/opt/avr-gcc@7/bin"
 
 export PATH="/usr/local/opt/libxml2/bin:$PATH"
 export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
+
+export PATH="$PATH:/Users/yosuke/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
 
 #---------------------------------------------------------------------
 # alias
@@ -76,6 +78,7 @@ alias glgl='git log --graph --pretty=format:"${_git_log_oneline_format}"'
 alias rubodiff='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//)'
 alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//) -a'
 alias sp='bundle exec rspec'
+alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
