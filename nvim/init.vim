@@ -25,6 +25,12 @@ call dein#add('tomtom/tcomment_vim')
 call dein#add('Shougo/context_filetype.vim')
 call dein#add('cohama/lexima.vim')
 call dein#add('tpope/vim-endwise')
+call dein#add('terryma/vim-multiple-cursors')
+call dein#add('tpope/vim-surround')
+
+"=====================
+"deoplete setting
+"=====================
 
 call dein#add('Shougo/deoplete.nvim')
 if !has('nvim')
@@ -35,10 +41,6 @@ let g:deoplete#enable_at_startup = 1
 
 call dein#add('Shougo/neosnippet.vim')
 call dein#add('Shougo/neosnippet-snippets')
-
-"=====================
-"deoplete setting
-"=====================
 let g:deoplete#enable_at_startup = 1
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
