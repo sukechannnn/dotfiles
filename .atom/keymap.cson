@@ -66,3 +66,6 @@
 
 'atom-text-editor.vim-mode-plus:not(.insert-mode)':
   'ctrl-w': 'vim-mode-plus:mini-scroll-up'
+
+'atom-text-editor[data-grammar="text md"]':
+  'cmd-k': 'markdown:link'

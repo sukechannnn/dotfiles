@@ -8,6 +8,9 @@
       _analyticsUserId: "47f63636-1749-47d3-9787-9c9daf994464"
   "atom-clock":
     dateFormat: "MMMM Do, dddd, h:mm"
+  "atom-ide-ui":
+    "atom-ide-code-format":
+      formatOnSave: true
   "atom-material-ui":
     colors:
       abaseColor: "#3a447a"
@@ -44,8 +47,11 @@
       "atom-ctags"
       "autocomplete-paths"
       "github"
-      "go-plus"
       "spell-check"
+      "linter"
+      "atom-ternjs"
+      "linter-eslint"
+      "prettier-atom"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
