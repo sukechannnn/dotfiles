@@ -83,6 +83,7 @@ alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Version
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
 alias vim='nvim'
+alias gv='gh pr view `git branch --show-current`'
 
 #---------------------------------------------------------------------
 # cdr
@@ -140,5 +141,5 @@ function peco-pkill() {
 alias pk="peco-pkill"
 
 # ghqのlist一覧から選択して移動
-alias gh='cd $(ghq list -p | peco)'
+alias ghl='cd $(ghq list -p | peco)'
 
