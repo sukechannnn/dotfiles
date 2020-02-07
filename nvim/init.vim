@@ -49,19 +49,6 @@ smap <C-k>     <Plug>(neosnippet_expand_or_jump)
 xmap <C-k>     <Plug>(neosnippet_expand_target)
 
 "=====================
-"neocomplcache setting
-"=====================
-" Disable AutoComplPop.
-" let g:acp_enableAtStartup = 0
-" Use neocomplete.
-"let g:neocomplete#enable_at_startup = 1
-" Use smartcase.
-"let g:neocomplete#enable_smart_case = 1
-" Set minimum syntax keyword length.
-"let g:neocomplete#sources#syntax#min_keyword_length = 1
-"let g:neocomplete#lock_buffer_name_pattern = '\*ku\*'
-
-"=====================
 "key map
 "=====================
 
@@ -107,4 +94,7 @@ set tabstop=2
 set shiftwidth=2
 set noautoindent
 set nosmartindent
+set clipboard=unnamed
+
 autocmd Filetype * set formatoptions=q
+
