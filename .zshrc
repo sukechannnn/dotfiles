@@ -14,14 +14,6 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-# RPROMPT に時刻を追加
-
-precmd () {
-  psvar=()
-  psvar[1]=$(date "+%H:%M:%S");
-}
-RPROMPT+=" %1v"
-
 # メモリ内の履歴の数
 HISTSIZE=1000000
 
@@ -33,10 +25,16 @@ MAILCHECK=0
 
 # Do not raise `zsh: no matches found`
 setopt nonomatch
-
 fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
-
 eval "$(direnv hook zsh)"
+
+# 時計
+precmd () {
+  psvar=()
+  psvar[1]=$(date "+%H:%M:%S");
+}
+RPROMPT+=" %1v"
+
 #---------------------------------------------------------------------
 # env
 #---------------------------------------------------------------------
@@ -70,6 +68,7 @@ alias gis='git status'
 alias gca='git commit --allow-empty'
 alias gco='noglob git checkout'
 alias gcop='noglob git checkout `git branch | peco`'
+alias gcopr='noglob gh pr checkout'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
@@ -82,7 +81,6 @@ alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
-alias vim='nvim'
 alias gv='gh pr view `git branch --show-current`'
 
 #---------------------------------------------------------------------
