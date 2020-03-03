@@ -33,12 +33,11 @@ precmd () {
   psvar=()
   psvar[1]=$(date "+%H:%M:%S");
 }
-RPROMPT+=" %1v"
+RPROMPT='${editor_info[overwrite]}%(?:: %F{1}✘ %? %f)${VIM:+" %B%F{6}V%f%b"}${_prompt_sorin_git} %1v'
 
 #---------------------------------------------------------------------
 # env
 #---------------------------------------------------------------------
-
 export PATH="$HOME/.anyenv/bin:$PATH"
 eval "$(anyenv init -)"
 
@@ -81,7 +80,8 @@ alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
-alias gv='gh pr view `git branch --show-current`'
+alias prbrowse='gh pr view `git branch --show-current`'
+alias vim='nvim'
 
 #---------------------------------------------------------------------
 # cdr
