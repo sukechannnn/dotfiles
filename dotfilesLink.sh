@@ -1,10 +1,13 @@
 #! /bin/bash
-ln -sf ~/dotfiles/.zprofile ~/.zprofile
-ln -sf ~/dotfiles/.zshenv ~/.zshenv
-ln -sf ~/dotfiles/.zshrc ~/.zshrc
-ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
-ln -sf ~/dotfiles/.vimrc ~/.vimrc
-ln -sf ~/dotfiles/.atom ~/.atom
-ln -sf ~/dotfiles/nvim ~/.config
-ln -sf ~/dotfiles/.bundle/config ~/.bundle/config
-ln -sf ~/dotfiles/.gemrc ~/.gemrc
+ln -fnsv ~/dotfiles/.zprofile ~/.zprofile
+ln -fnsv ~/dotfiles/.zshenv ~/.zshenv
+ln -fnsv ~/dotfiles/.zshrc ~/.zshrc
+ln -fnsv ~/dotfiles/.zpreztorc ~/.zpreztorc
+ln -fnsv ~/dotfiles/.vimrc ~/.vimrc
+ln -fnsv ~/dotfiles/.atom ~/.atom
+ln -fnsv ~/dotfiles/nvim ~/.config
+if [ ! -d ~/.bundle ]; then
+  mkdir ~/.bundle
+fi
+ln -fnsv ~/dotfiles/.bundle/config ~/.bundle/config
+ln -fnsv ~/dotfiles/.gemrc ~/.gemrc
