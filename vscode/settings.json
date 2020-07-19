@@ -1,0 +1,19 @@
+{
+    "editor.minimap.enabled": false,
+    "workbench.colorTheme": "One Dark Pro",
+    "workbench.editor.enablePreview": false,
+    "editor.cursorBlinking": "solid",
+    "atomKeymap.promptV3Features": true,
+    "editor.multiCursorModifier": "ctrlCmd",
+    "editor.formatOnPaste": true,
+    "vim.statusBarColorControl": false,
+    "editor.quickSuggestions": true,
+    "files.autoSave": "onWindowChange",
+    "window.zoomLevel": 0,
+    "ruby.intellisense": "rubyLocate",
+    "ruby.locate": {
+        "exclude": "{**/@(test|spec|tmp|.*),**/@(test|spec|tmp|.*)/**,**/*_spec.rb}"
+    },
+    "workbench.startupEditor": "newUntitledFile",
+    "gitlens.codeLens.enabled": false
+}

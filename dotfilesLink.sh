@@ -11,3 +11,5 @@ if [ ! -d ~/.bundle ]; then
 fi
 ln -fnsv ~/dotfiles/.bundle/config ~/.bundle/config
 ln -fnsv ~/dotfiles/.gemrc ~/.gemrc
+ln -fnsv ~/dotfiles/vscode/settings.json ~/Library/Application\ Support/Code/User/settings.json
+ln -fnsv ~/dotfiles/vscode/keybindings.json ~/Library/Application\ Support/Code/User/keybindings.json
