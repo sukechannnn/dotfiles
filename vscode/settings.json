@@ -15,5 +15,6 @@
         "exclude": "{**/@(test|spec|tmp|.*),**/@(test|spec|tmp|.*)/**,**/*_spec.rb}"
     },
     "workbench.startupEditor": "newUntitledFile",
-    "gitlens.codeLens.enabled": false
+    "gitlens.codeLens.enabled": false,
+    "editor.tabSize": 2
 }
