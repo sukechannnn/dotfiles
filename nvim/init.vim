@@ -97,7 +97,7 @@ set tabstop=2
 set shiftwidth=2
 set noautoindent
 set nosmartindent
-set clipboard=unnamed
+" set clipboard=unnamed
 
 autocmd Filetype * set formatoptions=q
 

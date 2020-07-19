@@ -58,6 +58,8 @@ export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
 
 export PATH="$PATH:/Users/yosuke/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
 
+export GO111MODULE=on
+
 #---------------------------------------------------------------------
 # alias
 #---------------------------------------------------------------------
@@ -67,7 +69,7 @@ alias gis='git status'
 alias gca='git commit --allow-empty'
 alias gco='noglob git checkout'
 alias gcop='noglob git checkout `git branch | peco`'
-alias gcopr='noglob gh pr checkout'
+alias gch='git cherry-pick'
 alias gif='git diff'
 alias gic='git commit --verbose'
 alias gicm='git commit --message'
@@ -80,6 +82,7 @@ alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
 alias gifc='git diff --cached'
 alias gbrm='git branch --merged origin/master | grep -v "^\s*master" | grep -v "^*" | xargs git branch -D'
+alias ghco='noglob gh pr checkout'
 alias prbrowse='gh pr view `git branch --show-current`'
 alias vim='nvim'
 
@@ -141,3 +144,5 @@ alias pk="peco-pkill"
 # ghqのlist一覧から選択して移動
 alias ghl='cd $(ghq list -p | peco)'
 
+
+[ -f "$HOME/.shopify-app-cli/shopify.sh" ] && source "$HOME/.shopify-app-cli/shopify.sh"
