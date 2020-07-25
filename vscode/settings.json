@@ -16,5 +16,9 @@
     },
     "workbench.startupEditor": "newUntitledFile",
     "gitlens.codeLens.enabled": false,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "editor.occurrencesHighlight": false,
+    "editor.colorDecorators": false,
+    "editor.renderWhitespace": "boundary",
+    "files.trimTrailingWhitespace": true
 }
