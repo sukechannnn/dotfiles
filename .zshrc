@@ -56,7 +56,7 @@ export PATH="$PATH:/usr/local/opt/avr-gcc@7/bin"
 export PATH="/usr/local/opt/libxml2/bin:$PATH"
 export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
 
-export PATH="$PATH:/Users/yosuke/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
+export PATH="$PATH:$HOME/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
 
 export GO111MODULE=on
 
