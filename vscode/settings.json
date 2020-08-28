@@ -1,6 +1,6 @@
 {
     "editor.minimap.enabled": false,
-    "workbench.colorTheme": "One Dark Pro",
+    "workbench.colorTheme": "Atom One Dark",
     "workbench.editor.enablePreview": false,
     "editor.cursorBlinking": "solid",
     "atomKeymap.promptV3Features": true,
@@ -8,7 +8,6 @@
     "editor.formatOnPaste": true,
     "vim.statusBarColorControl": false,
     "editor.quickSuggestions": true,
-    "files.autoSave": "onWindowChange",
     "window.zoomLevel": 0,
     "ruby.intellisense": "rubyLocate",
     "ruby.locate": {
@@ -20,5 +19,7 @@
     "editor.occurrencesHighlight": false,
     "editor.colorDecorators": false,
     "editor.renderWhitespace": "boundary",
-    "files.trimTrailingWhitespace": true
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "workbench.iconTheme": "file-icons"
 }

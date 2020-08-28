@@ -94,4 +94,19 @@
         "command": "selectPrevSuggestion",
         "when": "editorTextFocus && suggestWidgetMultipleSuggestions && suggestWidgetVisible"
     },
+    {
+        "key": "ctrl+cmd+l",
+        "command": "editor.action.showHover",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "right",
+        "command": "-extension.vim_right",
+        "when": "editorTextFocus && vim.active && !inDebugRepl"
+    },
+    {
+        "key": "left",
+        "command": "-extension.vim_left",
+        "when": "editorTextFocus && vim.active && !inDebugRepl"
+    },
 ]
