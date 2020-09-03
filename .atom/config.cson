@@ -11,6 +11,8 @@
   "atom-ide-ui":
     "atom-ide-code-format":
       formatOnSave: true
+    hyperclick:
+      darwinTriggerKeys: "ctrlKey"
   "atom-material-ui":
     colors:
       abaseColor: "#3a447a"
@@ -48,16 +50,19 @@
       "autocomplete-paths"
       "github"
       "spell-check"
-      "linter"
       "atom-ternjs"
-      "linter-eslint"
-      "prettier-atom"
+      "goto-definition"
+      "linter"
+      "ruby-solargraph"
+      "ide-flowtype"
+      "linter-stylelint"
     ]
     followSymlinks: false
     openEmptyEditorOnStart: false
     packagesWithKeymapsDisabled: [
       "symbols-view"
       "platformio-ide-terminal"
+      "blocky"
     ]
     projectHome: "/Users/obatayousuke/Develop/AtomPackages"
     telemetryConsent: "limited"
@@ -87,14 +92,13 @@
     rb: "source.ruby.rails"
   "flatwhite-syntax":
     ebmedded: "Full"
+  "flow-ide":
+    useLSP: true
   "git-log":
     fontScale: 0.9
   "go-plus":
     autocomplete: {}
     config: {}
-    disabledBundledPackages: [
-      "go-debug"
-    ]
     format: {}
     guru: {}
     lint: {}
@@ -109,18 +113,25 @@
   "hey-pane": {}
   "highlight-selected":
     hideHighlightOnSelectedWord: true
+  hyperclick: {}
+  "ide-flowtype":
+    tryFlowBin: true
+  "ide-typescript":
+    ignoreFlow: false
   "japanese-wrap":
     characterWidth: {}
   "language-markdown":
     disableLanguageGfm: false
   linter: {}
   "linter-erb": {}
-  "linter-eslint": {}
+  "linter-eslint":
+    autofix: {}
   "linter-matlab": {}
   "linter-sass-lint": {}
+  "linter-stylelint":
+    fixOnSave: true
   "linter-ui-default":
-    panelHeight: 56
-    showPanel: true
+    panelHeight: 134
   "markdown-pdf": {}
   "markdown-preview":
     breakOnSingleNewline: true
