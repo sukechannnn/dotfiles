@@ -29,7 +29,7 @@ if dein#load_state('~/.cache/dein')
   call dein#add('tpope/vim-endwise')
   call dein#add('cohama/lexima.vim')
   call dein#add('tpope/vim-surround')
-  call dein#add('Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' })
+  call dein#add('Shougo/deoplete.nvim')
   let g:deoplete#enable_at_startup = 1
 
   " Required:
