@@ -1,6 +1,6 @@
 {
     "editor.minimap.enabled": false,
-    "workbench.colorTheme": "Atom One Dark",
+    "workbench.colorTheme": "Nord",
     "workbench.editor.enablePreview": false,
     "editor.cursorBlinking": "solid",
     "atomKeymap.promptV3Features": true,
@@ -21,5 +21,8 @@
     "editor.renderWhitespace": "boundary",
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    "workbench.iconTheme": "file-icons"
+    "workbench.iconTheme": "file-icons",
+    "explorer.confirmDragAndDrop": false,
+    "eslint.format.enable": true,
+    "editor.formatOnSave": true
 }
