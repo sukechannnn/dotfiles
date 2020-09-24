@@ -29,13 +29,15 @@ if dein#load_state('~/.cache/dein')
   call dein#add('tpope/vim-endwise')
   call dein#add('cohama/lexima.vim')
   call dein#add('tpope/vim-surround')
+  call dein#add('mg979/vim-visual-multi', {'branch': 'master'})
   call dein#add('Shougo/deoplete.nvim')
-  let g:deoplete#enable_at_startup = 1
 
   " Required:
   call dein#end()
   call dein#save_state()
 endif
+
+let g:deoplete#enable_at_startup = 1
 
 " Required:
 filetype plugin indent on
