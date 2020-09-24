@@ -24,5 +24,18 @@
     "workbench.iconTheme": "file-icons",
     "explorer.confirmDragAndDrop": false,
     "eslint.format.enable": true,
-    "editor.formatOnSave": true
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "editor.formatOnSave": true,
+    "flow.useNPMPackagedFlow": true,
+    "javascript.validate.enable": false,
+    "workbench.colorCustomizations": {
+        "editor.selectionBackground": "#658DB5",
+        "editor.selectionHighlightBackground": "#658DB5",
+        "editor.findMatchHighlightBackground": "#658DB5",
+        "editor.lineHighlightBackground": "#2E3440"
+    },
+    "eslint.alwaysShowStatus": true,
+    "workbench.editor.tabSizing": "shrink"
 }
