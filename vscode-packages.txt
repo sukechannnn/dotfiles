@@ -1,0 +1,12 @@
+akamud.vscode-theme-onedark
+arcticicestudio.nord-visual-studio-code
+Atishay-Jain.All-Autocomplete
+file-icons.file-icons
+ionutvmi.path-autocomplete
+ms-vscode.atom-keybindings
+vscodevim.vim
+rebornix.ruby
+wingrunr21.vscode-ruby
+dbaeumer.vscode-eslint
+flowtype.flow-for-vscode
+
