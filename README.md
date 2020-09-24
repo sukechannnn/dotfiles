@@ -5,7 +5,7 @@
 ### Setup dotfiles
 
 ```
-$ bash link_dotfiles.sh
+$ bash ./link_dotfiles.sh
 ```
 
 ### Vim
@@ -26,6 +26,6 @@ $ apm-nightly install --packages-file packages.txt
 ### Ruby Gems
 
 ```
-$ bash localRubyGems.sh
+$ bash ./install_pry.sh
 ```
 
