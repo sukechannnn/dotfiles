@@ -29,7 +29,6 @@ minimap
 multi-cursor
 nord-atom-syntax
 nord-atom-ui
-platformio-ide-terminal
 rails-open-rspec
 react
 react-snippets
