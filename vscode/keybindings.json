@@ -151,12 +151,6 @@
     {
         "key": "shift+cmd+c",
         "command": "copyRelativeFilePath",
-        "when": "!editorFocus"
-    },
-    {
-        "key": "shift+alt+cmd+c",
-        "command": "-copyRelativeFilePath",
-        "when": "!editorFocus"
     },
     {
         "key": "cmd+k cmd+c",
