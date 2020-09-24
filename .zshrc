@@ -58,6 +58,10 @@ export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
 
 export PATH="$PATH:$HOME/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
 
+export PATH="$PATH:/usr/local/bin/code"
+export PATH="$PATH:/usr/local/bin/atom-nightly"
+export PATH="$PATH:/usr/local/bin/apm-nightly"
+
 export GO111MODULE=on
 
 #---------------------------------------------------------------------
