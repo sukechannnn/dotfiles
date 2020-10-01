@@ -5,6 +5,7 @@ change-case
 color-picker
 css-snippets
 cursor-history
+copy-path
 file-icons
 file-types
 git-log
@@ -29,6 +30,7 @@ minimap
 multi-cursor
 nord-atom-syntax
 nord-atom-ui
+rainbow-csv
 rails-open-rspec
 react
 react-snippets

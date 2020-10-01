@@ -42,6 +42,7 @@
   'shift-cmd-W': 'abort!'
   'cmd-r': 'window:reload'
   'shift-cmd-w': 'tree-view:toggle-focus'
+  'ctrl-cmd-p': 'color-picker:open'
 
 'body atom-text-editor.autocomplete-active':
   'tab': 'autocomplete-plus:move-down'

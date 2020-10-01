@@ -51,7 +51,6 @@
       "github"
       "spell-check"
       "atom-ternjs"
-      "goto-definition"
       "linter"
       "ruby-solargraph"
       "ide-flowtype"
