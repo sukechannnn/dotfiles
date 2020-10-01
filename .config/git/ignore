@@ -16,9 +16,6 @@ production-env.txt
 # Rails
 public/assets/
 
-# Icon must end with two \r
-Icon
-
 # Thumbnails
 ._*
 
