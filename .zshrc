@@ -35,6 +35,9 @@ precmd () {
 }
 RPROMPT='${editor_info[overwrite]}%(?:: %F{1}✘ %? %f)${VIM:+" %B%F{6}V%f%b"}${_prompt_sorin_git} %1v'
 
+# Ruby build config
+RUBY_CONFIGURE_OPTS="--with-readline-dir=`brew --prefix readline` --with-openssl-dir=`brew --prefix openssl`"
+
 #---------------------------------------------------------------------
 # env
 #---------------------------------------------------------------------
@@ -56,7 +59,7 @@ export PATH="$PATH:/usr/local/opt/avr-gcc@7/bin"
 export PATH="/usr/local/opt/libxml2/bin:$PATH"
 export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
 
-export PATH="$PATH:$HOME/.ghq/github.com/sukechannnn/dev_util_cmds/bin"
+export PATH="$PATH:/Users/sukechannnn/go/src/github.com/sukechannnn/dev_util_cmds/bin"
 
 export PATH="$PATH:/usr/local/bin/code"
 export PATH="$PATH:/usr/local/bin/atom-nightly"
@@ -80,7 +83,7 @@ alias gicm='git commit --message'
 alias gpul='git pull origin `git symbolic-ref --short HEAD`'
 alias glgl='git log --graph --pretty=format:"${_git_log_oneline_format}"'
 alias rubodiff='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//)'
-alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//) -a'
+alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//) $1 -a'
 alias sp='bundle exec rspec'
 alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
