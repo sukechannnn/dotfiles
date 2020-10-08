@@ -11,11 +11,11 @@
   "editor.quickSuggestions": true,
   "window.zoomLevel": 0,
   "ruby.intellisense": "rubyLocate",
+  "ruby.useLanguageServer": true,
   "ruby.locate": {
     "exclude": "{**/@(test|spec|tmp|.*),**/@(test|spec|tmp|.*)/**,**/*_spec.rb}"
   },
   "workbench.startupEditor": "newUntitledFile",
-  "gitlens.codeLens.enabled": false,
   "editor.tabSize": 2,
   "editor.occurrencesHighlight": false,
   "editor.colorDecorators": false,
@@ -33,7 +33,7 @@
   "javascript.validate.enable": false,
   "workbench.colorCustomizations": {
     "editor.selectionBackground": "#658DB5",
-    "editor.selectionHighlightBackground": "#658DB5",
+    "editor.selectionHighlightBackground": "#3f5973",
     "editor.findMatchHighlightBackground": "#658DB5",
     "editor.lineHighlightBackground": "#2E3440"
   },
