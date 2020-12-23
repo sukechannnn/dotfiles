@@ -201,4 +201,8 @@
         "command": "editor.action.insertCursorBelow",
         "when": "editorTextFocus"
     },
+    {
+        "key": "cmd+k cmd+k",
+        "command": "workbench.action.focusLeftGroup"
+    },
 ]
