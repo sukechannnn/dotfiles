@@ -60,7 +60,7 @@
   'alt-cmd-down': 'editor:move-line-down'
   'cmd-l': 'git-log:show'
   'shift-cmd-C': 'copy-path:copy-project-relative-path'
-  'ctrl-b': 'blame:toggle'
+  'ctrl-b': 'git-blame:toggle'
 
 '.platform-darwin':
   'ctrl-cmd-w': 'tree-view:toggle-focus'

@@ -29,8 +29,19 @@
       animations: false
       panelContrast: true
       panelShadows: true
+  "atom-package-deps":
+    ignored: [
+      "atom-typescript"
+    ]
   "atom-ternjs":
     useSnippets: true
+  "atom-typescript":
+    autocompletionSuggestionPriority: 2
+    disableAtomIdeDefinitions: true
+    preferBuiltinBusySignal: true
+    preferBuiltinOccurrenceHighlight: true
+    preferBuiltinSigHelp: true
+    preferBuiltinTooltips: true
   "autocomplete-ctags":
     minimumPrefixLength: 2
   "autocomplete-plus":
@@ -47,11 +58,9 @@
     disabledPackages: [
       "vim-mode"
       "atom-ctags"
-      "autocomplete-paths"
       "github"
       "spell-check"
       "atom-ternjs"
-      "linter"
       "ruby-solargraph"
       "ide-flowtype"
       "linter-stylelint"
@@ -74,7 +83,7 @@
     autoIndentOnPaste: false
     backUpBeforeSaving: true
     confirmCheckoutHeadRevision: false
-    fontSize: 12
+    fontSize: 13
     invisibles:
       eol: " "
       space: "-"
@@ -82,6 +91,7 @@
     scrollPastEnd: true
     showIndentGuide: true
     showInvisibles: true
+    softWrapAtPreferredLineLength: true
   "exception-reporting":
     userId: "5cbdbbef-3435-207a-5ec9-b94dc729fc98"
   "file-types":
@@ -93,6 +103,8 @@
     ebmedded: "Full"
   "flow-ide":
     useLSP: true
+  "git-blame":
+    columnWidth: 217
   "git-log":
     fontScale: 0.9
   "go-plus":
@@ -124,7 +136,10 @@
   linter: {}
   "linter-erb": {}
   "linter-eslint":
-    autofix: {}
+    autofix:
+      fixOnSave: true
+    disabling:
+      disableWhenNoEslintConfig: false
   "linter-matlab": {}
   "linter-sass-lint": {}
   "linter-stylelint":
