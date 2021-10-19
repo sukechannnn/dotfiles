@@ -82,8 +82,8 @@ alias gic='git commit --verbose'
 alias gicm='git commit --message'
 alias gpul='git pull origin `git symbolic-ref --short HEAD`'
 alias glgl='git log --graph --pretty=format:"${_git_log_oneline_format}"'
-alias rubodiff='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//)'
-alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed s/M// | sed s/D.*//) $1 -a'
+alias rubodiff='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed -E s/M+// | sed s/A// | sed s/D.*//)'
+alias rubodiff-a='bundle exec rubocop $(git status --short | grep -e ".*\.rb" | sed -E s/M+// | sed s/A// | sed s/D.*//) $1 -a'
 alias sp='bundle exec rspec'
 alias sps='bin/rspec-skip-test-setup'
 alias wifi-ckeck='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I'
@@ -153,3 +153,13 @@ alias ghl='cd $(ghq list -p | peco)'
 
 
 [ -f "$HOME/.shopify-app-cli/shopify.sh" ] && source "$HOME/.shopify-app-cli/shopify.sh"
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="/Users/sukechannnn/.sdkman"
+[[ -s "/Users/sukechannnn/.sdkman/bin/sdkman-init.sh" ]] && source "/Users/sukechannnn/.sdkman/bin/sdkman-init.sh"
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/sukechannnn/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/sukechannnn/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/sukechannnn/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/sukechannnn/google-cloud-sdk/completion.zsh.inc'; fi
