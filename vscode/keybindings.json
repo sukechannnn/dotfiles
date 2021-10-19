@@ -205,4 +205,20 @@
         "key": "cmd+k cmd+k",
         "command": "workbench.action.focusLeftGroup"
     },
+    {
+        "key": "cmd+k cmd+right",
+        "command": "workbench.action.splitEditorRight"
+    },
+    {
+        "key": "cmd+k cmd+right",
+        "command": "-workbench.action.focusRightGroup"
+    },
+    {
+        "key": "ctrl+cmd+e",
+        "command": "workbench.action.problems.focus"
+    },
+    {
+        "key": "shift+cmd+a",
+        "command": "search.action.focusSearchList"
+    },
 ]

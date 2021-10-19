@@ -9,7 +9,6 @@
   "editor.formatOnPaste": true,
   "vim.statusBarColorControl": false,
   "editor.quickSuggestions": true,
-  "window.zoomLevel": 0,
   "ruby.intellisense": "rubyLocate",
   "ruby.useLanguageServer": true,
   "ruby.locate": {
@@ -24,6 +23,7 @@
   "files.insertFinalNewline": true,
   "workbench.iconTheme": "file-icons",
   "explorer.confirmDragAndDrop": false,
+  "explorer.autoReveal": false,
   "eslint.format.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
@@ -37,6 +37,20 @@
     "editor.findMatchHighlightBackground": "#658DB5",
     "editor.lineHighlightBackground": "#2E3440"
   },
+  "workbench.editor.tabSizing": "shrink",
   "eslint.alwaysShowStatus": true,
-  "workbench.editor.tabSizing": "shrink"
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.scrollBeyondLastLine": true,
+  "editor.cursorStyle": "line",
+  "editor.lineNumbers": "on",
+  "editor.wordSeparators": "/\\()\"':,.;<>~!@#$%^&*|+=[]{}`?-",
+  "editor.wordWrap": "off",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "security.workspace.trust.untrustedFiles": "open",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.autoSave": "afterDelay",
+  "window.zoomLevel": 1,
 }
