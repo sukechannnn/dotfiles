@@ -4,7 +4,7 @@ ln -fnsv ~/dotfiles/.zshenv ~/.zshenv
 ln -fnsv ~/dotfiles/.zshrc ~/.zshrc
 ln -fnsv ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -fnsv ~/dotfiles/.atom ~/.atom
-ln -fnsv ~/dotfiles/nvim ~/.config
+ln -fnsv ~/dotfiles/.vimrc ~/.vimrc
 if [ ! -d ~/.bundle ]; then
   mkdir ~/.bundle
 fi
